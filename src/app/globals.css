@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-workspace-bg text-text-primary font-sans antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-workspace-bg;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-workspace-border rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-muted;
+  }
+}
+
+@layer components {
+  /* Panel surfaces */
+  .panel {
+    @apply bg-workspace-surface border-workspace-border;
+  }
+
+  .panel-elevated {
+    @apply bg-workspace-elevated border-workspace-border;
+  }
+
+  /* Card */
+  .paper-card {
+    @apply bg-workspace-elevated border border-workspace-border rounded-lg;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-2xs font-medium font-mono;
+  }
+
+  .badge-critical {
+    @apply bg-accent-danger/15 text-accent-danger border border-accent-danger/20;
+  }
+
+  .badge-warning {
+    @apply bg-accent-warning/15 text-accent-warning border border-accent-warning/20;
+  }
+
+  .badge-info {
+    @apply bg-accent-info/15 text-accent-info border border-accent-info/20;
+  }
+
+  .badge-positive {
+    @apply bg-accent-success/15 text-accent-success border border-accent-success/20;
+  }
+
+  /* Agent state indicators */
+  .agent-state-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .agent-state-idle { @apply bg-text-muted; }
+  .agent-state-waiting { @apply bg-text-tertiary animate-pulse; }
+  .agent-state-reading { @apply bg-accent-info animate-pulse; }
+  .agent-state-analyzing { @apply bg-accent-primary animate-pulse; }
+  .agent-state-debating { @apply bg-accent-warning animate-pulse; }
+  .agent-state-proposing-edit { @apply bg-agent-product animate-pulse; }
+  .agent-state-synthesizing { @apply bg-accent-primary animate-pulse-slow; }
+  .agent-state-done { @apply bg-accent-success; }
+
+  /* Button — modern style (replaces pixel-btn) */
+  .pixel-btn {
+    @apply font-mono text-xs rounded-md transition-all duration-150;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .pixel-btn:hover {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+  .pixel-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  /* Canvas background */
+  .meeting-room-bg {
+    @apply bg-workspace-bg;
+  }
+
+  /* Speech bubble base */
+  .speech-bubble {
+    @apply bg-workspace-elevated text-text-primary text-2xs font-mono px-2 py-1 rounded-lg;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  /* Terminal text accent */
+  .terminal-text {
+    @apply font-mono text-accent-primary;
+    text-shadow: 0 0 8px rgba(59,130,246,0.3);
+  }
+}
+
+/* ── Discussion Scene animations ── */
+
+@keyframes bubbleIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes seatPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+  50%      { box-shadow: 0 0 0 6px rgba(59,130,246,0.1); }
+}
+
+@keyframes seatAppear {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.scene-bubble-enter {
+  animation: bubbleIn 0.25s ease-out forwards;
+}
+
+.seat-active-pulse {
+  animation: seatPulse 2.5s ease-in-out infinite;
+}
+
+.seat-appear {
+  animation: seatAppear 0.3s ease-out forwards;
+}
