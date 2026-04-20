@@ -173,11 +173,14 @@ model BoardRun {
   deletedAt   DateTime?
 
   // Relations
-  agentSnapshots RunAgentSnapshot[]
-  opinions       AgentOpinion[]
-  debateMoments  DebateMoment[]
-  verdict        FinalVerdict?
-  document       DocumentArtifact?
+  agentSnapshots    RunAgentSnapshot[]
+  opinions          AgentOpinion[]
+  debateMoments     DebateMoment[]
+  verdict           FinalVerdict?
+  document          DocumentArtifact?
+  editProposals     EditProposal[]
+  arbitratedEdits   ArbitratedEdit[]
+  redlineArtifacts  RedlineArtifact[]
 
   @@index([userId])
   @@index([userId, deletedAt])
@@ -211,7 +214,80 @@ model DocumentArtifact {
   fullText String?  @db.Text
   sections Json // DocumentSection[] — parsed structure
   metadata Json // extraction quality, parser info
+  // Faz 4: original DOCX bytes preserved for redline round-trip.
+  // Nullable so pre-Faz-4 rows remain valid, and so trimOrphanDocxBuffers
+  // can null this out under the TTL policy after a retention window.
+  originalDocxBuffer Bytes?
   createdAt DateTime @default(now())
+}
+
+// ─── Edit Proposal (Faz 4) ────────────────────────────
+//
+// Raw clause-level edit suggested by an agent during the agent pass.
+// Many per run; chief arbitration consolidates them into ArbitratedEdit.
+
+model EditProposal {
+  id           String   @id @default(cuid())
+  runId        String
+  run          BoardRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  agentKey     String
+  clauseRef    String
+  editType     String // "replace_clause" | "replace_phrase" | "insert_after" | "delete_clause"
+  originalText String?  @db.Text
+  proposedText String   @db.Text
+  rationale    String   @db.Text
+  severity     String // "critical" | "warning" | "info"
+  createdAt    DateTime @default(now())
+
+  @@index([runId])
+  @@index([runId, clauseRef])
+}
+
+// ─── Arbitrated Edit (Faz 4) ──────────────────────────
+//
+// Chief's canonical decision per clause/phrase. sourceProposals lists
+// the EditProposal IDs that fed this arbitration (trace + audit).
+// resolution captures which proposal(s) the chief accepted.
+
+model ArbitratedEdit {
+  id                String   @id @default(cuid())
+  runId             String
+  run               BoardRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  clauseRef         String
+  editType          String
+  originalText      String?  @db.Text
+  finalText         String   @db.Text
+  sourceProposals   String[] // EditProposal IDs
+  arbitrationNote   String   @db.Text
+  resolution        String // "accepted_a" | "accepted_b" | "merged" | "rewritten" | "rejected_all" | "orphan_unmatched"
+  finalSeverity     String // "critical" | "warning" | "info" — chief may raise/lower
+  createdAt         DateTime @default(now())
+
+  @@index([runId])
+  @@index([runId, resolution])
+}
+
+// ─── Redline Artifact (Faz 4) ─────────────────────────
+//
+// Generated track-changes DOCX. Versioned per run: every regeneration
+// marks previous rows isLatest=false and creates a new one with
+// generation+1. GET endpoint defaults to isLatest=true; ?generation=N
+// returns a specific version.
+
+model RedlineArtifact {
+  id           String   @id @default(cuid())
+  runId        String
+  run          BoardRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  generation   Int
+  isLatest     Boolean  @default(true)
+  docxBuffer   Bytes
+  editCount    Int
+  orphanCount  Int
+  generatedAt  DateTime @default(now())
+
+  @@unique([runId, generation])
+  @@index([runId])
+  @@index([runId, isLatest])
 }
 
 // ─── Agent Opinion ────────────────────────────────────
