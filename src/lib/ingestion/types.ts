@@ -2,22 +2,19 @@
 // Document Ingestion Types
 // ============================================================
 //
-// Normalized types for document input, regardless of whether
-// the source is a demo scenario or a real uploaded file.
-//
-// This layer sits between raw input (scenario data / file upload)
-// and the analysis engine. The engine should eventually consume
-// ReviewInput instead of UploadedDocument directly.
+// Normalized types for document input uploaded by the user.
+// Output (ParsedDocument) is consumed by the boardroom pipeline.
 // ============================================================
-
-import type { AgentId, BusinessContext } from "../types";
 
 // --- Document Source ---
 
-/** Where the document came from — scenario seed or user upload */
-export type DocumentSource =
-  | { type: "scenario"; scenarioId: string }
-  | { type: "upload"; fileName: string; fileType: string; fileSize: number };
+/** Where the document came from — user upload */
+export type DocumentSource = {
+  type: "upload";
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+};
 
 // --- Section & Clause Types ---
 
@@ -73,7 +70,7 @@ export interface DocumentMetadata {
   /** Detected language (e.g. "tr", "en") */
   language: string | null;
   /** Which parser produced this result */
-  parserUsed: "mock-scenario" | "stub" | "plain-text" | "pdf" | "docx";
+  parserUsed: "stub" | "plain-text" | "pdf" | "docx";
   /** Extraction quality assessment */
   extractionQuality?: "good" | "partial" | "poor" | "none";
   /** Diagnostics notes about the extraction process */
@@ -86,9 +83,7 @@ export interface DocumentMetadata {
  * This is the canonical shape that downstream consumers (engine, UI)
  * should use. It captures both the content and provenance of a document.
  *
- * - For scenarios: sections are synthesized from scenario metadata
- * - For uploads:   stub parser creates placeholder sections (v1)
- *                  future real parsers will extract actual content
+ * Sections are extracted by the appropriate parser (PDF/DOCX/TXT).
  */
 export interface ParsedDocument {
   id: string;
@@ -114,20 +109,3 @@ export interface DocumentIngestionResult {
   warnings: string[];
 }
 
-// --- Review Input ---
-
-/**
- * Normalized input for the analysis engine.
- *
- * This is the future contract: when real AI parsing is integrated,
- * the engine will receive ReviewInput instead of the current
- * UploadedDocument + scenarioId approach.
- *
- * For now, this type is defined but not yet consumed by the engine.
- * It serves as the target interface for the migration.
- */
-export interface ReviewInput {
-  document: ParsedDocument;
-  businessContext: BusinessContext;
-  selectedAgents: AgentId[];
-}

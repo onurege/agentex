@@ -2,37 +2,21 @@
 // Document Ingestion Service
 // ============================================================
 //
-// Orchestrates the flow from raw input (scenario or uploaded file)
-// to a normalized ParsedDocument.
-//
-// Two paths:
-//   1. Scenario → builds ParsedDocument from DemoScenario data
-//   2. Upload   → delegates to the appropriate DocumentParser
-//
-// The service is stateless — it transforms input and returns results.
-// State management (storing the ParsedDocument) is handled by the store.
+// Transforms an uploaded file into a normalized ParsedDocument
+// via the appropriate parser (PDF/DOCX/TXT). Stateless — state
+// management is handled by the boardroom flow store.
 // ============================================================
 
 import type {
   DocumentSource,
-  ParsedDocument,
   DocumentIngestionResult,
-  DocumentSection,
-  DocumentMetadata,
 } from "./types";
 import { getParser } from "./parsers";
-import { getScenario } from "../scenarios";
-import { segmentSections, synthesizeClausesFromFindings } from "./segmentation";
+import { segmentSections } from "./segmentation";
 
 // --- Service Interface ---
 
 export interface DocumentIngestionService {
-  /**
-   * Ingest a document from any source.
-   *
-   * @param source — identifies the origin (scenario or upload metadata)
-   * @param rawFile — the browser File object (required for upload sources)
-   */
   ingest(
     source: DocumentSource,
     rawFile?: File,
@@ -49,9 +33,6 @@ export class DefaultDocumentIngestionService
     rawFile?: File,
   ): Promise<DocumentIngestionResult> {
     try {
-      if (source.type === "scenario") {
-        return this.ingestFromScenario(source.scenarioId);
-      }
       return this.ingestFromUpload(source, rawFile);
     } catch (err) {
       return {
@@ -62,90 +43,10 @@ export class DefaultDocumentIngestionService
     }
   }
 
-  // ── Scenario Ingestion ───────────────────────────────────────
-
-  private ingestFromScenario(
-    scenarioId: string,
-  ): DocumentIngestionResult {
-    const scenario = getScenario(scenarioId);
-    if (!scenario) {
-      return {
-        success: false,
-        error: `Scenario not found: ${scenarioId}`,
-        warnings: [],
-      };
-    }
-
-    const doc = scenario.document;
-
-    // Base sections from scenario metadata
-    const baseSections: DocumentSection[] = [
-      {
-        id: "section-overview",
-        title: "Genel Bakış",
-        content: doc.summary || scenario.description,
-        sectionType: "overview",
-        depth: 0,
-      },
-      {
-        id: "section-context",
-        title: "İş Bağlamı",
-        content: scenario.businessContext.notes.join("\n"),
-        sectionType: "context",
-        depth: 0,
-      },
-    ];
-
-    // Risk category sections
-    scenario.chiefRecommendation.riskCategories.forEach((risk, i) => {
-      baseSections.push({
-        id: `section-risk-${i + 1}`,
-        title: risk.name,
-        content: risk.description,
-        sectionType: "general",
-        depth: 0,
-      });
-    });
-
-    // Synthesize clause-level sections from findings data
-    const clauseSections = synthesizeClausesFromFindings(scenario.findings);
-
-    // Merge: base sections first, then clause sections
-    const sections: DocumentSection[] = [
-      ...baseSections,
-      ...clauseSections,
-    ];
-
-    const metadata: DocumentMetadata = {
-      documentTypeGuess: scenario.chiefRecommendation.documentType,
-      language: "tr",
-      parserUsed: "mock-scenario",
-    };
-
-    const parsedDocument: ParsedDocument = {
-      id: `scenario-${scenarioId}`,
-      source: { type: "scenario", scenarioId },
-      fileName: doc.name,
-      fileType: doc.type,
-      fileSize: doc.size,
-      pageCount: doc.pageCount ?? null,
-      sections,
-      fullText: null, // scenarios don't have real text content
-      metadata,
-      parsedAt: new Date().toISOString(),
-    };
-
-    return {
-      success: true,
-      document: parsedDocument,
-      warnings: [],
-    };
-  }
-
   // ── Upload Ingestion ─────────────────────────────────────────
 
   private async ingestFromUpload(
-    source: Extract<DocumentSource, { type: "upload" }>,
+    source: DocumentSource,
     rawFile?: File,
   ): Promise<DocumentIngestionResult> {
     if (!rawFile) {
