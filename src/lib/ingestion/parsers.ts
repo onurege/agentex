@@ -19,6 +19,7 @@ import {
   normalizeExtractedText,
   assessExtractionQuality,
 } from "./normalize-text";
+import { assertDocxSize, DocxTooLargeError } from "./docx-guard";
 
 // --- Parser Interface ---
 
@@ -150,6 +151,11 @@ export class DocxParser implements DocumentParser {
 
     try {
       const arrayBuffer = await readFileAsArrayBuffer(file);
+
+      // Faz 4: enforce the size cap before parsing so the error surfaces
+      // fast and callers can translate DOCX_TOO_LARGE into a 413.
+      assertDocxSize(arrayBuffer);
+
       const mammoth = await import("mammoth");
 
       const result = await mammoth.extractRawText({
@@ -201,6 +207,11 @@ export class DocxParser implements DocumentParser {
         extractionNotes,
       };
 
+      // Faz 4: encode the original DOCX as base64 so it can travel
+      // alongside the parsed view to the server and land in
+      // DocumentArtifact.originalDocxBuffer for the redline renderer.
+      const originalDocxBase64 = arrayBufferToBase64(arrayBuffer);
+
       return {
         id: generateDocumentId(),
         source: {
@@ -219,8 +230,12 @@ export class DocxParser implements DocumentParser {
         fullText: text,
         metadata,
         parsedAt: new Date().toISOString(),
+        originalDocxBase64,
       };
     } catch (err) {
+      if (err instanceof DocxTooLargeError) {
+        throw err; // caller should map to 413
+      }
       const errorMsg =
         err instanceof Error ? err.message : "DOCX extraction failed";
       extractionNotes.push(`DOCX extraction error: ${errorMsg}`);
@@ -228,6 +243,23 @@ export class DocxParser implements DocumentParser {
       return buildStubResult(file, "docx", extractionNotes, "none");
     }
   }
+}
+
+// --- Base64 helper (browser-safe for moderate buffers) ---
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunk = 0x8000; // avoid stack overflow on large buffers
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(
+      null,
+      Array.from(bytes.subarray(i, i + chunk)),
+    );
+  }
+  return typeof window !== "undefined"
+    ? window.btoa(binary)
+    : Buffer.from(binary, "binary").toString("base64");
 }
 
 // --- Plain Text Parser ---

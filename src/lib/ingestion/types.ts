@@ -98,6 +98,13 @@ export interface ParsedDocument {
   fullText: string | null;
   metadata: DocumentMetadata;
   parsedAt: string;
+  /**
+   * Original DOCX file as base64 (Faz 4 redline round-trip).
+   * Only populated for fileType = "docx" uploads under the size cap.
+   * Sent to the server where it's persisted on DocumentArtifact and
+   * consumed by the redline renderer. Null for PDF / TXT / large DOCX.
+   */
+  originalDocxBase64?: string | null;
 }
 
 // --- Ingestion Result ---
