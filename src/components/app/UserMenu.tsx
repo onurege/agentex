@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import type { UserRole } from "@/lib/config/roles";
+import { useFastMode } from "@/lib/motion/fast-mode";
 
 const ROLE_LABEL: Record<UserRole, string> = {
   super_admin: "Super Admin",
@@ -18,6 +19,7 @@ const ROLE_BADGE_STYLE: Record<UserRole, string> = {
 
 export function UserMenu() {
   const { data: session } = useSession();
+  const { enabled: fastEnabled, manual, systemReduced, toggleManual } = useFastMode();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -97,6 +99,53 @@ export function UserMenu() {
               {ROLE_LABEL[role]}
             </span>
           </div>
+
+          {/* Sade mod (fast-mode) toggle */}
+          <div className="px-4 py-3 border-b border-workspace-border/50 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <span className="text-sm text-text-primary">Sade mod</span>
+              {systemReduced && (
+                <span className="block text-[11px] text-text-muted mt-0.5">
+                  Sistem tarafından zorunlu
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={fastEnabled}
+              aria-label="Sade modu aç/kapat"
+              disabled={systemReduced}
+              onClick={toggleManual}
+              title={
+                systemReduced
+                  ? "OS hareket azaltma açık; sistem ayarından değiştirin"
+                  : undefined
+              }
+              className={`relative shrink-0 w-10 h-6 rounded-full border
+                          transition-colors motion-reduce:transition-none
+                          ${
+                            fastEnabled
+                              ? "bg-accent-primary border-accent-primary"
+                              : "bg-workspace-elevated border-workspace-border"
+                          }
+                          ${
+                            systemReduced
+                              ? "opacity-60 cursor-not-allowed"
+                              : "cursor-pointer"
+                          }`}
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow
+                            transition-transform motion-reduce:transition-none
+                            ${
+                              fastEnabled ? "translate-x-[18px]" : "translate-x-0.5"
+                            }`}
+                aria-hidden
+              />
+            </button>
+          </div>
+
           <button
             type="button"
             role="menuitem"
