@@ -9,6 +9,7 @@ import { MAX_BOARD_SIZE } from "@/lib/boardroom-agents";
 import { useBoardroomFlowStore } from "@/lib/boardroom-flow-store";
 import { useStageAgents, type StageAgent } from "@/lib/stage-agents";
 import { MigrationBanner } from "@/components/app/MigrationBanner";
+import { StaggerChildren, StaggerItem } from "@/lib/motion/primitives";
 
 export default function AgentGalleryPage() {
   const selectedAgentIds = useBoardroomFlowStore((s) => s.selectedAgentIds);
@@ -46,18 +47,22 @@ export default function AgentGalleryPage() {
         </div>
 
         {/* Agent Grid — uses published effective data */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-[1080px]">
+        <StaggerChildren
+          stagger={0.06}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-[1080px]"
+        >
           {stageAgents.map((agent) => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              isSelected={selectedSet.has(agent.id)}
-              onSelect={() => selectAgent(agent.id)}
-              onDeselect={() => deselectAgent(agent.id)}
-              onViewDetail={() => setPreviewAgent(agent)}
-            />
+            <StaggerItem key={agent.id}>
+              <AgentCard
+                agent={agent}
+                isSelected={selectedSet.has(agent.id)}
+                onSelect={() => selectAgent(agent.id)}
+                onDeselect={() => deselectAgent(agent.id)}
+                onViewDetail={() => setPreviewAgent(agent)}
+              />
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerChildren>
       </div>
 
       {/* Bottom board bar — always visible */}

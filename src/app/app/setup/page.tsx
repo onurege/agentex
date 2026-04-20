@@ -9,6 +9,7 @@ import { BoardSummaryPanel } from "@/components/setup/BoardSummaryPanel";
 import { ContextNotesInput } from "@/components/setup/ContextNotesInput";
 import { useBoardroomFlowStore } from "@/lib/boardroom-flow-store";
 import { SITE } from "@/lib/config/site";
+import { SceneIn } from "@/lib/motion/primitives";
 
 export default function BoardSetupPage() {
   const router = useRouter();
@@ -49,16 +50,18 @@ export default function BoardSetupPage() {
           </p>
         </div>
 
-        {/* Two-column layout */}
+        {/* Two-column layout — left panel enters first, right follows at 120ms */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto w-full">
           {/* Left — Document Upload */}
-          <DocumentUploadPanel />
+          <SceneIn>
+            <DocumentUploadPanel />
+          </SceneIn>
 
           {/* Right — Board & Context */}
-          <div className="flex flex-col gap-8">
+          <SceneIn delay={0.12} className="flex flex-col gap-8">
             <BoardSummaryPanel />
             <ContextNotesInput />
-          </div>
+          </SceneIn>
         </div>
 
         {/* Bottom Action Bar */}
