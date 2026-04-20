@@ -9,15 +9,22 @@
 // table, not in a signed JWT. Trade-off: cheap revocation and fresh
 // role lookups at the cost of a DB round-trip per getServerSession.
 //
-// Current scope (commit 4): adapter + provider + session/redirect
-// callbacks. Domain allowlist, initial super_admin promotion, and the
-// custom error page land in commits 5 and 6.
+// Access policy:
+// - signIn callback rejects anything outside @univera.com.tr. Rejected
+//   logins redirect to /auth/error?error=AccessDenied (commit 6).
+// - events.signIn promotes INITIAL_SUPER_ADMIN_EMAIL on first login.
+//   Idempotent: skipped once the target user already holds super_admin,
+//   and a no-op when the env var is unset. Placed in `events` (not
+//   `callbacks.signIn`) so it fires AFTER the adapter creates the User
+//   row; otherwise the prisma.user.update would not find a target.
 // ============================================================
 
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
+
+const ALLOWED_DOMAIN = "univera.com.tr";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -35,6 +42,11 @@ export const authOptions: NextAuthOptions = {
     signIn: "/",
   },
   callbacks: {
+    async signIn({ user }) {
+      const email = (user.email ?? "").toLowerCase();
+      if (!email.endsWith(`@${ALLOWED_DOMAIN}`)) return false;
+      return true;
+    },
     async session({ session, user }) {
       // DB strategy: `user` is the full User row from Prisma.
       if (session.user) {
@@ -52,6 +64,18 @@ export const authOptions: NextAuthOptions = {
       if (url.startsWith("/app")) return `${baseUrl}${url}`;
       if (url.startsWith(baseUrl)) return url;
       return `${baseUrl}/app`;
+    },
+  },
+  events: {
+    async signIn({ user }) {
+      const initialEmail = process.env.INITIAL_SUPER_ADMIN_EMAIL?.toLowerCase();
+      if (!initialEmail) return;
+      if (user.email?.toLowerCase() !== initialEmail) return;
+      if (user.role === "super_admin") return; // idempotent
+      await prisma.user.update({
+        where: { email: initialEmail },
+        data: { role: "super_admin" },
+      });
     },
   },
 };
