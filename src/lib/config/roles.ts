@@ -7,15 +7,14 @@
 //   authorized_user  — can access Control Room (Panel)
 //   super_admin      — full access including Users & Audit Log
 //
-// Role source (from Faz 2 onward):
+// Role source:
 //   - Persisted on User.role in Postgres.
 //   - Injected onto session.user.role by the NextAuth session callback.
 //   - Server components: getServerSession(authOptions) → session.user.role
 //   - Client components: useSession()?.data?.user?.role
 //   - API routes: getAuthUser() → user.role
 //
-// Env-based allowlists (NEXT_PUBLIC_SUPER_ADMINS, NEXT_PUBLIC_AUTHORIZED_USERS)
-// are gone. INITIAL_SUPER_ADMIN_EMAIL bootstraps the first super_admin on
+// Bootstrap: INITIAL_SUPER_ADMIN_EMAIL promotes the first super_admin on
 // first login (see src/lib/auth-options.ts events.signIn).
 //
 // This module stays pure (types + PERMISSION_MAP) so client bundles can
