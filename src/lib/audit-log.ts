@@ -12,6 +12,14 @@
 
 import { getPersistenceMode } from "./persistence/factory";
 
+// Module-level actor, populated by SessionActorBridge when the user's
+// NextAuth session changes. Falls back to "system" when no session is
+// known (SSR, logged-out state, or when the bridge hasn't mounted yet).
+let currentActorId: string | null = null;
+export function setCurrentActor(id: string | null): void {
+  currentActorId = id;
+}
+
 export type AuditAction =
   | "cv_draft_saved"
   | "cv_published"
@@ -77,7 +85,7 @@ export function saveAuditEvent(params: {
     targetType: params.targetType,
     targetId: params.targetId,
     summary: params.summary,
-    actor: params.actor ?? "system",
+    actor: params.actor ?? currentActorId ?? "system",
     timestamp: new Date().toISOString(),
   };
   const events = readEvents();
