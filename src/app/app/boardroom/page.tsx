@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useMemo, useRef, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { StageLayout } from "@/components/stage/StageLayout";
@@ -8,6 +8,8 @@ import { ScenePhaseBar } from "@/components/boardroom/ScenePhaseBar";
 import { BoardroomAgentSeat } from "@/components/boardroom/BoardroomAgentSeat";
 import { DocumentFocusCard } from "@/components/boardroom/DocumentFocusCard";
 import { DebateTimelinePanel } from "@/components/boardroom/DebateTimelinePanel";
+import { DisagreementConnector } from "@/components/boardroom/DisagreementConnector";
+import { SpotlightFocus } from "@/lib/motion/primitives";
 import { useBoardroomFlowStore } from "@/lib/boardroom-flow-store";
 import {
   generateDebateSequence,
@@ -188,6 +190,25 @@ export default function BoardroomPage() {
     };
   }, [selectedAgentIds.length, parsedDocument, boardroomStatus, startOrchestration]);
 
+  // Derive the current disagreement pair: one agent objecting, another
+  // defending at the same moment. Hooks must run before the guard
+  // return below so they stay in consistent order across renders.
+  const disagreementPair = useMemo(() => {
+    let objectorId: string | null = null;
+    let defenderId: string | null = null;
+    for (const [agentId, state] of Object.entries(agentSceneStates)) {
+      if (!state) continue;
+      if (state.status === "objecting" && !objectorId) objectorId = agentId;
+      if (state.status === "defending" && !defenderId) defenderId = agentId;
+    }
+    if (objectorId && defenderId && objectorId !== defenderId) {
+      return { fromId: objectorId, toId: defenderId };
+    }
+    return null;
+  }, [agentSceneStates]);
+
+  const stageRef = useRef<HTMLDivElement>(null);
+
   // Guard render
   if (selectedAgentIds.length === 0 || (!parsedDocument && !uploadedFile)) {
     return (
@@ -239,15 +260,21 @@ export default function BoardroomPage() {
               }}
             />
 
-            {/* Stage — perspective root. z-index layering per plan:
-                z-0 connectors (added later), z-10 table, z-20 seats. */}
+            {/* Stage — perspective root. z-index layering:
+                z-0 disagreement connector, z-10 table, z-20 seats. */}
             <div
+              ref={stageRef}
               className="relative w-[720px] h-[440px]"
               style={{
                 perspective: "1400px",
                 perspectiveOrigin: "50% 20%",
               }}
             >
+              <DisagreementConnector
+                stageRef={stageRef}
+                fromId={disagreementPair?.fromId ?? null}
+                toId={disagreementPair?.toId ?? null}
+              />
               {/* Oval table — tilted away from the viewer */}
               <div
                 className="absolute left-1/2 top-1/2 w-[420px] h-[240px] z-10 flex items-center justify-center"
@@ -265,13 +292,19 @@ export default function BoardroomPage() {
                 <DocumentFocusCard fileName={fileName} currentTopic={highlightedTopic} />
               </div>
 
-              {/* Seats — positioned on an ellipse around the table */}
+              {/* Seats — positioned on an ellipse around the table.
+                  SpotlightFocus dims non-participants during a
+                  disagreement moment; active=true everywhere else. */}
               {boardroomAgents.map((agent, i) => {
                 const { x, y } = computeSeatPosition(i, boardroomAgents.length);
                 const sceneState = agentSceneStates[agent.id];
                 const isActive = activeSpeakerId === agent.id;
                 const status = sceneState?.status ?? "waiting";
                 const isIdle = status === "waiting" || status === "seated";
+                const inSpotlight =
+                  !disagreementPair ||
+                  agent.id === disagreementPair.fromId ||
+                  agent.id === disagreementPair.toId;
                 return (
                   <div
                     key={agent.id}
@@ -286,12 +319,14 @@ export default function BoardroomPage() {
                         "transform 220ms cubic-bezier(0.16, 1, 0.3, 1), filter 600ms linear",
                     }}
                   >
-                    <BoardroomAgentSeat
-                      agent={agent}
-                      sceneState={sceneState}
-                      isActiveSpeaker={isActive}
-                      isChief={agent.id === "chief-agent"}
-                    />
+                    <SpotlightFocus active={inSpotlight}>
+                      <BoardroomAgentSeat
+                        agent={agent}
+                        sceneState={sceneState}
+                        isActiveSpeaker={isActive}
+                        isChief={agent.id === "chief-agent"}
+                      />
+                    </SpotlightFocus>
                   </div>
                 );
               })}
