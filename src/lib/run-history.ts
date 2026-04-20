@@ -15,6 +15,7 @@
 
 import type { DebateEvent, VerdictSeed } from "./boardroom-flow-store";
 import { dispatchToAdapter } from "./persistence/dispatch";
+import type { ArbitratedEdit, EditProposal } from "./redline/types";
 
 // --- Frozen agent snapshot (does not change with later edits) ---
 
@@ -75,6 +76,13 @@ export interface BoardroomRunSnapshot {
     agentId?: string;
     error?: string;
   }>;
+
+  // Faz 4 redline payload — only populated in db-mode flows where we
+  // generate a track-changes DOCX. Omitted from local-mode
+  // localStorage to keep per-run size bounded (base64 can be ~13MB).
+  originalDocxBase64?: string | null;
+  editProposals?: EditProposal[];
+  arbitratedEdits?: ArbitratedEdit[];
 }
 
 // --- localStorage key ---

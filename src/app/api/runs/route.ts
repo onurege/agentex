@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser, unauthorized, badRequest } from "@/lib/api-auth";
+import { applyRedline } from "@/lib/redline/docx-renderer";
+import type { ArbitratedEdit, EditProposal } from "@/lib/redline/types";
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUser();
@@ -50,6 +52,12 @@ export async function POST(req: NextRequest) {
 
   const snapshot = body as unknown as import("@/lib/run-history").BoardroomRunSnapshot;
 
+  const originalDocxBuffer = snapshot.originalDocxBase64
+    ? Buffer.from(snapshot.originalDocxBase64, "base64")
+    : null;
+  const editProposals: EditProposal[] = snapshot.editProposals ?? [];
+  const arbitratedEdits: ArbitratedEdit[] = snapshot.arbitratedEdits ?? [];
+
   await prisma.$transaction(async (tx) => {
     const existing = await tx.boardRun.findUnique({ where: { id: snapshot.id } });
     if (existing) return;
@@ -72,6 +80,54 @@ export async function POST(req: NextRequest) {
         completedAt: new Date(snapshot.createdAt),
       },
     });
+
+    // Faz 4: DocumentArtifact + originalDocxBuffer
+    if (originalDocxBuffer) {
+      await tx.documentArtifact.create({
+        data: {
+          runId: run.id,
+          fileName: snapshot.documentName,
+          fileType: snapshot.documentType,
+          fileSize: snapshot.documentSize,
+          sections: [] as unknown as import("@prisma/client").Prisma.InputJsonValue,
+          metadata: {} as unknown as import("@prisma/client").Prisma.InputJsonValue,
+          originalDocxBuffer,
+        },
+      });
+    }
+
+    // Faz 4: persist raw proposals for audit trail
+    if (editProposals.length > 0) {
+      await tx.editProposal.createMany({
+        data: editProposals.map((p) => ({
+          runId: run.id,
+          agentKey: p.agentId,
+          clauseRef: p.clauseRef,
+          editType: p.editType,
+          originalText: p.originalText ?? null,
+          proposedText: p.proposedText,
+          rationale: p.rationale,
+          severity: p.severity,
+        })),
+      });
+    }
+
+    // Faz 4: persist chief's canonical edits
+    if (arbitratedEdits.length > 0) {
+      await tx.arbitratedEdit.createMany({
+        data: arbitratedEdits.map((e) => ({
+          runId: run.id,
+          clauseRef: e.clauseRef,
+          editType: e.editType,
+          originalText: e.originalText ?? null,
+          finalText: e.finalText,
+          sourceProposals: e.sourceProposals,
+          arbitrationNote: e.arbitrationNote,
+          resolution: e.resolution,
+          finalSeverity: e.finalSeverity,
+        })),
+      });
+    }
 
     if (snapshot.verdictSeed) {
       await tx.finalVerdict.create({
@@ -115,6 +171,33 @@ export async function POST(req: NextRequest) {
       },
     });
   });
+
+  // Faz 4: generate redline DOCX outside the transaction (jszip I/O
+  // shouldn't hold row locks). Skip silently if prerequisites missing.
+  if (originalDocxBuffer && arbitratedEdits.length > 0) {
+    try {
+      const { buffer, appliedCount, orphanCount } = await applyRedline(
+        originalDocxBuffer,
+        arbitratedEdits,
+      );
+      await prisma.redlineArtifact.create({
+        data: {
+          runId: snapshot.id,
+          generation: 1,
+          isLatest: true,
+          // Prisma wants Uint8Array<ArrayBuffer>; Buffer's backing
+          // ArrayBufferLike type doesn't cast cleanly, so copy.
+          docxBuffer: new Uint8Array(buffer),
+          editCount: appliedCount,
+          orphanCount,
+        },
+      });
+    } catch (err) {
+      console.error("Redline generation failed:", err);
+      // Non-fatal: run saved, redline skipped. UI gates download
+      // behind RedlineArtifact existence.
+    }
+  }
 
   return NextResponse.json({ id: snapshot.id }, { status: 201 });
 }
