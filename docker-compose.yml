@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: agentex-db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: agentex
+      POSTGRES_USER: agentex
+      POSTGRES_PASSWORD: agentex_dev
+    volumes:
+      - agentex_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentex"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  agentex_pgdata:
