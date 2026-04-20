@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Users, FileText, MessageSquare, CheckCircle2 } from "lucide-react";
 import { SITE, brandString } from "@/lib/config/site";
+import { useFastMode } from "@/lib/motion/fast-mode";
+import { DURATION, EASE } from "@/lib/motion/tokens";
 
 const HOW_IT_WORKS = [
   {
@@ -247,7 +249,7 @@ export function LandingPage() {
 // --- Animated Scene Preview ---
 
 function ScenePreview() {
-  const reduceMotion = useReducedMotion();
+  const { enabled: reduceMotion } = useFastMode();
   const radius = 140;
 
   return (
@@ -255,7 +257,7 @@ function ScenePreview() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: DURATION.sceneEnter, ease: EASE.entrance }}
         className="relative overflow-hidden rounded-2xl border border-[#1a2740] bg-gradient-to-b from-[#0B1220] to-[#111C36] shadow-2xl shadow-blue-900/20"
         style={{ aspectRatio: "16 / 9" }}
       >

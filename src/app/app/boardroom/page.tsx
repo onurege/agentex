@@ -250,7 +250,7 @@ export default function BoardroomPage() {
             </div>
           </div>
 
-          {/* Boardroom Table Area — CSS 3D scene */}
+          {/* Boardroom Table Area — 3D on desktop, stacked list on mobile */}
           <div className="flex-1 flex items-center justify-center relative overflow-hidden">
             <div
               className="absolute inset-0 pointer-events-none"
@@ -260,11 +260,36 @@ export default function BoardroomPage() {
               }}
             />
 
-            {/* Stage — perspective root. z-index layering:
+            {/* Mobile / tablet stacked fallback — no 3D, no connector */}
+            <div className="lg:hidden w-full max-w-md px-4 py-6 flex flex-col gap-3">
+              {boardroomAgents.map((agent) => {
+                const sceneState = agentSceneStates[agent.id];
+                const isActive = activeSpeakerId === agent.id;
+                return (
+                  <div
+                    key={agent.id}
+                    className={`rounded-xl bg-workspace-surface border p-3 ${
+                      isActive
+                        ? "border-accent-primary/50 shadow-glow-blue"
+                        : "border-workspace-border"
+                    }`}
+                  >
+                    <BoardroomAgentSeat
+                      agent={agent}
+                      sceneState={sceneState}
+                      isActiveSpeaker={isActive}
+                      isChief={agent.id === "chief-agent"}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop stage — perspective root. z-index layering:
                 z-0 disagreement connector, z-10 table, z-20 seats. */}
             <div
               ref={stageRef}
-              className="relative w-[720px] h-[440px]"
+              className="hidden lg:block relative w-[720px] h-[440px]"
               style={{
                 perspective: "1400px",
                 perspectiveOrigin: "50% 20%",
@@ -335,7 +360,12 @@ export default function BoardroomPage() {
 
           {/* Footer Status Bar */}
           <div className="px-6 py-4 border-t border-workspace-border/30 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
+            <div
+              className="flex items-center gap-3"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               {!isComplete && (
                 <>
                   <span className="w-2.5 h-2.5 rounded-full bg-accent-primary animate-pulse" />
