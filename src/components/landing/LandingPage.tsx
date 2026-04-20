@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Users, FileText, MessageSquare, CheckCircle2 } from "lucide-react";
@@ -63,9 +63,17 @@ const SEAT_POSITIONS = [
 ];
 
 export function LandingPage() {
-  const handleSignIn = useCallback(() => {
-    signIn("google", { callbackUrl: SITE.paths.app });
+  const [callbackUrl, setCallbackUrl] = useState<string>(SITE.paths.app);
+
+  // Middleware parks the original URL in ?callbackUrl=… — honor it on sign-in.
+  useEffect(() => {
+    const cb = new URLSearchParams(window.location.search).get("callbackUrl");
+    if (cb) setCallbackUrl(cb);
   }, []);
+
+  const handleSignIn = useCallback(() => {
+    signIn("google", { callbackUrl });
+  }, [callbackUrl]);
 
   return (
     <div className="min-h-screen bg-[#fafbfc] text-[#1a1a2e]">
