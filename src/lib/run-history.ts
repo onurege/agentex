@@ -112,9 +112,23 @@ function writeRuns(runs: BoardroomRunSnapshot[]): void {
 }
 
 export function saveBoardroomRun(run: BoardroomRunSnapshot): void {
+  // localStorage copy drops Faz 4 payload — base64 DOCX + proposal/
+  // arbitration arrays can push the snapshot above sessionStorage /
+  // localStorage quotas. The full payload still travels to the server
+  // via the adapter dispatch below.
+  const {
+    originalDocxBase64: _docxBase64,
+    editProposals: _proposals,
+    arbitratedEdits: _edits,
+    ...localCopy
+  } = run;
+  void _docxBase64;
+  void _proposals;
+  void _edits;
+
   const runs = readRuns();
-  const filtered = runs.filter((r) => r.id !== run.id);
-  writeRuns([run, ...filtered]);
+  const filtered = runs.filter((r) => r.id !== localCopy.id);
+  writeRuns([localCopy, ...filtered]);
 
   // Audit log (local mode only — db mode writes audit server-side via API)
   try {
@@ -129,7 +143,9 @@ export function saveBoardroomRun(run: BoardroomRunSnapshot): void {
     // Audit log not available (SSR)
   }
 
-  // DB mode: POST /api/runs in background. Local mode: no-op.
+  // DB mode: POST /api/runs in background with the full payload so
+  // server can persist DocumentArtifact + proposals + redline. Local
+  // mode: no-op.
   dispatchToAdapter((adapter) => adapter.runs.createRun("", run));
 }
 
@@ -191,6 +207,10 @@ export function buildRunSnapshot(params: {
   contextNotes: string;
   debateTimeline: DebateEvent[];
   verdictSeed: VerdictSeed;
+  // Faz 4 — only passed in db mode; omitted keeps legacy snapshot shape.
+  originalDocxBase64?: string | null;
+  editProposals?: EditProposal[];
+  arbitratedEdits?: ArbitratedEdit[];
 }): BoardroomRunSnapshot {
   return {
     id: `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -203,5 +223,8 @@ export function buildRunSnapshot(params: {
     contextNotes: params.contextNotes,
     debateTimeline: params.debateTimeline,
     verdictSeed: params.verdictSeed,
+    originalDocxBase64: params.originalDocxBase64,
+    editProposals: params.editProposals,
+    arbitratedEdits: params.arbitratedEdits,
   };
 }

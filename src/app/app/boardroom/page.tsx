@@ -116,6 +116,13 @@ export default function BoardroomPage() {
               buildFrozenAgentSnapshot(chiefAgent, true),
               ...selectedAgents.map((a) => buildFrozenAgentSnapshot(a, false)),
             ];
+            // Faz 4: pull redline payload from the AI result. Only
+            // present when the AI path ran successfully AND the
+            // uploaded document was a DOCX (PDF/TXT carry no base64).
+            const aiResult = aiResultRef.current;
+            const flatProposals = aiResult?.pipeline?.agentResults
+              ?.flatMap((ar) => ar.editProposals ?? []) ?? [];
+
             const snapshot = buildRunSnapshot({
               selectedAgentIds: state.selectedAgentIds,
               agentSnapshots,
@@ -125,6 +132,9 @@ export default function BoardroomPage() {
               contextNotes: state.contextNotes,
               debateTimeline: useBoardroomFlowStore.getState().debateTimeline,
               verdictSeed: verdict,
+              originalDocxBase64: parsedDocument?.originalDocxBase64 ?? null,
+              editProposals: flatProposals,
+              arbitratedEdits: aiResult?.arbitratedEdits ?? [],
             });
             snapshot.analysisMode = mode;
             snapshot.modelInfo = model;
