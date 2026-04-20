@@ -40,6 +40,7 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "database" },
   pages: {
     signIn: "/",
+    error: "/auth/error",
   },
   callbacks: {
     async signIn({ user }) {
