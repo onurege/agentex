@@ -179,16 +179,25 @@ export default function BoardroomPage() {
     setBoardroomStatus, playSteps,
   ]);
 
-  // Auto-start
+  // Auto-start — fires once when the page is idle and the inputs are ready.
+  // hasStartedRef inside startOrchestration guards against duplicate kicks.
   useEffect(() => {
     if (selectedAgentIds.length > 0 && parsedDocument && boardroomStatus === "idle") {
       startOrchestration();
     }
+  }, [selectedAgentIds.length, parsedDocument, boardroomStatus, startOrchestration]);
+
+  // Timer cleanup runs ONLY on unmount. Keeping it tied to the deps above
+  // tore pending playSteps timers down whenever the callback identity
+  // churned mid-run (Zustand selectors return fresh arrays on every
+  // render → playSteps recreated → startOrchestration recreated →
+  // auto-start effect re-ran → previous cleanup wiped the scene).
+  useEffect(() => {
     const timers = timersRef.current;
     return () => {
       timers.forEach(clearTimeout);
     };
-  }, [selectedAgentIds.length, parsedDocument, boardroomStatus, startOrchestration]);
+  }, []);
 
   // Derive the current disagreement pair: one agent objecting, another
   // defending at the same moment. Hooks must run before the guard
