@@ -1,22 +1,25 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { authOptions } from "@/lib/auth-options";
+import type { UserRole } from "@/lib/config/roles";
 
 export interface SessionUser {
   id: string;
   email: string;
+  role: UserRole;
   name?: string | null;
   image?: string | null;
 }
 
 export async function getAuthUser(): Promise<SessionUser | null> {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
-  const user = session.user as { id?: string; email?: string; name?: string; image?: string };
   return {
-    id: user.id ?? user.email ?? "",
-    email: user.email ?? "",
-    name: user.name,
-    image: user.image,
+    id: session.user.id,
+    email: session.user.email,
+    role: session.user.role,
+    name: session.user.name,
+    image: session.user.image,
   };
 }
 

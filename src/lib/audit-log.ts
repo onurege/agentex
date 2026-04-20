@@ -20,9 +20,10 @@ export type AuditAction =
   | "prompt_rollback"
   | "run_created"
   | "run_deleted"
-  | "template_applied";
+  | "template_applied"
+  | "role_changed";
 
-export type AuditTargetType = "agent" | "run" | "template";
+export type AuditTargetType = "agent" | "run" | "template" | "user";
 
 export interface AuditEvent {
   id: string;
@@ -112,10 +113,12 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   run_created: "Çalıştırma Oluşturuldu",
   run_deleted: "Çalıştırma Silindi",
   template_applied: "Şablon Uygulandı",
+  role_changed: "Rol Değiştirildi",
 };
 
 export const TARGET_TYPE_LABELS: Record<AuditTargetType, string> = {
   agent: "Ajan",
   run: "Çalıştırma",
   template: "Şablon",
+  user: "Kullanıcı",
 };
