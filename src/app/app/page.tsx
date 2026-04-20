@@ -33,7 +33,7 @@ export default function AgentGalleryPage() {
 
         {/* Header */}
         <div className="text-center mb-10 max-w-2xl">
-          <h1 className="text-4xl font-bold text-text-primary mb-3">
+          <h1 className="font-display text-4xl font-bold text-text-primary mb-3">
             Uzman Ajanlar
           </h1>
           <p className="text-xl text-text-secondary leading-relaxed">

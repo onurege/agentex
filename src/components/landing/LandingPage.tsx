@@ -112,7 +112,7 @@ export function LandingPage() {
             <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6] animate-pulse" />
             {SITE.marketing.badge}
           </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-6">
+          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-6">
             {SITE.marketing.headline.split("Uzman AI Kuruluna").map((part, i, arr) =>
               i < arr.length - 1 ? (
                 <span key={i}>
@@ -338,7 +338,7 @@ function ScenePreview() {
 
         {/* Caption */}
         <div className="absolute bottom-4 left-0 right-0 text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#1f2d4d] bg-[#0B1220]/80 px-3 py-1 text-xs font-medium text-[#93c5fd] backdrop-blur">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#1f2d4d] bg-[#0B1220]/80 px-3 py-1 font-mono text-xs font-medium text-[#93c5fd] backdrop-blur">
             <span className="h-1.5 w-1.5 rounded-full bg-[#3B82F6] animate-pulse" />
             Kurul oturumu — 6 uzman ajan
           </span>

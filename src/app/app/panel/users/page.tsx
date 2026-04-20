@@ -117,7 +117,7 @@ export default function UsersPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-text-primary mb-2">Users</h1>
+        <h1 className="font-display text-3xl font-bold text-text-primary mb-2">Users</h1>
         <p className="text-lg text-text-secondary">
           Kullanıcı yönetimi ve panel erişim kontrolü.
         </p>
