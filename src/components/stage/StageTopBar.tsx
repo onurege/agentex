@@ -4,18 +4,12 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { SITE } from "@/lib/config/site";
 import { getPermissions } from "@/lib/config/roles";
+import { UserMenu } from "@/components/app/UserMenu";
 
 export function StageTopBar() {
   const { data: session } = useSession();
   const role = session?.user?.role ?? "user";
   const permissions = getPermissions(role);
-
-  const initials = session?.user?.name
-    ?.split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 
   return (
     <header className="flex items-center justify-between px-6 h-[72px] border-b border-workspace-border/50 bg-workspace-bg/80 backdrop-blur-sm shrink-0">
@@ -60,15 +54,8 @@ export function StageTopBar() {
           </Link>
         )}
 
-        {/* User Avatar */}
-        <div
-          className="flex items-center justify-center w-10 h-10 rounded-full
-                     bg-accent-primary/20 text-accent-primary text-sm font-semibold
-                     border border-accent-primary/30"
-          title={session?.user?.name ?? "Kullanıcı"}
-        >
-          {initials || "?"}
-        </div>
+        {/* User menu — avatar + email + role + sign out */}
+        <UserMenu />
       </div>
     </header>
   );
