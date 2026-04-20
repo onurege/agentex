@@ -33,6 +33,7 @@ export function BoardroomAgentSeat({
   const isActive = isActiveSpeaker;
   const isObjecting = status === "objecting";
   const isDefending = status === "defending";
+  const isSynthesizing = status === "synthesizing";
 
   return (
     <div
@@ -52,9 +53,11 @@ export function BoardroomAgentSeat({
               ? "border-accent-warning bg-accent-warning/10"
               : isDefending
                 ? "border-accent-info bg-accent-info/10"
-                : status === "done"
-                  ? "border-accent-success/50 bg-accent-success/10"
-                  : "border-workspace-border bg-workspace-elevated"
+                : isSynthesizing
+                  ? "border-accent-success bg-accent-success/10 animate-pulse-slow"
+                  : status === "done"
+                    ? "border-accent-success/50 bg-accent-success/10"
+                    : "border-workspace-border bg-workspace-elevated"
           }
           ${isActive ? "ring-2 ring-accent-primary/30 ring-offset-2 ring-offset-workspace-bg" : ""}
         `}
@@ -82,9 +85,11 @@ export function BoardroomAgentSeat({
               ? "bg-accent-warning/15 text-accent-warning"
               : isDefending
                 ? "bg-accent-info/15 text-accent-info"
-                : status === "done"
-                  ? "bg-accent-success/10 text-accent-success"
-                  : "text-text-muted"
+                : isSynthesizing
+                  ? "bg-accent-success/15 text-accent-success"
+                  : status === "done"
+                    ? "bg-accent-success/10 text-accent-success"
+                    : "text-text-muted"
           }
         `}
       >

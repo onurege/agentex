@@ -268,6 +268,10 @@ export default function BoardroomPage() {
               {/* Seats — positioned on an ellipse around the table */}
               {boardroomAgents.map((agent, i) => {
                 const { x, y } = computeSeatPosition(i, boardroomAgents.length);
+                const sceneState = agentSceneStates[agent.id];
+                const isActive = activeSpeakerId === agent.id;
+                const status = sceneState?.status ?? "waiting";
+                const isIdle = status === "waiting" || status === "seated";
                 return (
                   <div
                     key={agent.id}
@@ -276,13 +280,16 @@ export default function BoardroomPage() {
                     style={{
                       left: `calc(50% + ${x}px)`,
                       top: `calc(50% + ${y}px)`,
-                      transform: "translate(-50%, -50%)",
+                      transform: `translate(-50%, -50%) translateZ(${isActive ? 20 : 0}px)`,
+                      filter: isIdle ? "saturate(0.85)" : "saturate(1)",
+                      transition:
+                        "transform 220ms cubic-bezier(0.16, 1, 0.3, 1), filter 600ms linear",
                     }}
                   >
                     <BoardroomAgentSeat
                       agent={agent}
-                      sceneState={agentSceneStates[agent.id]}
-                      isActiveSpeaker={activeSpeakerId === agent.id}
+                      sceneState={sceneState}
+                      isActiveSpeaker={isActive}
                       isChief={agent.id === "chief-agent"}
                     />
                   </div>
