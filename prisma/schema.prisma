@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── User ─────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  role      String   @default("user") // user | authorized_user | super_admin
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agentProfiles AgentProfile[]
+  boardRuns     BoardRun[]
+  templates     BoardTemplate[]
+  auditLogs     AuditLog[]      @relation("AuditActor")
+
+  @@index([email])
+}
+
+// ─── Agent Profile ────────────────────────────────────
+
+model AgentProfile {
+  id      String  @id @default(cuid())
+  agentKey String // "legal-counsel", "finance-director", etc.
+  ownerId String? // null = global
+  owner   User?   @relation(fields: [ownerId], references: [id])
+
+  // Draft state — JSONB (not queried, UI form state)
+  cvDraft     Json?
+  promptDraft Json?
+  cvLastSaved     DateTime?
+  promptLastSaved DateTime?
+
+  // Published → AgentVersion is source of truth
+  currentVersionId String?
+  currentVersion   AgentVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+
+  versions AgentVersion[] @relation("ProfileVersions")
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([agentKey, ownerId])
+  @@index([agentKey])
+  @@index([ownerId])
+}
+
+// ─── Agent Version (Immutable snapshot on publish) ────
+
+model AgentVersion {
+  id        String       @id @default(cuid())
+  profileId String
+  profile   AgentProfile @relation("ProfileVersions", fields: [profileId], references: [id])
+  version   Int          // auto-increment per profile
+
+  // Frozen CV at publish time
+  cvSnapshot Json? // AgentCVData shape — immutable
+
+  // Frozen Prompt at publish time
+  systemPrompt String? @db.Text
+  rolePrompt   String? @db.Text
+  outputRules  String? @db.Text
+  guardrails   String? @db.Text
+
+  publishedAt DateTime @default(now())
+
+  // Reverse nav — in practice 0 or 1
+  currentOf    AgentProfile[]     @relation("CurrentVersion")
+  runSnapshots RunAgentSnapshot[]
+
+  @@unique([profileId, version])
+  @@index([profileId])
+}
+
+// ─── Board Template ───────────────────────────────────
+
+model BoardTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  emoji       String?
+  agentKeys   String[] // ["legal-counsel", "finance-director"]
+  ownerId     String?  // null = system preset
+  owner       User?    @relation(fields: [ownerId], references: [id])
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([ownerId])
+}
+
+// ─── Board Run ────────────────────────────────────────
+
+model BoardRun {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Document info (frozen at run time)
+  documentName String
+  documentType String
+  documentSize Int
+  contextNotes String? @db.Text
+
+  // Run metadata
+  analysisMode     String // "ai" | "ai-partial" | "fallback"
+  modelInfo        String?
+  pipelineMetadata Json? // stage timing, errors — diagnostic
+
+  status      String   @default("running") // running | complete | failed
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  deletedAt   DateTime?
+
+  // Relations
+  agentSnapshots RunAgentSnapshot[]
+  opinions       AgentOpinion[]
+  debateMoments  DebateMoment[]
+  verdict        FinalVerdict?
+  document       DocumentArtifact?
+
+  @@index([userId])
+  @@index([userId, deletedAt])
+  @@index([startedAt])
+}
+
+// ─── Run <-> Agent Version (join table) ───────────────
+
+model RunAgentSnapshot {
+  id             String       @id @default(cuid())
+  runId          String
+  run            BoardRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  agentVersionId String
+  agentVersion   AgentVersion @relation(fields: [agentVersionId], references: [id])
+  agentKey       String // denormalized for quick access
+  isChief        Boolean @default(false)
+
+  @@unique([runId, agentKey])
+  @@index([runId])
+}
+
+// ─── Document Artifact ────────────────────────────────
+
+model DocumentArtifact {
+  id       String   @id @default(cuid())
+  runId    String   @unique
+  run      BoardRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  fileName String
+  fileType String
+  fileSize Int
+  fullText String?  @db.Text
+  sections Json // DocumentSection[] — parsed structure
+  metadata Json // extraction quality, parser info
+  createdAt DateTime @default(now())
+}
+
+// ─── Agent Opinion ────────────────────────────────────
+
+model AgentOpinion {
+  id        String   @id @default(cuid())
+  runId     String
+  run       BoardRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  agentKey  String
+  agentName String
+  type      String // "observation" | "analysis" | "objection"
+  topic     String
+  message   String @db.Text
+  data      Json?  // structured opinion payload
+  timestamp Int    // relative ms from run start
+  createdAt DateTime @default(now())
+
+  @@index([runId])
+  @@index([runId, agentKey])
+}
+
+// ─── Debate Moment ────────────────────────────────────
+
+model DebateMoment {
+  id        String   @id @default(cuid())
+  runId     String
+  run       BoardRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  agentKey  String
+  agentName String
+  type      String // DebateEventType enum values
+  topic     String
+  message   String @db.Text
+  metadata  Json?  // optional enrichment
+  timestamp Int    // relative ms
+  createdAt DateTime @default(now())
+
+  @@index([runId])
+  @@index([runId, type])
+}
+
+// ─── Final Verdict ────────────────────────────────────
+
+model FinalVerdict {
+  id              String   @id @default(cuid())
+  runId           String   @unique
+  run             BoardRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  summary         String   @db.Text
+  riskLevel       String // "high" | "medium" | "low"
+  confidenceLevel String? // "high" | "medium" | "low"
+  decisions       Json // string[]
+  actionItems     Json // string[]
+  agentPerspectives Json // Array<{ agentId, agentName, avatar, position }>
+  disagreements     Json // Array<{ topic, agentA, agentB, resolution }>
+  // NOTE: Faz 4'te multi-round debate gelince
+  // resolvedDisagreements -> VerdictDisagreement tablosuna,
+  // positionChanges -> VerdictPositionChange tablosuna normalize edilecek.
+  resolvedDisagreements   Json?
+  unresolvedDisagreements Json?
+  positionChanges         Json?
+  createdAt DateTime @default(now())
+
+  @@index([runId])
+}
+
+// ─── Audit Log ────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String // cv_draft_saved, run_created, etc.
+  targetType String // "agent" | "run" | "template"
+  targetId   String?
+  summary    String
+  actorId    String?
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id])
+  timestamp  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@index([action])
+  @@index([timestamp])
+}
