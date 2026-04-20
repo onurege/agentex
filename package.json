@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.48.0",
+    "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
     "clsx": "^2.1.0",
     "framer-motion": "^11.0.0",
@@ -22,6 +23,7 @@
     "next": "^14.2.0",
     "next-auth": "^4.24.13",
     "pdfjs-dist": "^5.6.205",
+    "pg": "^8.20.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "zod": "^4.3.6",
