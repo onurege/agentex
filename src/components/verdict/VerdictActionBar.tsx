@@ -61,16 +61,17 @@ export function VerdictActionBar({ verdict, documentName }: VerdictActionBarProp
   const router = useRouter();
   const resetFlow = useBoardroomFlowStore((s) => s.resetFlow);
   const [copied, setCopied] = useState(false);
-  const [redlineRunId, setRedlineRunId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [latestRunId, setLatestRunId] = useState<string | null>(null);
 
-  // Redline download is only available in db mode (server persists the
-  // RedlineArtifact). Pick up the most recent run from localStorage — it
-  // was just saved by the boardroom page a moment ago and carries the
-  // runId we need for the download URL.
+  // Server-backed downloads (redline DOCX, negotiation-record PDF) are
+  // only available in db mode — the API routes read the persisted run.
+  // Pick up the most recent run id from localStorage; the boardroom
+  // page saved it a moment ago.
   useEffect(() => {
     if (getPersistenceMode() !== "db") return;
     const latest = getBoardroomRuns()[0];
-    if (latest) setRedlineRunId(latest.id);
+    if (latest) setLatestRunId(latest.id);
   }, []);
 
   const handleCopy = useCallback(async () => {
@@ -94,16 +95,30 @@ export function VerdictActionBar({ verdict, documentName }: VerdictActionBarProp
     }
   }, [verdict, documentName]);
 
-  const handleExport = useCallback(() => {
-    const text = formatVerdictAsText(verdict, documentName);
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `kurul-karari-${documentName.replace(/\.[^.]+$/, "")}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [verdict, documentName]);
+  const handleExport = useCallback(async () => {
+    if (!latestRunId || exporting) return;
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/runs/${latestRunId}/record-pdf`);
+      if (!res.ok) {
+        throw new Error(`PDF export failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `muzakere-kaydi-${documentName.replace(/\.[^.]+$/, "")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert(
+        "PDF dışa aktarımı başarısız oldu. Sonucu Kopyala düğmesini kullanabilirsiniz.",
+      );
+    } finally {
+      setExporting(false);
+    }
+  }, [documentName, exporting, latestRunId]);
 
   const handleNewRun = useCallback(() => {
     resetFlow();
@@ -113,9 +128,9 @@ export function VerdictActionBar({ verdict, documentName }: VerdictActionBarProp
   return (
     <div className="flex items-center justify-center gap-4 pt-8 border-t border-workspace-border/30 flex-wrap">
       {/* Redline DOCX — primary Faz 4 action, only in db mode */}
-      {redlineRunId && (
+      {latestRunId && (
         <a
-          href={`/api/runs/${redlineRunId}/redline`}
+          href={`/api/runs/${latestRunId}/redline`}
           className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-base font-semibold
                      bg-accent-primary text-white border border-accent-primary
                      hover:bg-accent-secondary transition-colors min-h-[52px] shadow-glow-blue"
@@ -164,21 +179,54 @@ export function VerdictActionBar({ verdict, documentName }: VerdictActionBarProp
         )}
       </button>
 
-      {/* Export */}
-      <button
-        onClick={handleExport}
-        className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-base font-semibold
-                   bg-workspace-surface text-text-secondary border border-workspace-border
-                   hover:bg-workspace-elevated hover:text-text-primary
-                   transition-colors min-h-[52px]"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="7 10 12 15 17 10" />
-          <line x1="12" y1="15" x2="12" y2="3" />
-        </svg>
-        <span>Dışa Aktar</span>
-      </button>
+      {/* Negotiation record PDF — only in db mode (needs persisted run) */}
+      {latestRunId && (
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-base font-semibold
+                     bg-workspace-surface text-text-secondary border border-workspace-border
+                     hover:bg-workspace-elevated hover:text-text-primary
+                     disabled:opacity-60 disabled:cursor-not-allowed
+                     transition-colors min-h-[52px]"
+        >
+          {exporting ? (
+            <>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="animate-spin"
+              >
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              <span>Hazırlanıyor…</span>
+            </>
+          ) : (
+            <>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              <span>Müzakere Kaydı (PDF)</span>
+            </>
+          )}
+        </button>
+      )}
 
       {/* New Run */}
       <button
