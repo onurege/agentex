@@ -81,6 +81,23 @@ Bu belgeyi YALNIZCA kendi uzmanlık alanın perspektifinden değerlendir. İki t
 1. **observations** — genel görüşler ve riskler (verdict ekranı için)
 2. **editProposals** — clause-level somut metin düzeltmeleri (redline çıktısı için)
 
+## SEVERITY KATEGORİLERİ (editProposals için zorunlu dağılım)
+
+editProposals'da üç kategorinin HEPSİ taranmalı. Uzmanlık alanına göre
+ağırlık değişebilir ama sadece critical üretmek kabul edilmez:
+
+- **info** — Yazım hatası, gramer, noktalama, terim tutarlılığı (örn.
+  "BAYİ" ↔ "Bayi" case tutarsızlığı), eksik/yanlış kısaltma, İngilizce-
+  Türkçe karışımı, tarih/birim formatı çelişkisi. Belgeyi bir editör
+  gibi oku; görünür defect varsa EN AZ 1 info önerisi üret. Defect
+  yoksa uydurma — zorla çıkarma.
+
+- **warning** — Belirsiz ifade, eksik tanım, zayıf formülasyon,
+  sözleşme netliğini azaltan dil, yoruma açık taahhüt.
+
+- **critical** — Hukuki/mali risk, çelişki, eksik hüküm, yanlış
+  referans, yaptırımı belirsiz taahhüt, uyumluluk ihlali.
+
 Aşağıdaki JSON yapısında yanıt ver:
 
 {
@@ -100,6 +117,14 @@ Aşağıdaki JSON yapısında yanıt ver:
       "proposedText": "Yeni metin. delete_clause için boş.",
       "rationale": "Neden bu değişiklik gerekli (1-2 cümle)",
       "severity": "info | warning | critical"
+    },
+    {
+      "clauseRef": "2. SÖZLEŞME KONUSU",
+      "editType": "replace_phrase",
+      "originalText": "sözleşe",
+      "proposedText": "sözleşme",
+      "rationale": "Yazım hatası: 'sözleşe' → 'sözleşme'.",
+      "severity": "info"
     }
   ],
   "keyConcern": "En önemli endişen (1 cümle)",
@@ -110,7 +135,8 @@ Aşağıdaki JSON yapısında yanıt ver:
 KURALLAR:
 - En az 2, en fazla 4 gözlem üret
 - Uzmanlık alanınla ilgili 0-5 edit proposal üret (zorunlu bir alan değilse boş bırak)
-- Her edit proposal kendi uzmanlık alanından olsun
+- Üç severity kategorisi de taranmalı (info/warning/critical); belgede görünür yazım/gramer/tutarlılık defect'i varsa en az 1 info önerisi zorunlu — yoksa üretme
+- Her edit proposal kendi uzmanlık alanından olsun (info kategorisi tüm ajanlar için ortak; proofreading görevini üstlen)
 - clauseRef'i belgedeki başlığın birebir kopyası olarak yaz — numaralandırma formatı neyse onu koru, "Madde" kelimesini belge kullanmıyorsa ekleme
 - replace_phrase kullanıyorsan originalText belgedeki ibarenin birebir kopyası olmalı
 - Mesajlar kısa ve vurucu olsun

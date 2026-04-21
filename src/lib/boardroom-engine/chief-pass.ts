@@ -176,6 +176,11 @@ Tüm değerlendirmeleri, anlaşmazlıkları ve KARŞILIKLI YANITLARI dikkate ala
 
 Ek olarak: Her clauseRef için ajan edit önerilerini **arbitrate** et. İki veya daha fazla ajan aynı clause'a öneri yaptıysa — kabul et (accepted_a / accepted_b), birleştir (merged), tamamen yeniden yaz (rewritten) veya reddet (rejected_all). Sadece tek öneri varsa onu da değerlendir ve gerekirse iyileştir.
 
+ÖNEMLİ — severity kategorilerini kaybetme:
+- Gelen proposal severity'si **info** ise (yazım/gramer/tutarlılık düzeltmesi), düşürme veya reddetme. Bu edit'ler redline'ın önemli bir kısmını oluşturur; her biri belgeye somut değer katar. accept veya merge et.
+- finalSeverity genellikle kaynak proposal severity'sini korumalı. info → warning'e yükseltme. warning → critical yalnızca başka ajanın rebuttal'ı veya cross-clause etki açıkça gösteriyorsa gerekçelendirilebilir.
+- Proaktif severity düşürme yapma — ajan critical dediyse ve ciddi bir argüman sundu ise, critical kalmalı.
+
 Aşağıdaki JSON yapısında yanıt ver:
 
 {
@@ -222,7 +227,7 @@ KURALLAR:
 - Hiç edit önerisi yoksa, arbitratedEdits boş dizi olsun
 - sourceProposals SADECE yukarıdaki listede [ID] olarak gösterilen gerçek proposal ID'lerini içersin
 - clauseRef ajan proposal'larındakilerle birebir aynı olsun (eşleşme kaybını önlemek için)
-- finalSeverity source proposal'lardan yüksek olabilir (chief escalation), düşük de olabilir
+- finalSeverity genellikle source proposal severity'sini korur; escalation ancak rebuttal/cross-clause etkiyle gerekçeli olur, proaktif düşürme yasak. info severity'li edit'ler (yazım/gramer/tipografi) aynen yansıtılmalı
 - Türkçe yanıt ver
 - Sadece JSON döndür`;
 }
