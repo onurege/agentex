@@ -108,6 +108,7 @@ function p(
     spacingBefore?: number;
     spacingAfter?: number;
     alignment?: (typeof AlignmentType)[keyof typeof AlignmentType];
+    keepNext?: boolean;
   } = {},
 ): Paragraph {
   const runs =
@@ -115,6 +116,7 @@ function p(
   return new Paragraph({
     children: runs,
     alignment: opts.alignment,
+    keepNext: opts.keepNext,
     spacing: {
       before: opts.spacingBefore ?? 0,
       after: opts.spacingAfter ?? 0,
@@ -160,15 +162,20 @@ function noBorders() {
 
 // ── Section header ───────────────────────────────────────
 //
-// Colored bar character + uppercase section name. A plain
-// paragraph — using HeadingLevel.HEADING_2 combined with
-// `keepNext: true` pulled the first section onto page 2 because
-// Word tried to keep the heading glued to the following table and
-// couldn't fit the pair on page 1. Outline navigation is
-// secondary here; readability is primary.
+// Colored bar character + uppercase section name. `keepNext: true`
+// binds the header to the paragraph/table that follows so the
+// heading never sits alone at the bottom of a page — if the first
+// block doesn't fit after the heading, Word pushes both to the
+// next page together.
+//
+// (Using HeadingLevel.HEADING_2 here instead of a plain paragraph
+// pulled an extra keepLines chain into the mix that left the cover
+// blank in an earlier iteration. Plain paragraph + explicit
+// keepNext gives the behavior we want without that side-effect.)
 function sectionHeader(title: string): Paragraph {
   return new Paragraph({
-    spacing: { before: 320, after: 160 },
+    keepNext: true,
+    spacing: { before: 440, after: 220 },
     children: [
       new TextRun({
         text: "▌ ",
@@ -374,7 +381,7 @@ function decisionsBlock(decisions: string[]): (Paragraph | Table)[] {
   decisions.forEach((d, i) => {
     out.push(
       new Paragraph({
-        spacing: { before: 60, after: 60 },
+        spacing: { before: 100, after: 100 },
         indent: { left: 360, hanging: 360 },
         children: [
           new TextRun({
@@ -444,7 +451,7 @@ function agentPerspectivesBlock(
         ],
       }),
     );
-    out.push(p([], { spacingAfter: 120 }));
+    out.push(p([], { spacingAfter: 240 }));
   });
   return out;
 }
@@ -485,7 +492,7 @@ function disagreementsBlock(
         p([text(detail, { color: C.ink })]),
       ]),
     );
-    out.push(p([], { spacingAfter: 120 }));
+    out.push(p([], { spacingAfter: 240 }));
   };
 
   resolved.forEach((d) =>
@@ -570,7 +577,7 @@ function positionChangesBlock(
         ],
       }),
     );
-    out.push(p([], { spacingAfter: 120 }));
+    out.push(p([], { spacingAfter: 240 }));
   });
   return out;
 }
@@ -581,7 +588,7 @@ function actionItemsBlock(items: string[]): (Paragraph | Table)[] {
   items.forEach((a) => {
     out.push(
       new Paragraph({
-        spacing: { before: 60, after: 60 },
+        spacing: { before: 100, after: 100 },
         indent: { left: 360, hanging: 360 },
         children: [
           new TextRun({
