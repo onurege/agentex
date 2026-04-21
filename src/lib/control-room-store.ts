@@ -227,7 +227,12 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           },
         });
         saveAuditEvent({ action: "cv_draft_saved", targetType: "agent", targetId: agentId, summary: `${data.name} CV taslağı kaydedildi` });
-        dispatchToAdapter((adapter) => adapter.agents.saveCVDraft(agentId, data));
+        // Custom agents are localStorage-only in v1 — the DB has no
+        // AgentProfile row for them, so hitting the adapter would
+        // 404/500. Skip dispatch for custom; sync write above stands.
+        if (!get().customAgents[agentId]) {
+          dispatchToAdapter((adapter) => adapter.agents.saveCVDraft(agentId, data));
+        }
       },
 
       publishCV: (agentId) => {
@@ -243,7 +248,9 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           },
         });
         saveAuditEvent({ action: "cv_published", targetType: "agent", targetId: agentId, summary: `${profile.cvDraft.name} CV yayınlandı` });
-        dispatchToAdapter((adapter) => adapter.agents.publishCV(agentId));
+        if (!get().customAgents[agentId]) {
+          dispatchToAdapter((adapter) => adapter.agents.publishCV(agentId));
+        }
       },
 
       // ── Prompt ──────────────────────────────────────────
@@ -269,7 +276,9 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           },
         });
         saveAuditEvent({ action: "prompt_draft_saved", targetType: "agent", targetId: agentId, summary: `${agentId} prompt taslağı kaydedildi` });
-        dispatchToAdapter((adapter) => adapter.agents.savePromptDraft(agentId, data));
+        if (!get().customAgents[agentId]) {
+          dispatchToAdapter((adapter) => adapter.agents.savePromptDraft(agentId, data));
+        }
       },
 
       publishPrompt: (agentId) => {
@@ -287,7 +296,9 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           },
         });
         saveAuditEvent({ action: "prompt_published", targetType: "agent", targetId: agentId, summary: `${agentId} prompt v${newVersion} yayınlandı` });
-        dispatchToAdapter((adapter) => adapter.agents.publishPrompt(agentId));
+        if (!get().customAgents[agentId]) {
+          dispatchToAdapter((adapter) => adapter.agents.publishPrompt(agentId));
+        }
       },
 
       rollbackPrompt: (agentId) => {
@@ -304,7 +315,9 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           },
         });
         saveAuditEvent({ action: "prompt_rollback", targetType: "agent", targetId: agentId, summary: `${agentId} prompt v${profile.promptVersion}'e geri alındı` });
-        dispatchToAdapter((adapter) => adapter.agents.rollbackPrompt(agentId));
+        if (!get().customAgents[agentId]) {
+          dispatchToAdapter((adapter) => adapter.agents.rollbackPrompt(agentId));
+        }
       },
 
       // ── Effective agent data ────────────────────────────
