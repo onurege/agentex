@@ -51,17 +51,30 @@ const PPR_REGEX = /<w:pPr(?:\s[^>]*)?>[\s\S]*?<\/w:pPr>|<w:pPr(?:\s[^>]*)?\/>/;
 
 const DEFAULT_AUTHOR = "AI Boardroom";
 
-// Explicit revision colors. Word's default behavior is to color tracked
-// changes by author; with a single synthetic author ("AI Boardroom")
-// every edit would share one color. Forcing red on deletions and green
-// on insertions via <w:color w:val="..."/> inside each run's <w:rPr>
-// gives readers the familiar before/after contrast regardless of the
-// reviewer's local Word settings. Hex values are the standard Office
-// "Dark Red" and "Green" from the theme palette.
+// Explicit revision styling. Two layers are applied per change:
+//
+//   1. <w:color w:val="HEX"/> — red for deletions, green for
+//      insertions. This is the "nice" layer that matches the standard
+//      Office "Dark Red" and "Green" theme palette.
+//
+//   2. <w:highlight w:val="green"/> on INSERTIONS only. Word's track-
+//      changes renderer overrides inline <w:color> on <w:ins> runs
+//      whenever the reviewer has Insertions color set to "By author"
+//      (the default). In that mode the author gets an auto-assigned
+//      tint and our green is ignored. <w:highlight> is NOT subject to
+//      that override, so adding it guarantees visible contrast even
+//      when the "By author" default is in effect. The enum is the
+//      CT_Highlight set (yellow, green, cyan, …); green pairs with the
+//      green color for a consistent before/after reading.
+//
+// Deletions keep only <w:color>. Strikethrough + color render reliably
+// on <w:del> without the highlight, and highlighted strikethrough is
+// harder to skim.
 const DEL_COLOR_HEX = "C00000";
 const INS_COLOR_HEX = "00B050";
+const INS_HIGHLIGHT = "green";
 const DEL_RPR = `<w:rPr><w:color w:val="${DEL_COLOR_HEX}"/></w:rPr>`;
-const INS_RPR = `<w:rPr><w:color w:val="${INS_COLOR_HEX}"/></w:rPr>`;
+const INS_RPR = `<w:rPr><w:color w:val="${INS_COLOR_HEX}"/><w:highlight w:val="${INS_HIGHLIGHT}"/></w:rPr>`;
 
 export async function applyRedline(
   originalDocx: Buffer,
@@ -283,37 +296,167 @@ function buildDeletedParagraph(
 
 // ── Run colorization ────────────────────────────────────
 //
-// Injects <w:color w:val="HEX"/> into every <w:r> inside `xml`. Three
-// input shapes to handle per OOXML:
-//   (a) Self-closing rPr: <w:rPr/>   → expand with our color child.
-//   (b) Existing rPr block: strip any prior <w:color/> then prepend
-//       ours so the run's other properties (bold, italic, fonts)
-//       survive.
+// Injects <w:color> (and optionally <w:highlight>) into every <w:r>
+// inside `xml`. Three input shapes to handle per OOXML:
+//   (a) Self-closing rPr: <w:rPr/>   → expand with our tags.
+//   (b) Existing rPr block: strip any prior color/highlight, then
+//       splice ours in at the schema-correct position so the run's
+//       other properties (bold, italic, fonts, size) survive intact.
 //   (c) Run without rPr: inject a fresh <w:rPr> right after <w:r>.
 // Order matters — (a) must run before (b) so the self-closing form
 // doesn't match as an "existing block".
-function colorizeRuns(xml: string, colorHex: string): string {
-  const colorTag = `<w:color w:val="${colorHex}"/>`;
+//
+// ECMA-376 §17.3.2.28 CT_RPr requires a specific child-element
+// sequence (rStyle → rFonts → b/i/… → color → sz → highlight → u → …).
+// Previously we prepended <w:color> to the rPr body, which put it
+// ahead of rStyle/rFonts/b/etc. — an invalid sequence that Word can
+// silently drop. The new logic ranks each child by its schema
+// position and splices our tags in order.
 
-  let result = xml.replace(
-    /<w:rPr(?:\s[^>]*)?\/>/g,
-    `<w:rPr>${colorTag}</w:rPr>`,
-  );
+// CT_RPr child-element order. Subset covering the properties Word
+// commonly emits; unknown tags fall to the end.
+const RPR_SCHEMA_ORDER = [
+  "rStyle",
+  "rFonts",
+  "b",
+  "bCs",
+  "i",
+  "iCs",
+  "caps",
+  "smallCaps",
+  "strike",
+  "dstrike",
+  "outline",
+  "shadow",
+  "emboss",
+  "imprint",
+  "noProof",
+  "snapToGrid",
+  "vanish",
+  "webHidden",
+  "color",
+  "spacing",
+  "w",
+  "kern",
+  "position",
+  "sz",
+  "szCs",
+  "highlight",
+  "u",
+  "effect",
+  "bdr",
+  "shd",
+  "fitText",
+  "vertAlign",
+  "rtl",
+  "cs",
+  "em",
+  "lang",
+  "eastAsianLayout",
+  "specVanish",
+  "oMath",
+  "rPrChange",
+] as const;
 
+function rprChildRank(tagName: string): number {
+  const idx = (RPR_SCHEMA_ORDER as readonly string[]).indexOf(tagName);
+  return idx === -1 ? RPR_SCHEMA_ORDER.length : idx;
+}
+
+export function colorizeRuns(
+  xml: string,
+  colorHex: string,
+  highlightVal?: string,
+): string {
+  const inserts: Array<{ tagName: string; xml: string }> = [
+    { tagName: "color", xml: `<w:color w:val="${colorHex}"/>` },
+  ];
+  if (highlightVal) {
+    inserts.push({
+      tagName: "highlight",
+      xml: `<w:highlight w:val="${highlightVal}"/>`,
+    });
+  }
+  const freshRpr = `<w:rPr>${inserts.map((i) => i.xml).join("")}</w:rPr>`;
+
+  // (a) self-closing rPr
+  let result = xml.replace(/<w:rPr(?:\s[^>]*)?\/>/g, freshRpr);
+
+  // (b) existing rPr body — strip prior color/highlight, splice in order
   result = result.replace(
     /<w:rPr(?:\s[^>]*)?>([\s\S]*?)<\/w:rPr>/g,
-    (_full, body: string) => {
-      const stripped = body.replace(/<w:color(?:\s[^>]*)?\/>/g, "");
-      return `<w:rPr>${colorTag}${stripped}</w:rPr>`;
-    },
+    (_full, body: string) =>
+      `<w:rPr>${injectRprChildren(body, inserts)}</w:rPr>`,
   );
 
+  // (c) run without rPr
   result = result.replace(
     /(<w:r(?:\s[^>]*)?>)(?!<w:rPr)/g,
-    `$1<w:rPr>${colorTag}</w:rPr>`,
+    `$1${freshRpr}`,
   );
 
   return result;
+}
+
+function injectRprChildren(
+  body: string,
+  newTags: ReadonlyArray<{ tagName: string; xml: string }>,
+): string {
+  // 1. Strip any existing copies of the tags we're about to insert
+  //    (self-closing or paired form; attributes optional).
+  let cleaned = body;
+  for (const { tagName } of newTags) {
+    const selfClosing = new RegExp(
+      `<w:${tagName}(?:\\s[^>]*)?\\/>`,
+      "g",
+    );
+    const paired = new RegExp(
+      `<w:${tagName}(?:\\s[^>]*)?>[\\s\\S]*?<\\/w:${tagName}>`,
+      "g",
+    );
+    cleaned = cleaned.replace(selfClosing, "").replace(paired, "");
+  }
+
+  // 2. Enumerate top-level <w:*> elements with their schema rank.
+  //    Non-w: elements and text fall through unchanged (they'll be
+  //    emitted between element boundaries by the cursor walk).
+  const elementRe =
+    /<w:([a-zA-Z0-9]+)(?:\s[^>]*)?(?:\/>|>[\s\S]*?<\/w:\1>)/g;
+  const positions: Array<{ end: number; rank: number }> = [];
+  let m: RegExpExecArray | null;
+  while ((m = elementRe.exec(cleaned)) !== null) {
+    positions.push({
+      end: m.index + m[0].length,
+      rank: rprChildRank(m[1]),
+    });
+  }
+
+  // 3. Walk the cleaned body; before each existing element whose rank
+  //    is strictly greater than a pending insert, splice the insert in.
+  const pending = newTags
+    .slice()
+    .sort((a, b) => rprChildRank(a.tagName) - rprChildRank(b.tagName));
+
+  let out = "";
+  let cursor = 0;
+  let insertIdx = 0;
+  for (const pos of positions) {
+    while (
+      insertIdx < pending.length &&
+      rprChildRank(pending[insertIdx].tagName) < pos.rank
+    ) {
+      out += pending[insertIdx].xml;
+      insertIdx++;
+    }
+    out += cleaned.slice(cursor, pos.end);
+    cursor = pos.end;
+  }
+  out += cleaned.slice(cursor);
+  while (insertIdx < pending.length) {
+    out += pending[insertIdx].xml;
+    insertIdx++;
+  }
+  return out;
 }
 
 function buildInsertedParagraph(

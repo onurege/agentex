@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import JSZip from "jszip";
-import { applyRedline, isSectionHeading } from "../docx-renderer";
+import {
+  applyRedline,
+  colorizeRuns,
+  isSectionHeading,
+} from "../docx-renderer";
 import type { ArbitratedEdit } from "../types";
 
 async function makeDocx(paragraphs: string[]): Promise<Buffer> {
@@ -153,7 +157,7 @@ describe("applyRedline — revision colors", () => {
       /<w:del[^>]*>\s*<w:r>\s*<w:rPr><w:color w:val="C00000"\/><\/w:rPr>\s*<w:delText/,
     );
     expect(xml).toMatch(
-      /<w:ins[^>]*>\s*<w:r>\s*<w:rPr><w:color w:val="00B050"\/><\/w:rPr>\s*<w:t/,
+      /<w:ins[^>]*>\s*<w:r>\s*<w:rPr><w:color w:val="00B050"\/><w:highlight w:val="green"\/><\/w:rPr>\s*<w:t/,
     );
   });
 
@@ -174,6 +178,63 @@ describe("applyRedline — revision colors", () => {
     const xml = await readDocumentXml(result.buffer);
     expect(xml).toContain(`<w:color w:val="C00000"/>`);
     expect(xml).toContain(`<w:color w:val="00B050"/>`);
+    // Insertions must also carry <w:highlight> so Word's "Insertions
+    // by author" default can't silently strip the green tint.
+    expect(xml).toContain(`<w:highlight w:val="green"/>`);
+  });
+});
+
+describe("colorizeRuns — CT_RPr schema ordering", () => {
+  it("splices w:color after w:b (color's schema rank is higher)", () => {
+    const input = `<w:r><w:rPr><w:b/></w:rPr><w:t>x</w:t></w:r>`;
+    const output = colorizeRuns(input, "00B050");
+    expect(output).toContain(
+      `<w:rPr><w:b/><w:color w:val="00B050"/></w:rPr>`,
+    );
+  });
+
+  it("splices w:color before w:sz (color outranks sz)", () => {
+    const input = `<w:r><w:rPr><w:sz w:val="22"/></w:rPr><w:t>x</w:t></w:r>`;
+    const output = colorizeRuns(input, "C00000");
+    expect(output).toContain(
+      `<w:rPr><w:color w:val="C00000"/><w:sz w:val="22"/></w:rPr>`,
+    );
+  });
+
+  it("places w:highlight after w:sz but keeps w:color before it", () => {
+    const input =
+      `<w:r><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:t>x</w:t></w:r>`;
+    const output = colorizeRuns(input, "00B050", "green");
+    // CT_RPr: b(rank 2) → color(18) → sz(23) → highlight(25)
+    expect(output).toContain(
+      `<w:rPr><w:b/><w:color w:val="00B050"/><w:sz w:val="22"/><w:highlight w:val="green"/></w:rPr>`,
+    );
+  });
+
+  it("strips prior w:color and w:highlight before re-injection", () => {
+    const input =
+      `<w:r><w:rPr><w:b/><w:color w:val="000000"/><w:highlight w:val="yellow"/></w:rPr><w:t>x</w:t></w:r>`;
+    const output = colorizeRuns(input, "00B050", "green");
+    expect(output).toContain(
+      `<w:rPr><w:b/><w:color w:val="00B050"/><w:highlight w:val="green"/></w:rPr>`,
+    );
+    expect(output).not.toContain(`w:val="000000"`);
+    expect(output).not.toContain(`w:val="yellow"`);
+  });
+
+  it("handles self-closing rPr and runs without rPr", () => {
+    const selfClosing = colorizeRuns(
+      `<w:r><w:rPr/><w:t>x</w:t></w:r>`,
+      "00B050",
+      "green",
+    );
+    expect(selfClosing).toContain(
+      `<w:rPr><w:color w:val="00B050"/><w:highlight w:val="green"/></w:rPr>`,
+    );
+    const bareRun = colorizeRuns(`<w:r><w:t>x</w:t></w:r>`, "C00000");
+    expect(bareRun).toContain(
+      `<w:r><w:rPr><w:color w:val="C00000"/></w:rPr><w:t>x</w:t></w:r>`,
+    );
   });
 });
 
