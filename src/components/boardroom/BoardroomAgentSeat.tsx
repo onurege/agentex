@@ -10,16 +10,26 @@ interface BoardroomAgentSeatProps {
   isChief?: boolean;
 }
 
+// Faz 4: labels reframed around the contract-review flow. The underlying
+// status enum stays the same (state machine untouched); only the
+// badge text shifts from "discussion" language to "redline" language.
+//   reading      — still "Okuyor" (agent reading the contract)
+//   analyzing    — now "Düzeltme Hazırlıyor" (drafting edit proposals)
+//   speaking     — now "Öneri Sunuyor" (presenting a proposal)
+//   objecting    — "Çakışma Bildirdi" (flagging an edit conflict)
+//   defending    — "Önerisini Koruyor" (holding position)
+//   rebutting    — "Karşı Öneri" (counter-proposal)
+//   synthesizing — now "Tahkim Ediyor" (chief arbitrating conflicts)
 const STATUS_LABELS: Record<AgentSceneState["status"], string> = {
   waiting: "Bekliyor",
   seated: "Yerleşti",
   reading: "Okuyor",
-  analyzing: "İnceliyor",
-  speaking: "Konuşuyor",
-  objecting: "İtiraz Ediyor",
-  defending: "Savunuyor",
-  rebutting: "Yanıtlıyor",
-  synthesizing: "Sonuçluyor",
+  analyzing: "Düzeltme Hazırlıyor",
+  speaking: "Öneri Sunuyor",
+  objecting: "Çakışma Bildirdi",
+  defending: "Önerisini Koruyor",
+  rebutting: "Karşı Öneri",
+  synthesizing: "Tahkim Ediyor",
   done: "Tamamladı",
 };
 

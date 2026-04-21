@@ -392,9 +392,9 @@ export default function BoardroomPage() {
                     Durum:{" "}
                     <span className="text-text-primary font-medium">
                       {boardroomPhase === "kurul-toplaniyor" && "Kurul toplanıyor..."}
-                      {boardroomPhase === "belge-inceleniyor" && "Ajanlar belgeyi inceliyor..."}
-                      {boardroomPhase === "tartisma" && "Ajanlar belgeyi tartışıyor..."}
-                      {boardroomPhase === "karar-olusturuluyor" && "Kurul kararı oluşturuluyor..."}
+                      {boardroomPhase === "belge-inceleniyor" && "Ajanlar sözleşmeyi tarıyor ve düzeltme hazırlıyor..."}
+                      {boardroomPhase === "tartisma" && "Ajanlar düzeltme önerilerini paylaşıyor..."}
+                      {boardroomPhase === "karar-olusturuluyor" && "Baş ajan çakışmaları çözüyor, redline hazırlanıyor..."}
                       {boardroomPhase === "idle" && "AI analizi hazırlanıyor..."}
                     </span>
                   </p>
