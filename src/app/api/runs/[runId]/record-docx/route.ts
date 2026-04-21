@@ -1,24 +1,20 @@
 // ============================================================
-// GET /api/runs/[runId]/record-pdf
+// GET /api/runs/[runId]/record-docx
 // ============================================================
 //
-// Streams a PDF of the run's negotiation record (cover + verdict +
-// agent perspectives + disagreements + position changes + action
-// items). Mirrors the redline route's auth + filename pattern.
-//
-// Rendering runs server-side via @react-pdf/renderer.renderToBuffer,
-// which takes a React element — we build it with React.createElement
-// so this file can stay .ts (Next.js Route Handlers don't officially
-// accept .tsx).
+// Streams a Word-native negotiation-record DOCX of the run. Mirrors
+// the redline route's auth + filename pattern. Rendering happens in
+// negotiation-docx.ts via the `docx` package (declarative OOXML —
+// no headless browser or font embedding needed).
 // ============================================================
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { forbidden, getAuthUser, notFound, unauthorized } from "@/lib/api-auth";
 import {
-  renderNegotiationRecordPdf,
+  renderNegotiationRecordDocx,
   type NegotiationRecordData,
-} from "@/lib/export/negotiation-pdf";
+} from "@/lib/export/negotiation-docx";
 import type { VerdictSeed } from "@/lib/boardroom-flow-store";
 
 export async function GET(
@@ -43,8 +39,7 @@ export async function GET(
   if (!run.verdict) return notFound("Verdict not available for this run");
 
   // Prisma returns the JSON columns as `unknown`; the VerdictSeed
-  // shape is what the client/engine always writes, so the cast is
-  // safe. Missing optional fields fall through as undefined.
+  // shape is what the engine always writes, so the cast is safe.
   const v = run.verdict;
   const verdict: VerdictSeed = {
     summary: v.summary,
@@ -73,16 +68,17 @@ export async function GET(
     verdict,
   };
 
-  const buffer = await renderNegotiationRecordPdf(data);
+  const buffer = await renderNegotiationRecordDocx(data);
 
   const baseName = run.documentName.replace(/\.[^.]+$/, "");
-  const fileName = `muzakere-kaydi-${baseName}.pdf`;
+  const fileName = `muzakere-kaydi-${baseName}.docx`;
   const asciiName = fileName.replace(/[^\x20-\x7E]/g, "_");
 
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {
-      "Content-Type": "application/pdf",
+      "Content-Type":
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
       "Content-Length": String(buffer.length),
       "Cache-Control": "private, no-store",

@@ -99,21 +99,21 @@ export function VerdictActionBar({ verdict, documentName }: VerdictActionBarProp
     if (!latestRunId || exporting) return;
     setExporting(true);
     try {
-      const res = await fetch(`/api/runs/${latestRunId}/record-pdf`);
+      const res = await fetch(`/api/runs/${latestRunId}/record-docx`);
       if (!res.ok) {
-        throw new Error(`PDF export failed (${res.status})`);
+        throw new Error(`DOCX export failed (${res.status})`);
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `muzakere-kaydi-${documentName.replace(/\.[^.]+$/, "")}.pdf`;
+      a.download = `muzakere-kaydi-${documentName.replace(/\.[^.]+$/, "")}.docx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
       alert(
-        "PDF dışa aktarımı başarısız oldu. Sonucu Kopyala düğmesini kullanabilirsiniz.",
+        "Word dışa aktarımı başarısız oldu. Sonucu Kopyala düğmesini kullanabilirsiniz.",
       );
     } finally {
       setExporting(false);
@@ -222,7 +222,7 @@ export function VerdictActionBar({ verdict, documentName }: VerdictActionBarProp
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
               </svg>
-              <span>Müzakere Kaydı (PDF)</span>
+              <span>Müzakere Kaydı (Word)</span>
             </>
           )}
         </button>
