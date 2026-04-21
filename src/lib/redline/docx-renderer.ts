@@ -51,6 +51,18 @@ const PPR_REGEX = /<w:pPr(?:\s[^>]*)?>[\s\S]*?<\/w:pPr>|<w:pPr(?:\s[^>]*)?\/>/;
 
 const DEFAULT_AUTHOR = "AI Boardroom";
 
+// Explicit revision colors. Word's default behavior is to color tracked
+// changes by author; with a single synthetic author ("AI Boardroom")
+// every edit would share one color. Forcing red on deletions and green
+// on insertions via <w:color w:val="..."/> inside each run's <w:rPr>
+// gives readers the familiar before/after contrast regardless of the
+// reviewer's local Word settings. Hex values are the standard Office
+// "Dark Red" and "Green" from the theme palette.
+const DEL_COLOR_HEX = "C00000";
+const INS_COLOR_HEX = "00B050";
+const DEL_RPR = `<w:rPr><w:color w:val="${DEL_COLOR_HEX}"/></w:rPr>`;
+const INS_RPR = `<w:rPr><w:color w:val="${INS_COLOR_HEX}"/></w:rPr>`;
+
 export async function applyRedline(
   originalDocx: Buffer,
   edits: ArbitratedEdit[],
@@ -254,14 +266,54 @@ function buildDeletedParagraph(
   revId: number,
 ): string {
   // Convert <w:t> → <w:delText> inside the inner runs, then wrap
-  // everything in <w:del>. pPr stays outside <w:del>.
-  const innerAsDeleted = p.inner
-    .replace(/<w:t(\s[^>]*)?>/g, "<w:delText$1>")
-    .replace(/<\/w:t>/g, "</w:delText>");
+  // everything in <w:del>. pPr stays outside <w:del>. Each run is
+  // forced red so the deletion stands out even when the reviewer's
+  // Word ignores author-based coloring.
+  const innerAsDeleted = colorizeRuns(
+    p.inner
+      .replace(/<w:t(\s[^>]*)?>/g, "<w:delText$1>")
+      .replace(/<\/w:t>/g, "</w:delText>"),
+    DEL_COLOR_HEX,
+  );
   const deletion = `<w:del w:id="${revId}" w:author="${escapeAttr(
     author,
   )}" w:date="${date}">${innerAsDeleted}</w:del>`;
   return `<w:p>${p.pPr}${deletion}</w:p>`;
+}
+
+// ── Run colorization ────────────────────────────────────
+//
+// Injects <w:color w:val="HEX"/> into every <w:r> inside `xml`. Three
+// input shapes to handle per OOXML:
+//   (a) Self-closing rPr: <w:rPr/>   → expand with our color child.
+//   (b) Existing rPr block: strip any prior <w:color/> then prepend
+//       ours so the run's other properties (bold, italic, fonts)
+//       survive.
+//   (c) Run without rPr: inject a fresh <w:rPr> right after <w:r>.
+// Order matters — (a) must run before (b) so the self-closing form
+// doesn't match as an "existing block".
+function colorizeRuns(xml: string, colorHex: string): string {
+  const colorTag = `<w:color w:val="${colorHex}"/>`;
+
+  let result = xml.replace(
+    /<w:rPr(?:\s[^>]*)?\/>/g,
+    `<w:rPr>${colorTag}</w:rPr>`,
+  );
+
+  result = result.replace(
+    /<w:rPr(?:\s[^>]*)?>([\s\S]*?)<\/w:rPr>/g,
+    (_full, body: string) => {
+      const stripped = body.replace(/<w:color(?:\s[^>]*)?\/>/g, "");
+      return `<w:rPr>${colorTag}${stripped}</w:rPr>`;
+    },
+  );
+
+  result = result.replace(
+    /(<w:r(?:\s[^>]*)?>)(?!<w:rPr)/g,
+    `$1<w:rPr>${colorTag}</w:rPr>`,
+  );
+
+  return result;
 }
 
 function buildInsertedParagraph(
@@ -271,9 +323,11 @@ function buildInsertedParagraph(
   date: string,
   revId: number,
 ): string {
+  // Single synthetic run — force green via inline rPr so inserted text
+  // visually pairs with the red deletions above it.
   const insertion = `<w:ins w:id="${revId}" w:author="${escapeAttr(
     author,
-  )}" w:date="${date}"><w:r><w:t xml:space="preserve">${encodeEntities(
+  )}" w:date="${date}"><w:r>${INS_RPR}<w:t xml:space="preserve">${encodeEntities(
     text,
   )}</w:t></w:r></w:ins>`;
   return `<w:p>${pPr}${insertion}</w:p>`;
@@ -309,13 +363,17 @@ function replacePhraseInParagraph(
     );
 
     const opening = m[0].slice(0, m[0].indexOf(">") + 1);
+    // Surrounding text (`before` / `after`) keeps the original run's
+    // formatting. The del and ins runs get explicit red/green via
+    // DEL_RPR / INS_RPR so reviewers see color contrast regardless of
+    // Word's author-coloring settings.
     const replacement =
       `${opening}${before}</w:t></w:r>` +
       `<w:del w:id="${revIdStart}" w:author="${escapeAttr(author)}" w:date="${date}">` +
-      `<w:r><w:delText xml:space="preserve">${encoded}</w:delText></w:r>` +
+      `<w:r>${DEL_RPR}<w:delText xml:space="preserve">${encoded}</w:delText></w:r>` +
       `</w:del>` +
       `<w:ins w:id="${revIdStart + 1}" w:author="${escapeAttr(author)}" w:date="${date}">` +
-      `<w:r><w:t xml:space="preserve">${encodeEntities(finalText)}</w:t></w:r>` +
+      `<w:r>${INS_RPR}<w:t xml:space="preserve">${encodeEntities(finalText)}</w:t></w:r>` +
       `</w:ins>` +
       `<w:r>${opening}${after}`;
 

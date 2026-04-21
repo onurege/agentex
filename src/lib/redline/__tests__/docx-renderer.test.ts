@@ -133,6 +133,50 @@ describe("applyRedline — replace_phrase heading-fallback walk", () => {
   });
 });
 
+describe("applyRedline — revision colors", () => {
+  it("emits red on deleted runs and green on inserted runs", async () => {
+    const docx = await makeDocx([
+      "4. BAYİ YETKİ DERECELERİ. Bayi aşağıdaki yetkilere sahiptir.",
+    ]);
+    const result = await applyRedline(docx, [
+      editOf({
+        clauseRef: "4. BAYİ YETKİ DERECELERİ",
+        editType: "replace_phrase",
+        originalText: "Bayi aşağıdaki yetkilere sahiptir",
+        finalText: "Bayi şu yetkilere sahiptir",
+      }),
+    ]);
+    expect(result.appliedCount).toBe(1);
+    const xml = await readDocumentXml(result.buffer);
+    // Red on the <w:delText> run, green on the <w:t> insertion run.
+    expect(xml).toMatch(
+      /<w:del[^>]*>\s*<w:r>\s*<w:rPr><w:color w:val="C00000"\/><\/w:rPr>\s*<w:delText/,
+    );
+    expect(xml).toMatch(
+      /<w:ins[^>]*>\s*<w:r>\s*<w:rPr><w:color w:val="00B050"\/><\/w:rPr>\s*<w:t/,
+    );
+  });
+
+  it("colors whole-paragraph replace_clause deletions red and insertions green", async () => {
+    const docx = await makeDocx([
+      "Madde 5 Süre",
+      "Sözleşme bir yıl süreyle geçerlidir.",
+    ]);
+    const result = await applyRedline(docx, [
+      editOf({
+        clauseRef: "Sözleşme bir yıl süreyle geçerlidir.",
+        editType: "replace_clause",
+        originalText: "Sözleşme bir yıl süreyle geçerlidir.",
+        finalText: "Sözleşme iki yıl süreyle geçerlidir.",
+      }),
+    ]);
+    expect(result.appliedCount).toBe(1);
+    const xml = await readDocumentXml(result.buffer);
+    expect(xml).toContain(`<w:color w:val="C00000"/>`);
+    expect(xml).toContain(`<w:color w:val="00B050"/>`);
+  });
+});
+
 describe("applyRedline — true orphan", () => {
   it("records orphan when the phrase does not appear anywhere in the section", async () => {
     const docx = await makeDocx([
