@@ -94,7 +94,7 @@ Aşağıdaki JSON yapısında yanıt ver:
   ],
   "editProposals": [
     {
-      "clauseRef": "Madde X.Y — ZORUNLU: 'Madde N', 'Article N', '§N' veya tam paragraf başlığı. Serbest metin yasak.",
+      "clauseRef": "Belgedeki başlığı AYNEN kopyala (ör. 'Madde 4.2', '4.1', '4. BAYİ YETKİ DERECELERİ', 'Article 3', 'Gizlilik Yükümlülüğü'). Belge hangi formatı kullanıyorsa onu kullan — format dayatma. ZORUNLU: serbest açıklama veya parafraz yasak, başlık literal olacak.",
       "editType": "replace_clause | replace_phrase | insert_after | delete_clause",
       "originalText": "replace_phrase için ZORUNLU — değiştirilecek metnin birebir kopyası. Diğer tipler için boş/atla.",
       "proposedText": "Yeni metin. delete_clause için boş.",
@@ -111,7 +111,7 @@ KURALLAR:
 - En az 2, en fazla 4 gözlem üret
 - Uzmanlık alanınla ilgili 0-5 edit proposal üret (zorunlu bir alan değilse boş bırak)
 - Her edit proposal kendi uzmanlık alanından olsun
-- clauseRef alanını "Madde X.Y" veya tam paragraf başlığı olarak yaz, serbest açıklama yazma
+- clauseRef'i belgedeki başlığın birebir kopyası olarak yaz — numaralandırma formatı neyse onu koru, "Madde" kelimesini belge kullanmıyorsa ekleme
 - replace_phrase kullanıyorsan originalText belgedeki ibarenin birebir kopyası olmalı
 - Mesajlar kısa ve vurucu olsun
 - Türkçe yanıt ver
