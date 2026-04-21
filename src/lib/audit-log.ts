@@ -29,7 +29,10 @@ export type AuditAction =
   | "run_created"
   | "run_deleted"
   | "template_applied"
-  | "role_changed";
+  | "role_changed"
+  | "agent_created"
+  | "agent_archived"
+  | "agent_restored";
 
 export type AuditTargetType = "agent" | "run" | "template" | "user";
 
@@ -122,6 +125,9 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   run_deleted: "Çalıştırma Silindi",
   template_applied: "Şablon Uygulandı",
   role_changed: "Rol Değiştirildi",
+  agent_created: "Ajan Oluşturuldu",
+  agent_archived: "Ajan Arşivlendi",
+  agent_restored: "Ajan Geri Getirildi",
 };
 
 export const TARGET_TYPE_LABELS: Record<AuditTargetType, string> = {

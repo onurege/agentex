@@ -53,10 +53,37 @@ export interface AgentProfile {
   promptVersion: number;
 }
 
+// --- Custom agent (user-created) ---
+//
+// Lives alongside BOARDROOM_AGENTS + CHIEF_AGENT. Persisted in the
+// same zustand store/localStorage slot as profiles. Soft-delete via
+// archivedAt — archived agents are hidden from default listings but
+// kept in storage so run-history snapshots still resolve by id.
+
+export interface CustomAgent extends BoardroomAgent {
+  isCustom: true;
+  archivedAt: string | null;
+  createdAt: string;
+}
+
+export interface CreateCustomAgentInput {
+  id: string;
+  name: string;
+  title: string;
+  avatar: string;
+  expertise: string[];
+  tone?: string;
+}
+
+export type CreateCustomAgentResult =
+  | { ok: true; agent: CustomAgent }
+  | { ok: false; error: "invalid_id" | "id_taken" | "missing_fields" };
+
 // --- Store ---
 
 interface ControlRoomState {
   profiles: Record<string, AgentProfile>;
+  customAgents: Record<string, CustomAgent>;
 }
 
 interface ControlRoomActions {
@@ -74,19 +101,52 @@ interface ControlRoomActions {
   rollbackPrompt: (agentId: string) => void;
 
   // Agent effective data
-  getEffectiveAgent: (agentId: string) => { name: string; title: string; expertise: string[]; avatar: string; isSystem: boolean } | null;
+  getEffectiveAgent: (agentId: string) => { name: string; title: string; expertise: string[]; avatar: string; isSystem: boolean; isCustom: boolean } | null;
 
   // Profile access
   getProfile: (agentId: string) => AgentProfile;
+
+  // Custom agents
+  createCustomAgent: (input: CreateCustomAgentInput) => CreateCustomAgentResult;
+  archiveCustomAgent: (agentId: string) => void;
+  restoreCustomAgent: (agentId: string) => void;
+  getCustomAgent: (agentId: string) => CustomAgent | null;
+  getAllAgentIds: (opts?: { includeArchived?: boolean }) => string[];
+  getAllBoardroomAgents: (opts?: { includeArchived?: boolean }) => BoardroomAgent[];
 }
 
 type ControlRoomStore = ControlRoomState & ControlRoomActions;
 
 // --- Default initializers ---
 
-function getBaseAgent(agentId: string): BoardroomAgent | null {
+// Resolves an agent id to its BoardroomAgent definition. Checks
+// custom agents first so that a user-created agent with the same id
+// as a future built-in wouldn't be shadowed — but id collision is
+// already blocked at create-time by isAgentIdTaken.
+function getBaseAgent(
+  agentId: string,
+  customAgents: Record<string, CustomAgent>,
+): BoardroomAgent | null {
+  const custom = customAgents[agentId];
+  if (custom) return custom;
   if (agentId === "chief-agent") return CHIEF_AGENT;
   return BOARDROOM_AGENTS.find((a) => a.id === agentId) ?? null;
+}
+
+// Built-in agent ids that a custom agent must not reuse.
+const RESERVED_IDS = new Set<string>([
+  "chief-agent",
+  ...BOARDROOM_AGENTS.map((a) => a.id),
+]);
+
+const VALID_ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function isAgentIdTaken(
+  id: string,
+  customAgents: Record<string, CustomAgent>,
+): boolean {
+  if (RESERVED_IDS.has(id)) return true;
+  return Boolean(customAgents[id]);
 }
 
 function defaultCV(agent: BoardroomAgent): AgentCVData {
@@ -125,9 +185,13 @@ function createDefaultProfile(agent: BoardroomAgent): AgentProfile {
   };
 }
 
-function ensureProfile(profiles: Record<string, AgentProfile>, agentId: string): AgentProfile {
+function ensureProfile(
+  profiles: Record<string, AgentProfile>,
+  customAgents: Record<string, CustomAgent>,
+  agentId: string,
+): AgentProfile {
   if (profiles[agentId]) return profiles[agentId];
-  const base = getBaseAgent(agentId);
+  const base = getBaseAgent(agentId, customAgents);
   if (!base) return createDefaultProfile(CHIEF_AGENT); // fallback
   return createDefaultProfile(base);
 }
@@ -138,19 +202,20 @@ export const useControlRoomStore = create<ControlRoomStore>()(
   persist(
     (set, get) => ({
       profiles: {},
+      customAgents: {},
 
       // ── CV ──────────────────────────────────────────────
 
       getCVDraft: (agentId) => {
-        return ensureProfile(get().profiles, agentId).cvDraft;
+        return ensureProfile(get().profiles, get().customAgents, agentId).cvDraft;
       },
 
       getCVPublished: (agentId) => {
-        return ensureProfile(get().profiles, agentId).cvPublished;
+        return ensureProfile(get().profiles, get().customAgents, agentId).cvPublished;
       },
 
       saveCVDraft: (agentId, data) => {
-        const profile = ensureProfile(get().profiles, agentId);
+        const profile = ensureProfile(get().profiles, get().customAgents, agentId);
         set({
           profiles: {
             ...get().profiles,
@@ -166,7 +231,7 @@ export const useControlRoomStore = create<ControlRoomStore>()(
       },
 
       publishCV: (agentId) => {
-        const profile = ensureProfile(get().profiles, agentId);
+        const profile = ensureProfile(get().profiles, get().customAgents, agentId);
         set({
           profiles: {
             ...get().profiles,
@@ -184,15 +249,15 @@ export const useControlRoomStore = create<ControlRoomStore>()(
       // ── Prompt ──────────────────────────────────────────
 
       getPromptDraft: (agentId) => {
-        return ensureProfile(get().profiles, agentId).promptDraft;
+        return ensureProfile(get().profiles, get().customAgents, agentId).promptDraft;
       },
 
       getPromptPublished: (agentId) => {
-        return ensureProfile(get().profiles, agentId).promptPublished;
+        return ensureProfile(get().profiles, get().customAgents, agentId).promptPublished;
       },
 
       savePromptDraft: (agentId, data) => {
-        const profile = ensureProfile(get().profiles, agentId);
+        const profile = ensureProfile(get().profiles, get().customAgents, agentId);
         set({
           profiles: {
             ...get().profiles,
@@ -208,7 +273,7 @@ export const useControlRoomStore = create<ControlRoomStore>()(
       },
 
       publishPrompt: (agentId) => {
-        const profile = ensureProfile(get().profiles, agentId);
+        const profile = ensureProfile(get().profiles, get().customAgents, agentId);
         const newVersion = profile.promptVersion + 1;
         set({
           profiles: {
@@ -226,7 +291,7 @@ export const useControlRoomStore = create<ControlRoomStore>()(
       },
 
       rollbackPrompt: (agentId) => {
-        const profile = ensureProfile(get().profiles, agentId);
+        const profile = ensureProfile(get().profiles, get().customAgents, agentId);
         if (!profile.promptPublished) return;
         set({
           profiles: {
@@ -245,10 +310,12 @@ export const useControlRoomStore = create<ControlRoomStore>()(
       // ── Effective agent data ────────────────────────────
 
       getEffectiveAgent: (agentId) => {
-        const base = getBaseAgent(agentId);
+        const customAgents = get().customAgents;
+        const base = getBaseAgent(agentId, customAgents);
         if (!base) return null;
         const profile = get().profiles[agentId];
         const cv = profile?.cvPublished ?? profile?.cvDraft;
+        const isCustom = Boolean(customAgents[agentId]);
         if (!cv) {
           return {
             name: base.name,
@@ -256,6 +323,7 @@ export const useControlRoomStore = create<ControlRoomStore>()(
             expertise: base.expertise,
             avatar: base.avatar,
             isSystem: agentId === "chief-agent",
+            isCustom,
           };
         }
         return {
@@ -264,18 +332,151 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           expertise: cv.expertise ? cv.expertise.split(",").map((s) => s.trim()).filter(Boolean) : base.expertise,
           avatar: base.avatar,
           isSystem: agentId === "chief-agent",
+          isCustom,
         };
       },
 
       // ── Profile access ──────────────────────────────────
 
       getProfile: (agentId) => {
-        return ensureProfile(get().profiles, agentId);
+        return ensureProfile(get().profiles, get().customAgents, agentId);
+      },
+
+      // ── Custom agents ───────────────────────────────────
+
+      createCustomAgent: (input) => {
+        const id = input.id.trim();
+        const name = input.name.trim();
+        const title = input.title.trim();
+        const avatar = input.avatar.trim();
+        const expertise = input.expertise.map((s) => s.trim()).filter(Boolean);
+
+        if (!name || !title || !avatar || expertise.length === 0) {
+          return { ok: false, error: "missing_fields" };
+        }
+        if (!VALID_ID_RE.test(id)) {
+          return { ok: false, error: "invalid_id" };
+        }
+        if (isAgentIdTaken(id, get().customAgents)) {
+          return { ok: false, error: "id_taken" };
+        }
+
+        const tone = input.tone?.trim() || "Profesyonel ve net";
+        const shortName = name.split(/\s+/)[0] || name;
+
+        const agent: CustomAgent = {
+          id,
+          name,
+          shortName,
+          title,
+          avatar,
+          color: "agent-custom",
+          characterLine: "",
+          description: "",
+          expertise,
+          bio: "",
+          documentTypes: [],
+          thinkingStyle: tone,
+          isCustom: true,
+          archivedAt: null,
+          createdAt: new Date().toISOString(),
+        };
+
+        set({
+          customAgents: { ...get().customAgents, [id]: agent },
+        });
+        saveAuditEvent({
+          action: "agent_created",
+          targetType: "agent",
+          targetId: id,
+          summary: `Özel ajan "${name}" oluşturuldu`,
+        });
+        return { ok: true, agent };
+      },
+
+      archiveCustomAgent: (agentId) => {
+        const agent = get().customAgents[agentId];
+        if (!agent || agent.archivedAt) return;
+        set({
+          customAgents: {
+            ...get().customAgents,
+            [agentId]: { ...agent, archivedAt: new Date().toISOString() },
+          },
+        });
+        saveAuditEvent({
+          action: "agent_archived",
+          targetType: "agent",
+          targetId: agentId,
+          summary: `Özel ajan "${agent.name}" arşivlendi`,
+        });
+      },
+
+      restoreCustomAgent: (agentId) => {
+        const agent = get().customAgents[agentId];
+        if (!agent || !agent.archivedAt) return;
+        set({
+          customAgents: {
+            ...get().customAgents,
+            [agentId]: { ...agent, archivedAt: null },
+          },
+        });
+        saveAuditEvent({
+          action: "agent_restored",
+          targetType: "agent",
+          targetId: agentId,
+          summary: `Özel ajan "${agent.name}" arşivden çıkarıldı`,
+        });
+      },
+
+      getCustomAgent: (agentId) => {
+        return get().customAgents[agentId] ?? null;
+      },
+
+      getAllAgentIds: (opts) => {
+        const includeArchived = opts?.includeArchived ?? false;
+        const builtIn = ["chief-agent", ...BOARDROOM_AGENTS.map((a) => a.id)];
+        const custom = Object.values(get().customAgents)
+          .filter((a) => includeArchived || !a.archivedAt)
+          .map((a) => a.id);
+        return [...builtIn, ...custom];
+      },
+
+      getAllBoardroomAgents: (opts) => {
+        const includeArchived = opts?.includeArchived ?? false;
+        const custom = Object.values(get().customAgents).filter(
+          (a) => includeArchived || !a.archivedAt,
+        );
+        return [...BOARDROOM_AGENTS, ...custom];
       },
     }),
     {
       name: "ai-boardroom-control-room",
-      version: 1,
+      version: 2,
+      migrate: (persistedState: unknown, fromVersion) => {
+        // v1 → v2: customAgents slot was introduced. Old payloads
+        // don't carry it, so we backfill an empty record.
+        if (fromVersion < 2 && persistedState && typeof persistedState === "object") {
+          const state = persistedState as Record<string, unknown>;
+          if (!state.customAgents) state.customAgents = {};
+          return state;
+        }
+        return persistedState;
+      },
     },
   ),
 );
+
+// ── Non-hook helpers (for modules that can't use hooks) ──
+//
+// Boardroom flow store and stage-agents.ts live outside React
+// components. They can't call useControlRoomStore directly, so
+// these selectors read the current store state synchronously.
+
+export function getCustomAgentsSnapshot(): Record<string, CustomAgent> {
+  return useControlRoomStore.getState().customAgents;
+}
+
+export function resolveAgentFromAnywhere(agentId: string): BoardroomAgent | null {
+  const customAgents = useControlRoomStore.getState().customAgents;
+  return getBaseAgent(agentId, customAgents);
+}
