@@ -88,17 +88,8 @@ export async function applyRedline(
       continue;
     }
 
-    const target = paragraphs.find((p) => p.id === match.paragraphId);
+    let target = paragraphs.find((p) => p.id === match.paragraphId);
     if (!target) {
-      orphanCount++;
-      continue;
-    }
-
-    // Look the target up in mutatedXml fresh — earlier edits may have
-    // shifted content. Use exact rawXml match; if another edit already
-    // replaced this paragraph, skip to avoid corruption.
-    const idx = mutatedXml.indexOf(target.rawXml);
-    if (idx === -1) {
       orphanCount++;
       continue;
     }
@@ -130,7 +121,7 @@ export async function applyRedline(
             revId++,
           );
         break;
-      case "replace_phrase":
+      case "replace_phrase": {
         replacement = replacePhraseInParagraph(
           target,
           edit.originalText ?? "",
@@ -139,11 +130,52 @@ export async function applyRedline(
           date,
           revId,
         );
+        // Fallback — clauseRef frequently matches a section heading
+        // whose body text lives in the paragraphs that follow. Walk
+        // forward within the same section (until the next heading or
+        // LIMIT paragraphs) and try each until one contains the phrase.
+        // This salvages edits that would otherwise silently orphan
+        // whenever the agent emits a heading-level clauseRef.
+        if (!replacement) {
+          const startIdx = paragraphs.findIndex((p) => p.id === target!.id);
+          const LIMIT = 15;
+          for (
+            let j = startIdx + 1;
+            j < Math.min(paragraphs.length, startIdx + 1 + LIMIT);
+            j++
+          ) {
+            const candidate = paragraphs[j];
+            if (isSectionHeading(candidate.text)) break;
+            const alt = replacePhraseInParagraph(
+              candidate,
+              edit.originalText ?? "",
+              edit.finalText,
+              author,
+              date,
+              revId,
+            );
+            if (alt) {
+              target = candidate;
+              replacement = alt;
+              break;
+            }
+          }
+        }
         if (replacement) revId += 2;
         break;
+      }
     }
 
     if (!replacement) {
+      orphanCount++;
+      continue;
+    }
+
+    // Look the target up in mutatedXml fresh — earlier edits may have
+    // shifted content. Use exact rawXml match; if another edit already
+    // replaced this paragraph, skip to avoid corruption.
+    const idx = mutatedXml.indexOf(target.rawXml);
+    if (idx === -1) {
       orphanCount++;
       continue;
     }
@@ -158,6 +190,25 @@ export async function applyRedline(
   zip.file("word/document.xml", mutatedXml);
   const buffer = (await zip.generateAsync({ type: "nodebuffer" })) as Buffer;
   return { buffer, appliedCount, orphanCount };
+}
+
+// ── Section-heading classifier ─────────────────────────
+//
+// Used by the replace_phrase fallback walk to stop at the next section
+// boundary. Turkish contracts mix three common heading styles:
+//   "4. BAYİ YETKİ DERECELERİ"   — plain number + ALL-CAPS title
+//   "Madde 5 Süre" / "Article 5" — anchor-prefix + title
+//   "EK - 3: MALİ KOŞULLAR"      — appendix marker
+// Digit-prefix detection requires uppercase so that lettered subclauses
+// ("a. Bayi hakları") remain inside the containing section.
+
+export function isSectionHeading(text: string): boolean {
+  const head = text.trim().slice(0, 50);
+  return (
+    /^(?:madde|article)\s+\d+/i.test(head) ||
+    /^ek\s*-?\s*\d+/i.test(head) ||
+    /^\d+\.\s+[A-ZÇĞİÖŞÜ]{2,}/.test(head)
+  );
 }
 
 // ── Paragraph extraction ────────────────────────────────
