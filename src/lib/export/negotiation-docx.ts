@@ -23,7 +23,6 @@ import {
   BorderStyle,
   Document,
   Footer,
-  HeadingLevel,
   LevelFormat,
   Packer,
   PageNumber,
@@ -109,8 +108,6 @@ function p(
     spacingBefore?: number;
     spacingAfter?: number;
     alignment?: (typeof AlignmentType)[keyof typeof AlignmentType];
-    keepNext?: boolean;
-    heading?: (typeof HeadingLevel)[keyof typeof HeadingLevel];
   } = {},
 ): Paragraph {
   const runs =
@@ -118,8 +115,6 @@ function p(
   return new Paragraph({
     children: runs,
     alignment: opts.alignment,
-    keepNext: opts.keepNext,
-    heading: opts.heading,
     spacing: {
       before: opts.spacingBefore ?? 0,
       after: opts.spacingAfter ?? 0,
@@ -165,12 +160,14 @@ function noBorders() {
 
 // ── Section header ───────────────────────────────────────
 //
-// Colored bar character + uppercase section name. Uses the H2
-// heading style so Word's navigation pane picks it up.
+// Colored bar character + uppercase section name. A plain
+// paragraph — using HeadingLevel.HEADING_2 combined with
+// `keepNext: true` pulled the first section onto page 2 because
+// Word tried to keep the heading glued to the following table and
+// couldn't fit the pair on page 1. Outline navigation is
+// secondary here; readability is primary.
 function sectionHeader(title: string): Paragraph {
   return new Paragraph({
-    heading: HeadingLevel.HEADING_2,
-    keepNext: true,
     spacing: { before: 320, after: 160 },
     children: [
       new TextRun({
