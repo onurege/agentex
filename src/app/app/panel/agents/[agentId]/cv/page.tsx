@@ -3,19 +3,21 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getBoardroomAgent } from "@/lib/boardroom-agents";
-import { CHIEF_AGENT } from "@/lib/boardroom-flow-store";
+import { getBoardroomAgent, CHIEF_AGENT } from "@/lib/boardroom-agents";
 import { useControlRoomStore, type AgentCVData } from "@/lib/control-room-store";
-
-function getBaseAgent(id: string) {
-  if (id === "chief-agent") return CHIEF_AGENT;
-  return getBoardroomAgent(id);
-}
 
 export default function CVBuilderPage() {
   const params = useParams();
   const agentId = params.agentId as string;
-  const agent = getBaseAgent(agentId);
+
+  // Include customAgents in the lookup so user-created agents resolve
+  // the same way built-in ones do. Subscribing here also re-renders
+  // if the agent is archived/restored while the page is open.
+  const customAgents = useControlRoomStore((s) => s.customAgents);
+  const agent =
+    agentId === "chief-agent"
+      ? CHIEF_AGENT
+      : (getBoardroomAgent(agentId) ?? customAgents[agentId] ?? null);
 
   const getCVDraft = useControlRoomStore((s) => s.getCVDraft);
   const getCVPublished = useControlRoomStore((s) => s.getCVPublished);

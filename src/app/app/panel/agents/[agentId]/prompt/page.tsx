@@ -3,14 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getBoardroomAgent } from "@/lib/boardroom-agents";
-import { CHIEF_AGENT } from "@/lib/boardroom-flow-store";
+import { getBoardroomAgent, CHIEF_AGENT } from "@/lib/boardroom-agents";
 import { useControlRoomStore, type AgentPromptData } from "@/lib/control-room-store";
-
-function getBaseAgent(id: string) {
-  if (id === "chief-agent") return CHIEF_AGENT;
-  return getBoardroomAgent(id);
-}
 
 const PROMPT_FIELDS: { key: keyof AgentPromptData; label: string; rows: number }[] = [
   { key: "systemPrompt", label: "System Prompt", rows: 5 },
@@ -22,7 +16,14 @@ const PROMPT_FIELDS: { key: keyof AgentPromptData; label: string; rows: number }
 export default function PromptStudioPage() {
   const params = useParams();
   const agentId = params.agentId as string;
-  const agent = getBaseAgent(agentId);
+
+  // Include customAgents in the lookup so user-created agents resolve
+  // the same way built-in ones do.
+  const customAgents = useControlRoomStore((s) => s.customAgents);
+  const agent =
+    agentId === "chief-agent"
+      ? CHIEF_AGENT
+      : (getBoardroomAgent(agentId) ?? customAgents[agentId] ?? null);
 
   const getPromptDraft = useControlRoomStore((s) => s.getPromptDraft);
   const getPromptPublished = useControlRoomStore((s) => s.getPromptPublished);
