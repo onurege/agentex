@@ -29,7 +29,7 @@
 
 import JSZip from "jszip";
 import type { ArbitratedEdit } from "./types";
-import { matchClause, type MatchableParagraph } from "./clause-matcher";
+import { matchClause, locatePhrase, type MatchableParagraph } from "./clause-matcher";
 
 export interface RedlineResult {
   buffer: Buffer;
@@ -270,7 +270,25 @@ function replacePhraseInParagraph(
 
     return p.rawXml.replace(m[0], replacement);
   }
-  return null;
+
+  // Fallback: multi-run / whitespace-mismatch case. Word splits text
+  // across <w:r> boundaries for formatting reasons (bold toggles,
+  // autocorrect runs, pasted spans) so the phrase often isn't in a
+  // single <w:t>. locatePhrase finds it in the raw plain-text view;
+  // if it's there, emit the edit as a whole-paragraph del+ins pair.
+  // Trade-off: intra-paragraph formatting inside the deleted block
+  // collapses to a single inserted run, but the edit is VISIBLE
+  // instead of silently orphaned.
+  const range = locatePhrase(p.text, originalText);
+  if (!range) return null;
+
+  const newText =
+    p.text.slice(0, range.start) + finalText + p.text.slice(range.end);
+
+  return (
+    buildDeletedParagraph(p, author, date, revIdStart) +
+    buildInsertedParagraph(p.pPr, newText, author, date, revIdStart + 1)
+  );
 }
 
 // ── Entity handling ─────────────────────────────────────
