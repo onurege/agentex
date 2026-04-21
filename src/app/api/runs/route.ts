@@ -211,7 +211,7 @@ type RunWithRelations = Awaited<ReturnType<typeof prisma.boardRun.findMany>>[num
     publishedAt: Date;
   } }>;
   debateMoments: Array<{ agentKey: string; agentName: string; type: string;
-    topic: string; message: string; timestamp: number; id: string }>;
+    topic: string; message: string; timestamp: bigint; id: string }>;
   verdict: { summary: string; riskLevel: string; confidenceLevel: string | null;
     decisions: unknown; actionItems: unknown; agentPerspectives: unknown;
     disagreements: unknown; resolvedDisagreements: unknown;
@@ -261,7 +261,9 @@ function runToSnapshot(run: RunWithRelations): import("@/lib/run-history").Board
       type: m.type as import("@/lib/boardroom-flow-store").DebateEventType,
       message: m.message,
       topic: m.topic,
-      timestamp: m.timestamp,
+      // Prisma returns BigInt; JSON.stringify throws on BigInt. Epoch
+      // ms (~1.78T) is well below 2^53, so Number() is lossless.
+      timestamp: Number(m.timestamp),
     })),
     verdictSeed: run.verdict
       ? {

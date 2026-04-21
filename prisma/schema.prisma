@@ -302,7 +302,7 @@ model AgentOpinion {
   topic     String
   message   String @db.Text
   data      Json?  // structured opinion payload
-  timestamp Int    // relative ms from run start
+  timestamp BigInt // absolute epoch ms (Date.now())
   createdAt DateTime @default(now())
 
   @@index([runId])
@@ -321,7 +321,7 @@ model DebateMoment {
   topic     String
   message   String @db.Text
   metadata  Json?  // optional enrichment
-  timestamp Int    // relative ms
+  timestamp BigInt // absolute epoch ms (Date.now())
   createdAt DateTime @default(now())
 
   @@index([runId])
