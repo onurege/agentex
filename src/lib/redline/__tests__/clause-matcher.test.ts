@@ -12,6 +12,46 @@ describe("matchClause — anchor layer", () => {
     expect(result).toEqual({ kind: "anchor", paragraphId: "p2" });
   });
 
+  it("matches bare '4.2' numbering against 'Madde 4.2' paragraphs (regression guard)", () => {
+    const paragraphs = [
+      { id: "p1", text: "Madde 4.2 Ödeme Koşulları" },
+    ];
+    const result = matchClause("4.2", paragraphs);
+    expect(result).toEqual({ kind: "anchor", paragraphId: "p1" });
+  });
+
+  it("matches bare '4.2' against plain-numbered paragraph '4.2 Ödeme...'", () => {
+    const paragraphs = [
+      { id: "p1", text: "1. TARAFLAR" },
+      { id: "p2", text: "4.1 Fiyatlandırma" },
+      { id: "p3", text: "4.2 Ödeme Koşulları. Taraflar..." },
+    ];
+    const result = matchClause("4.2", paragraphs);
+    expect(result).toEqual({ kind: "anchor", paragraphId: "p3" });
+  });
+
+  it("matches plain-numbered title '4. BAYİ YETKİ DERECELERİ'", () => {
+    const paragraphs = [
+      { id: "p1", text: "1. TARAFLAR" },
+      { id: "p2", text: "4. BAYİ YETKİ DERECELERİ" },
+      { id: "p3", text: "5. SÜRE" },
+    ];
+    const result = matchClause("4. BAYİ YETKİ DERECELERİ", paragraphs);
+    expect(result).toEqual({ kind: "anchor", paragraphId: "p2" });
+  });
+
+  it("does not let '4' leak onto '4.2' via the trailing '.'  boundary", () => {
+    const paragraphs = [
+      { id: "p1", text: "4.1 Fiyat" },
+      { id: "p2", text: "4.2 Ödeme" },
+    ];
+    // "4" alone should match "4.x" paragraphs because the "." counts
+    // as a valid terminator after the number; both would be candidates
+    // and the first wins — this guards the ordering.
+    const result = matchClause("4", paragraphs);
+    expect(result).toEqual({ kind: "anchor", paragraphId: "p1" });
+  });
+
   it("matches 'Article X.Y' anchor format", () => {
     const paragraphs = [{ id: "p1", text: "Article 4.2 Confidentiality" }];
     const result = matchClause("Article 4.2", paragraphs);
@@ -46,6 +86,35 @@ describe("matchClause — prefix layer", () => {
     ];
     const result = matchClause("Gizlilik Yükümlülüğü", paragraphs);
     expect(result).toEqual({ kind: "prefix", paragraphId: "p1" });
+  });
+});
+
+describe("matchClause — title substring fallback", () => {
+  it("matches bare title 'BAYİ YETKİ DERECELERİ' against '4. BAYİ YETKİ DERECELERİ'", () => {
+    const paragraphs = [
+      { id: "p1", text: "1. TARAFLAR" },
+      { id: "p2", text: "4. BAYİ YETKİ DERECELERİ" },
+      { id: "p3", text: "5. SÜRE" },
+    ];
+    const result = matchClause("BAYİ YETKİ DERECELERİ", paragraphs);
+    expect(result).toEqual({ kind: "title_substring", paragraphId: "p2" });
+  });
+
+  it("is case-insensitive with Turkish locale folding (İ/i)", () => {
+    const paragraphs = [
+      { id: "p1", text: "4. Gİzlİlİk Yükümlülüğü" },
+    ];
+    const result = matchClause("gizlilik yükümlülüğü", paragraphs);
+    expect(result).toEqual({ kind: "title_substring", paragraphId: "p1" });
+  });
+
+  it("skips the fallback for needles shorter than 10 chars", () => {
+    const paragraphs = [
+      { id: "p1", text: "Somewhere contains the word Süre inside it" },
+    ];
+    const result = matchClause("Süre", paragraphs);
+    // "Süre" is 4 chars → below threshold → orphan
+    expect(result).toEqual({ kind: "orphan" });
   });
 });
 

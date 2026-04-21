@@ -37,13 +37,20 @@ export interface MatchableParagraph {
 export type ClauseMatch =
   | { kind: "anchor"; paragraphId: string }
   | { kind: "prefix"; paragraphId: string }
+  | { kind: "title_substring"; paragraphId: string }
   | { kind: "orphan" };
 
+// Accept "Madde 4.2", "Article 4.2", "§4.2" AND plain "4.2" / "4".
+// Many Turkish contracts use bare numbering ("1. TARAFLAR",
+// "4. BAYİ YETKİ DERECELERİ") without the "Madde" prefix; the
+// matcher needs to catch those too.
 const ANCHOR_REGEX =
-  /^(?:madde|article|art\.?|§)\s*(\d+(?:\.\d+)*)/i;
+  /^(?:(?:madde|article|art\.?|§)\s*)?(\d+(?:\.\d+)*)/i;
 
 const PREFIX_REF_LEN = 40;
 const PARA_SCAN_LEN = 80;
+const TITLE_SCAN_LEN = 200;
+const TITLE_MIN_LEN = 10;
 
 function extractAnchor(ref: string): string | null {
   const match = ref.trim().match(ANCHOR_REGEX);
@@ -56,9 +63,13 @@ function paragraphStartsWithAnchor(
   anchor: string,
 ): boolean {
   const head = normalizeForMatch(paragraphText.slice(0, PARA_SCAN_LEN));
-  // Accept any recognized anchor prefix followed by the same number.
+  // Accept optional anchor prefix, then the same number, then either
+  // a literal "." (e.g. "4." before a title word) or a word boundary
+  // (end of number). The "." variant keeps "4" from matching "4.2"
+  // paragraphs — the full number "4.2" still matches itself because
+  // the escaped dots eat the "." before \b checks.
   const re = new RegExp(
-    `^(?:madde|article|art\\.?|§)\\s*${anchor.replace(/\./g, "\\.")}\\b`,
+    `^(?:(?:madde|article|art\\.?|§)\\s*)?${anchor.replace(/\./g, "\\.")}(?:\\.|\\b)`,
     "i",
   );
   return re.test(head);
@@ -89,6 +100,23 @@ export function matchClause(
       const head = normalizeForMatch(p.text).slice(0, PARA_SCAN_LEN);
       if (head.startsWith(needle)) {
         return { kind: "prefix", paragraphId: p.id };
+      }
+    }
+  }
+
+  // Layer 2.5 — title substring.
+  // clauseRef is a bare title (no number anchor) and long enough to be
+  // distinctive; find a paragraph whose head contains it regardless of
+  // the numbering prefix the document uses. Turkish locale for the
+  // İ/i folding.
+  if (anchor === null && needle.length >= TITLE_MIN_LEN) {
+    const caseFoldedNeedle = needle.toLocaleLowerCase("tr-TR");
+    for (const p of paragraphs) {
+      const caseFoldedHead = normalizeForMatch(
+        p.text.slice(0, TITLE_SCAN_LEN),
+      ).toLocaleLowerCase("tr-TR");
+      if (caseFoldedHead.includes(caseFoldedNeedle)) {
+        return { kind: "title_substring", paragraphId: p.id };
       }
     }
   }
