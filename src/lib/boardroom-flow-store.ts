@@ -13,10 +13,16 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { ParsedDocument } from "./ingestion/types";
 import {
   BOARDROOM_AGENTS,
+  CHIEF_AGENT,
   MAX_BOARD_SIZE,
   type BoardroomAgent,
 } from "./boardroom-agents";
+import { useControlRoomStore } from "./control-room-store";
 import { getIngestionService } from "./ingestion";
+
+// Re-export CHIEF_AGENT so existing imports from this module keep
+// working after the definition moved to boardroom-agents.ts.
+export { CHIEF_AGENT };
 
 // --- Upload status ---
 
@@ -86,21 +92,6 @@ export interface VerdictSeed {
 }
 
 // --- Chief agent (always present in boardroom) ---
-
-export const CHIEF_AGENT: BoardroomAgent = {
-  id: "chief-agent",
-  name: "Baş Ajan",
-  shortName: "Baş",
-  title: "Kurul Koordinatörü",
-  avatar: "👤",
-  color: "agent-chief",
-  characterLine: "Kurulu koordine eder ve son sentezi oluşturur.",
-  description: "Tüm kurul sürecini yönetir, risk alanlarını belirler ve bulguları eyleme dönüştürülebilir bir kararda sentezler.",
-  expertise: ["Risk değerlendirmesi", "Kurul koordinasyonu", "Sentez"],
-  bio: "",
-  documentTypes: [],
-  thinkingStyle: "Bütüncül ve sentez odaklı.",
-};
 
 // --- Store interface ---
 
@@ -177,9 +168,16 @@ type BoardroomFlowStore = BoardroomFlowState & BoardroomFlowActions;
 // --- Helpers ---
 
 function deriveSelectedAgents(ids: string[]): BoardroomAgent[] {
+  // Custom (user-created) agents live in the control-room store.
+  // Checking both sources keeps verdict/boardroom snapshots complete
+  // when the board mixes built-in and user agents.
+  const customAgents = useControlRoomStore.getState().customAgents;
   return ids
-    .map((id) => BOARDROOM_AGENTS.find((a) => a.id === id))
-    .filter((a): a is BoardroomAgent => a !== undefined);
+    .map(
+      (id) =>
+        BOARDROOM_AGENTS.find((a) => a.id === id) ?? customAgents[id] ?? null,
+    )
+    .filter((a): a is BoardroomAgent => a !== null);
 }
 
 function deriveCanLaunch(state: {

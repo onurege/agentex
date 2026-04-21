@@ -163,3 +163,24 @@ export const MAX_BOARD_SIZE = 5;
 export function getBoardroomAgent(id: string): BoardroomAgent | undefined {
   return BOARDROOM_AGENTS.find((a) => a.id === id);
 }
+
+// Chief agent — always seated at the boardroom, never listed in the
+// selectable gallery. Lives here (and not in boardroom-flow-store)
+// so any module can import the definition without pulling in the
+// zustand store graph. Legacy imports from boardroom-flow-store
+// continue to work via a re-export.
+export const CHIEF_AGENT: BoardroomAgent = {
+  id: "chief-agent",
+  name: "Baş Ajan",
+  shortName: "Baş",
+  title: "Kurul Koordinatörü",
+  avatar: "👤",
+  color: "agent-chief",
+  characterLine: "Kurulu koordine eder ve son sentezi oluşturur.",
+  description:
+    "Tüm kurul sürecini yönetir, risk alanlarını belirler ve bulguları eyleme dönüştürülebilir bir kararda sentezler.",
+  expertise: ["Risk değerlendirmesi", "Kurul koordinasyonu", "Sentez"],
+  bio: "",
+  documentTypes: [],
+  thinkingStyle: "Bütüncül ve sentez odaklı.",
+};
