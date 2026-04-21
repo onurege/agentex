@@ -31,6 +31,7 @@ import {
   ShadingType,
   Table,
   TableCell,
+  TableLayoutType,
   TableRow,
   TextRun,
   WidthType,
@@ -74,6 +75,13 @@ const SZ = {
   small: 18,
   tiny: 16,
 };
+
+// A4 page is 11906 twips wide. Minus 1200-twip left+right margins
+// (see the section `page.margin` config) the usable content width
+// is 9506. Fixed-layout tables need explicit column widths — with
+// auto layout Word collapses single-cell tables to content width,
+// which is how we ended up with one-character-per-line cards.
+const PAGE_USABLE = 9506;
 
 // ── Small builders ───────────────────────────────────────
 
@@ -188,7 +196,9 @@ function card(
   children: Paragraph[],
 ): Table {
   return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
+    width: { size: PAGE_USABLE, type: WidthType.DXA },
+    columnWidths: [PAGE_USABLE],
+    layout: TableLayoutType.FIXED,
     borders: {
       top: { style: BorderStyle.SINGLE, size: 2, color: C.border },
       bottom: { style: BorderStyle.SINGLE, size: 2, color: C.border },
@@ -202,6 +212,7 @@ function card(
         cantSplit: true,
         children: [
           new TableCell({
+            width: { size: PAGE_USABLE, type: WidthType.DXA },
             shading: fill ? cellShading(fill) : undefined,
             margins: { top: 160, bottom: 160, left: 200, right: 200 },
             borders: leftAccentBorders(borderColor),
@@ -215,7 +226,12 @@ function card(
 
 // ── Badge helpers ───────────────────────────────────────
 
-function badge(label: string, fg: string, bg: string): TableCell {
+function badge(
+  label: string,
+  fg: string,
+  bg: string,
+  widthDxa: number,
+): TableCell {
   return new TableCell({
     shading: cellShading(bg),
     borders: noBorders(),
@@ -233,7 +249,7 @@ function badge(label: string, fg: string, bg: string): TableCell {
         ],
       }),
     ],
-    width: { size: 1700, type: WidthType.DXA },
+    width: { size: widthDxa, type: WidthType.DXA },
   });
 }
 
@@ -279,16 +295,20 @@ function coverBlock(data: NegotiationRecordData): (Paragraph | Table)[] {
   const risk = riskBadge(data.verdict.riskLevel);
   const conf = confidenceLabel(data.verdict.confidenceLevel);
 
-  const badgeCells: TableCell[] = [
-    badge(risk.label, risk.fg, risk.bg),
-    spacerCell(),
-  ];
+  // Badge column widths (DXA twips). Remainder becomes the stretch
+  // cell so the table fills PAGE_USABLE and Word doesn't auto-collapse.
+  const BADGE_W = 2000;
+  const GAP_W = 160;
+  const badgeCells: TableCell[] = [badge(risk.label, risk.fg, risk.bg, BADGE_W)];
+  const columnWidths: number[] = [BADGE_W];
   if (conf) {
-    badgeCells.push(badge(conf, C.mutedStrong, C.subtle));
-    badgeCells.push(spacerCell(9999)); // stretch remaining
-  } else {
-    badgeCells.push(spacerCell(9999));
+    badgeCells.push(spacerCell(GAP_W));
+    badgeCells.push(badge(conf, C.mutedStrong, C.subtle, BADGE_W));
+    columnWidths.push(GAP_W, BADGE_W);
   }
+  const stretchW = PAGE_USABLE - columnWidths.reduce((a, b) => a + b, 0);
+  badgeCells.push(spacerCell(stretchW));
+  columnWidths.push(stretchW);
 
   const blocks: (Paragraph | Table)[] = [
     new Paragraph({
@@ -325,7 +345,9 @@ function coverBlock(data: NegotiationRecordData): (Paragraph | Table)[] {
       ],
     }),
     new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      width: { size: PAGE_USABLE, type: WidthType.DXA },
+      columnWidths,
+      layout: TableLayoutType.FIXED,
       borders: {
         top: { style: BorderStyle.NONE, size: 0, color: "auto" },
         bottom: { style: BorderStyle.NONE, size: 0, color: "auto" },
@@ -378,10 +400,12 @@ function agentPerspectivesBlock(
   if (perspectives.length === 0) return [];
   const out: (Paragraph | Table)[] = [sectionHeader("Ajan Görüşleri")];
   perspectives.forEach((perspective) => {
+    const AVATAR_W = 900;
+    const BODY_W = PAGE_USABLE - AVATAR_W;
     const initialsCell = new TableCell({
       shading: cellShading(C.primarySoft),
       borders: noBorders(),
-      width: { size: 900, type: WidthType.DXA },
+      width: { size: AVATAR_W, type: WidthType.DXA },
       margins: { top: 180, bottom: 180, left: 120, right: 120 },
       verticalAlign: "center",
       children: [
@@ -400,6 +424,7 @@ function agentPerspectivesBlock(
     });
     const bodyCell = new TableCell({
       borders: noBorders(),
+      width: { size: BODY_W, type: WidthType.DXA },
       margins: { top: 140, bottom: 140, left: 220, right: 160 },
       children: [
         p([text(perspective.agentName, { bold: true, color: C.ink })], {
@@ -410,7 +435,9 @@ function agentPerspectivesBlock(
     });
     out.push(
       new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
+        width: { size: PAGE_USABLE, type: WidthType.DXA },
+        columnWidths: [AVATAR_W, BODY_W],
+        layout: TableLayoutType.FIXED,
         borders: plainBorders(C.border),
         rows: [
           new TableRow({
@@ -485,9 +512,11 @@ function positionChangesBlock(
   if (!changes?.length) return [];
   const out: (Paragraph | Table)[] = [sectionHeader("Pozisyon Değişimleri")];
   changes.forEach((pc) => {
+    const HALF = Math.floor(PAGE_USABLE / 2);
     const halfCell = (label: string, body: string) =>
       new TableCell({
         borders: noBorders(),
+        width: { size: HALF, type: WidthType.DXA },
         margins: { top: 120, bottom: 120, left: 160, right: 160 },
         children: [
           p(
@@ -506,7 +535,9 @@ function positionChangesBlock(
       });
     out.push(
       new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
+        width: { size: PAGE_USABLE, type: WidthType.DXA },
+        columnWidths: [HALF, PAGE_USABLE - HALF],
+        layout: TableLayoutType.FIXED,
         borders: plainBorders(C.border),
         rows: [
           new TableRow({
@@ -515,6 +546,7 @@ function positionChangesBlock(
               new TableCell({
                 borders: noBorders(),
                 columnSpan: 2,
+                width: { size: PAGE_USABLE, type: WidthType.DXA },
                 margins: { top: 140, bottom: 40, left: 160, right: 160 },
                 children: [
                   p([text(pc.agentName, { bold: true, color: C.ink })], {
