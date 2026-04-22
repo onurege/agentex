@@ -84,7 +84,7 @@ export default function BoardSetupPage() {
             <Link
               href={SITE.paths.boardroom}
               className="flex items-center gap-2 px-10 py-4 rounded-xl text-xl font-semibold
-                         bg-accent-primary text-white border border-accent-primary
+                         bg-accent-primary text-workspace-surface border border-accent-primary
                          hover:bg-accent-secondary
                          transition-all duration-150 min-h-[56px] shadow-glow-blue"
             >

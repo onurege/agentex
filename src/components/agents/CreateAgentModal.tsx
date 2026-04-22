@@ -316,7 +316,7 @@ export function CreateAgentModal({ open, onClose }: CreateAgentModalProps) {
             type="button"
             onClick={onSubmit}
             disabled={submitting}
-            className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-accent-primary text-white border border-accent-primary hover:bg-accent-secondary disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-accent-primary text-workspace-surface border border-accent-primary hover:bg-accent-secondary disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? "Oluşturuluyor…" : "Oluştur ve Detayları Düzenle"}
           </button>

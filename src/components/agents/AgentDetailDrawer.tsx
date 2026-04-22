@@ -169,7 +169,7 @@ export function AgentDetailDrawer({
               ${
                 isSelected
                   ? "bg-workspace-elevated text-text-secondary border border-workspace-border hover:bg-workspace-border/50"
-                  : "bg-accent-primary text-white border border-accent-primary hover:bg-accent-secondary"
+                  : "bg-accent-primary text-workspace-surface border border-accent-primary hover:bg-accent-secondary"
               }
             `}
           >

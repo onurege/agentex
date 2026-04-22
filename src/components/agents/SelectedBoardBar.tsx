@@ -53,7 +53,7 @@ export function SelectedBoardBar({ selectedAgents }: SelectedBoardBarProps) {
           <Link
             href={SITE.paths.setup}
             className="flex items-center gap-2 px-8 py-3.5 rounded-xl text-lg font-semibold
-                       bg-accent-primary text-white border border-accent-primary
+                       bg-accent-primary text-workspace-surface border border-accent-primary
                        hover:bg-accent-secondary
                        transition-all duration-150 min-h-[52px] shrink-0"
           >

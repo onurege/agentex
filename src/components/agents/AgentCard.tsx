@@ -116,7 +116,7 @@ export function AgentCard({
             ${
               isSelected
                 ? "bg-accent-primary/15 text-accent-primary border border-accent-primary/30 hover:bg-accent-primary/25"
-                : "bg-accent-primary text-white border border-accent-primary hover:bg-accent-secondary"
+                : "bg-accent-primary text-workspace-surface border border-accent-primary hover:bg-accent-secondary"
             }
           `}
         >

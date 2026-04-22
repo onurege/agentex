@@ -76,7 +76,7 @@ function TemplateCard({
       <button
         onClick={onApply}
         className="px-5 py-2.5 rounded-lg text-base font-semibold
-                   bg-accent-primary text-white border border-accent-primary
+                   bg-accent-primary text-workspace-surface border border-accent-primary
                    hover:bg-accent-secondary transition-colors min-h-[44px]"
       >
         Şablonu Kullan

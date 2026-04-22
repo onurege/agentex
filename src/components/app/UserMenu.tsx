@@ -136,7 +136,7 @@ export function UserMenu() {
                           }`}
             >
               <span
-                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-workspace-surface border border-workspace-border shadow-soft
                             transition-transform motion-reduce:transition-none
                             ${
                               fastEnabled ? "translate-x-[18px]" : "translate-x-0.5"

@@ -51,18 +51,19 @@ export default function AuthErrorPage() {
   const { title, body } = MESSAGES[code];
 
   return (
-    <div className="min-h-screen bg-[#fafbfc] text-[#1a1a2e] flex items-center justify-center px-6">
+    <div className="min-h-screen bg-workspace-bg text-text-primary flex items-center justify-center px-6">
       <div className="max-w-md w-full text-center">
-        <div className="w-14 h-14 mx-auto mb-6 rounded-2xl bg-[#FEE2E2] flex items-center justify-center">
+        <div className="w-14 h-14 mx-auto mb-6 rounded-2xl bg-accent-danger/10 border border-accent-danger/25 flex items-center justify-center">
           <svg
             width="28"
             height="28"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#DC2626"
+            stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
+            className="text-accent-danger"
           >
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
@@ -70,12 +71,14 @@ export default function AuthErrorPage() {
           </svg>
         </div>
 
-        <h1 className="text-2xl font-bold mb-3">{title}</h1>
-        <p className="text-base text-[#64748b] leading-relaxed mb-8">{body}</p>
+        <h1 className="font-display text-2xl font-bold mb-3">{title}</h1>
+        <p className="text-base text-text-secondary leading-relaxed mb-8">
+          {body}
+        </p>
 
         <Link
           href="/"
-          className="inline-flex items-center gap-2 px-5 py-3 text-sm font-semibold text-white bg-[#3B82F6] hover:bg-[#2563EB] rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-3 text-sm font-semibold text-workspace-surface bg-accent-primary hover:bg-accent-secondary rounded-lg transition-colors shadow-soft"
         >
           <svg
             width="16"

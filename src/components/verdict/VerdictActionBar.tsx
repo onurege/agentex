@@ -132,7 +132,7 @@ export function VerdictActionBar({ verdict, documentName }: VerdictActionBarProp
         <a
           href={`/api/runs/${latestRunId}/redline`}
           className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-base font-semibold
-                     bg-accent-primary text-white border border-accent-primary
+                     bg-accent-primary text-workspace-surface border border-accent-primary
                      hover:bg-accent-secondary transition-colors min-h-[52px] shadow-glow-blue"
         >
           <svg
@@ -232,7 +232,7 @@ export function VerdictActionBar({ verdict, documentName }: VerdictActionBarProp
       <button
         onClick={handleNewRun}
         className="flex items-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold
-                   bg-accent-primary text-white border border-accent-primary
+                   bg-accent-primary text-workspace-surface border border-accent-primary
                    hover:bg-accent-secondary
                    transition-colors min-h-[52px]"
       >

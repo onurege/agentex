@@ -171,7 +171,7 @@ export default function PanelRunsPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <Link
                     href={`/app/runs/${run.id}`}
-                    className="px-4 py-2.5 rounded-lg text-[14px] font-medium bg-accent-primary text-white border border-accent-primary hover:bg-accent-secondary transition-colors min-h-[40px]"
+                    className="px-4 py-2.5 rounded-lg text-[14px] font-medium bg-accent-primary text-workspace-surface border border-accent-primary hover:bg-accent-secondary transition-colors min-h-[40px]"
                   >
                     Görüntüle
                   </Link>

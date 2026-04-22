@@ -56,7 +56,7 @@ export default function AgentLibraryPage() {
 
           <button
             onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-accent-primary text-white border border-accent-primary hover:bg-accent-secondary transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-accent-primary text-workspace-surface border border-accent-primary hover:bg-accent-secondary transition-colors"
           >
             <svg
               width="16"

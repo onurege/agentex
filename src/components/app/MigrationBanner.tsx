@@ -103,7 +103,7 @@ export function MigrationBanner() {
             onClick={handleMigrate}
             disabled={status === "running"}
             className="px-4 py-2 rounded-lg text-[14px] font-semibold
-                       bg-accent-primary text-white border border-accent-primary
+                       bg-accent-primary text-workspace-surface border border-accent-primary
                        hover:bg-accent-secondary transition-colors
                        disabled:opacity-60 disabled:cursor-not-allowed"
           >

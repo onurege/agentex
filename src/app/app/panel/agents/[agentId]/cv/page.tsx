@@ -60,7 +60,7 @@ export default function CVBuilderPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-2xl font-semibold text-text-primary mb-3">Ajan Bulunamadı</p>
-        <Link href="/app/panel/agents" className="px-6 py-3 rounded-xl text-base font-semibold bg-accent-primary text-white hover:bg-accent-secondary transition-colors">
+        <Link href="/app/panel/agents" className="px-6 py-3 rounded-xl text-base font-semibold bg-accent-primary text-workspace-surface hover:bg-accent-secondary transition-colors">
           Agent Library&apos;ye Dön
         </Link>
       </div>
@@ -122,7 +122,7 @@ export default function CVBuilderPage() {
             <button
               onClick={handleSaveDraft}
               disabled={!isDirty}
-              className={`px-6 py-3 rounded-xl text-base font-semibold min-h-[48px] transition-colors ${isDirty ? "bg-accent-primary text-white hover:bg-accent-secondary" : "bg-workspace-elevated text-text-muted border border-workspace-border cursor-not-allowed"}`}
+              className={`px-6 py-3 rounded-xl text-base font-semibold min-h-[48px] transition-colors ${isDirty ? "bg-accent-primary text-workspace-surface hover:bg-accent-secondary" : "bg-workspace-elevated text-text-muted border border-workspace-border cursor-not-allowed"}`}
             >
               {saveFlash === "saved" ? "✓ Taslak Kaydedildi" : "Taslak Kaydet"}
             </button>

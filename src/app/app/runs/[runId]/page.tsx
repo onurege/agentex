@@ -28,7 +28,7 @@ export default function SavedRunVerdictPage() {
           <p className="text-lg text-text-secondary">Bu kayıtlı oturum artık mevcut değil.</p>
           <Link
             href={SITE.paths.app}
-            className="px-6 py-3 rounded-xl text-base font-semibold bg-accent-primary text-white hover:bg-accent-secondary transition-colors"
+            className="px-6 py-3 rounded-xl text-base font-semibold bg-accent-primary text-workspace-surface hover:bg-accent-secondary transition-colors"
           >
             Yeni Tartışma Başlat
           </Link>
@@ -168,7 +168,7 @@ export default function SavedRunVerdictPage() {
               router.push(SITE.paths.app);
             }}
             className="flex items-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold
-                       bg-accent-primary text-white border border-accent-primary
+                       bg-accent-primary text-workspace-surface border border-accent-primary
                        hover:bg-accent-secondary transition-colors min-h-[52px]"
           >
             Yeni Tartışma Başlat
