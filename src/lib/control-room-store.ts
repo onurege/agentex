@@ -15,6 +15,11 @@ import { BOARDROOM_AGENTS, type BoardroomAgent } from "./boardroom-agents";
 import { CHIEF_AGENT } from "./boardroom-flow-store";
 import { saveAuditEvent } from "./audit-log";
 import { dispatchToAdapter } from "./persistence/dispatch";
+import {
+  getPersistenceAdapter,
+  getPersistenceMode,
+} from "./persistence/factory";
+import type { AgentProfileDTO } from "./persistence/types";
 
 // --- CV Data ---
 
@@ -107,12 +112,15 @@ interface ControlRoomActions {
   getProfile: (agentId: string) => AgentProfile;
 
   // Custom agents
-  createCustomAgent: (input: CreateCustomAgentInput) => CreateCustomAgentResult;
+  createCustomAgent: (
+    input: CreateCustomAgentInput,
+  ) => Promise<CreateCustomAgentResult>;
   archiveCustomAgent: (agentId: string) => void;
   restoreCustomAgent: (agentId: string) => void;
   getCustomAgent: (agentId: string) => CustomAgent | null;
   getAllAgentIds: (opts?: { includeArchived?: boolean }) => string[];
   getAllBoardroomAgents: (opts?: { includeArchived?: boolean }) => BoardroomAgent[];
+  hydrateCustomAgentsFromDTOs: (dtos: AgentProfileDTO[]) => void;
 }
 
 type ControlRoomStore = ControlRoomState & ControlRoomActions;
@@ -147,6 +155,40 @@ function isAgentIdTaken(
 ): boolean {
   if (RESERVED_IDS.has(id)) return true;
   return Boolean(customAgents[id]);
+}
+
+// Shape a CustomAgent from an AgentProfileDTO returned by the server
+// (or a mirrored local-adapter DTO). Fallbacks cover the case where
+// the DTO carries nulls for optional identity fields — e.g. a future
+// migration backfill.
+function customAgentFromDTO(
+  dto: AgentProfileDTO,
+  args: {
+    shortName: string;
+    fallbackName: string;
+    fallbackTitle: string;
+    fallbackAvatar: string;
+    fallbackTone: string;
+    preserveCreatedAt?: string;
+  },
+): CustomAgent {
+  return {
+    id: dto.agentKey,
+    name: dto.displayName ?? args.fallbackName,
+    shortName: args.shortName,
+    title: dto.title ?? args.fallbackTitle,
+    avatar: dto.avatar ?? args.fallbackAvatar,
+    color: "agent-custom",
+    characterLine: "",
+    description: "",
+    expertise: dto.expertise.length ? dto.expertise : [],
+    bio: "",
+    documentTypes: [],
+    thinkingStyle: dto.tone ?? args.fallbackTone,
+    isCustom: true,
+    archivedAt: dto.archivedAt,
+    createdAt: args.preserveCreatedAt ?? new Date().toISOString(),
+  };
 }
 
 function defaultCV(agent: BoardroomAgent): AgentCVData {
@@ -227,12 +269,7 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           },
         });
         saveAuditEvent({ action: "cv_draft_saved", targetType: "agent", targetId: agentId, summary: `${data.name} CV taslağı kaydedildi` });
-        // Custom agents are localStorage-only in v1 — the DB has no
-        // AgentProfile row for them, so hitting the adapter would
-        // 404/500. Skip dispatch for custom; sync write above stands.
-        if (!get().customAgents[agentId]) {
-          dispatchToAdapter((adapter) => adapter.agents.saveCVDraft(agentId, data));
-        }
+        dispatchToAdapter((adapter) => adapter.agents.saveCVDraft(agentId, data));
       },
 
       publishCV: (agentId) => {
@@ -248,9 +285,7 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           },
         });
         saveAuditEvent({ action: "cv_published", targetType: "agent", targetId: agentId, summary: `${profile.cvDraft.name} CV yayınlandı` });
-        if (!get().customAgents[agentId]) {
-          dispatchToAdapter((adapter) => adapter.agents.publishCV(agentId));
-        }
+        dispatchToAdapter((adapter) => adapter.agents.publishCV(agentId));
       },
 
       // ── Prompt ──────────────────────────────────────────
@@ -276,9 +311,7 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           },
         });
         saveAuditEvent({ action: "prompt_draft_saved", targetType: "agent", targetId: agentId, summary: `${agentId} prompt taslağı kaydedildi` });
-        if (!get().customAgents[agentId]) {
-          dispatchToAdapter((adapter) => adapter.agents.savePromptDraft(agentId, data));
-        }
+        dispatchToAdapter((adapter) => adapter.agents.savePromptDraft(agentId, data));
       },
 
       publishPrompt: (agentId) => {
@@ -296,9 +329,7 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           },
         });
         saveAuditEvent({ action: "prompt_published", targetType: "agent", targetId: agentId, summary: `${agentId} prompt v${newVersion} yayınlandı` });
-        if (!get().customAgents[agentId]) {
-          dispatchToAdapter((adapter) => adapter.agents.publishPrompt(agentId));
-        }
+        dispatchToAdapter((adapter) => adapter.agents.publishPrompt(agentId));
       },
 
       rollbackPrompt: (agentId) => {
@@ -315,9 +346,7 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           },
         });
         saveAuditEvent({ action: "prompt_rollback", targetType: "agent", targetId: agentId, summary: `${agentId} prompt v${profile.promptVersion}'e geri alındı` });
-        if (!get().customAgents[agentId]) {
-          dispatchToAdapter((adapter) => adapter.agents.rollbackPrompt(agentId));
-        }
+        dispatchToAdapter((adapter) => adapter.agents.rollbackPrompt(agentId));
       },
 
       // ── Effective agent data ────────────────────────────
@@ -357,7 +386,7 @@ export const useControlRoomStore = create<ControlRoomStore>()(
 
       // ── Custom agents ───────────────────────────────────
 
-      createCustomAgent: (input) => {
+      createCustomAgent: async (input) => {
         const id = input.id.trim();
         const name = input.name.trim();
         const title = input.title.trim();
@@ -377,6 +406,41 @@ export const useControlRoomStore = create<ControlRoomStore>()(
         const tone = input.tone?.trim() || "Profesyonel ve net";
         const shortName = name.split(/\s+/)[0] || name;
 
+        // DB mode: server is the source of truth — validate there too
+        // and wait for the row before updating local state so the
+        // redirect-to-cv page can immediately find the agent.
+        if (getPersistenceMode() === "db") {
+          try {
+            const adapter = await getPersistenceAdapter();
+            const dto = await adapter.agents.createCustom({
+              agentKey: id,
+              displayName: name,
+              title,
+              avatar,
+              expertise,
+              tone: input.tone?.trim() || null,
+            });
+            const agent = customAgentFromDTO(dto, {
+              shortName,
+              fallbackName: name,
+              fallbackTitle: title,
+              fallbackAvatar: avatar,
+              fallbackTone: tone,
+            });
+            set({ customAgents: { ...get().customAgents, [id]: agent } });
+            return { ok: true, agent };
+          } catch (err) {
+            const code = err instanceof Error ? err.message : "";
+            if (code.includes("id_taken")) return { ok: false, error: "id_taken" };
+            if (code.includes("invalid_id")) return { ok: false, error: "invalid_id" };
+            if (code.includes("missing_fields")) return { ok: false, error: "missing_fields" };
+            // eslint-disable-next-line no-console
+            console.error("[agents] createCustom failed:", err);
+            return { ok: false, error: "missing_fields" };
+          }
+        }
+
+        // Local mode — no server call; zustand + localStorage stand alone.
         const agent: CustomAgent = {
           id,
           name,
@@ -394,10 +458,7 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           archivedAt: null,
           createdAt: new Date().toISOString(),
         };
-
-        set({
-          customAgents: { ...get().customAgents, [id]: agent },
-        });
+        set({ customAgents: { ...get().customAgents, [id]: agent } });
         saveAuditEvent({
           action: "agent_created",
           targetType: "agent",
@@ -422,6 +483,7 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           targetId: agentId,
           summary: `Özel ajan "${agent.name}" arşivlendi`,
         });
+        dispatchToAdapter((adapter) => adapter.agents.archiveCustom(agentId));
       },
 
       restoreCustomAgent: (agentId) => {
@@ -439,6 +501,27 @@ export const useControlRoomStore = create<ControlRoomStore>()(
           targetId: agentId,
           summary: `Özel ajan "${agent.name}" arşivden çıkarıldı`,
         });
+        dispatchToAdapter((adapter) => adapter.agents.restoreCustom(agentId));
+      },
+
+      hydrateCustomAgentsFromDTOs: (dtos) => {
+        const existing = get().customAgents;
+        const merged: Record<string, CustomAgent> = { ...existing };
+        for (const dto of dtos) {
+          if (!dto.isUserCreated) continue;
+          const fallbackName = dto.displayName ?? dto.agentKey;
+          merged[dto.agentKey] = customAgentFromDTO(dto, {
+            shortName: fallbackName.split(/\s+/)[0],
+            fallbackName,
+            fallbackTitle: dto.title ?? "",
+            fallbackAvatar: dto.avatar ?? "🤖",
+            fallbackTone: dto.tone ?? "Profesyonel ve net",
+            // Keep original createdAt so the same agent doesn't drift
+            // when re-hydrated on each page load.
+            preserveCreatedAt: existing[dto.agentKey]?.createdAt,
+          });
+        }
+        set({ customAgents: merged });
       },
 
       getCustomAgent: (agentId) => {

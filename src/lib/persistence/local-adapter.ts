@@ -207,7 +207,7 @@ class LocalAgentStore implements AgentStore {
   async createCustom(
     input: import("./types").CreateCustomAgentDTO,
   ): Promise<AgentProfileDTO> {
-    const result = this.store.createCustomAgent({
+    const result = await this.store.createCustomAgent({
       id: input.agentKey,
       name: input.displayName,
       title: input.title,

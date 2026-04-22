@@ -101,11 +101,11 @@ export function CreateAgentModal({ open, onClose }: CreateAgentModalProps) {
     setExpertise((xs) => xs.filter((x) => x !== tag));
   }, []);
 
-  const onSubmit = useCallback(() => {
+  const onSubmit = useCallback(async () => {
     if (submitting) return;
     setError(null);
     setSubmitting(true);
-    const result = createCustomAgent({
+    const result = await createCustomAgent({
       id: slug,
       name,
       title,
