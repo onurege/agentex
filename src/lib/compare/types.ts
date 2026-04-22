@@ -9,6 +9,8 @@
 // is shared — imported read-only.
 // ============================================================
 
+import type { CompareSection } from "./parse";
+
 /** What kind of change this finding represents. */
 export type CompareFindingType =
   | "added"            // clause exists in v2, not in v1
@@ -52,6 +54,13 @@ export interface CompareDocumentMeta {
   sizeBytes: number;
   /** ISO string; when the upload was parsed. */
   parsedAt: string;
+  /**
+   * Clause-level sections extracted by the ingestion parser. Empty
+   * array when parsing yields no structure (fallback or unsupported
+   * file). Travels with the run so downstream consumers (export,
+   * future agent) don't need to re-parse.
+   */
+  sections: CompareSection[];
 }
 
 export interface CompareStats {

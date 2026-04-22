@@ -4,23 +4,43 @@
 // CompareUploadBox
 // ============================================================
 //
-// Single-file dropzone specialized for the compare flow. Captures
-// file metadata only (Faz 1 works on mock results — real parsing
-// lands in Faz 2). Emits a CompareDocumentMeta when a file is
-// picked; parent owns the "both uploaded?" decision.
+// Single-file dropzone specialized for the compare flow. Runs the
+// picked file through the real ingestion pipeline (Faz 2), exposes
+// idle/parsing/ready/error status inline, and emits a CompareUploadPayload
+// carrying parsed sections plus — for DOCX — the original buffer.
+// Parent owns the "both uploaded?" decision and the store wiring.
 // ============================================================
 
-import { useCallback, useRef, useState, type DragEvent } from "react";
-import { FileText, X, Upload } from "lucide-react";
+import {
+  useCallback,
+  useRef,
+  useState,
+  type DragEvent,
+} from "react";
+import { AlertTriangle, FileText, Loader2, Upload, X } from "lucide-react";
 import type { CompareDocumentMeta } from "@/lib/compare/types";
+import {
+  parseCompareDocument,
+  type CompareSection,
+} from "@/lib/compare/parse";
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt"];
+
+type UploadStatus = "idle" | "parsing" | "ready" | "error";
+
+/** What a successful upload yields — consumed by the store. */
+export interface CompareUploadPayload {
+  meta: CompareDocumentMeta;
+  sections: CompareSection[];
+  /** Non-null only for DOCX uploads; needed by the redline exporter. */
+  originalBuffer: ArrayBuffer | null;
+}
 
 interface CompareUploadBoxProps {
   label: string;
   tone: "v1" | "v2";
-  meta: CompareDocumentMeta | null;
-  onPick(meta: CompareDocumentMeta): void;
+  payload: CompareUploadPayload | null;
+  onPick(payload: CompareUploadPayload): void;
   onClear(): void;
 }
 
@@ -46,42 +66,86 @@ const TONE_CLASSES = {
 export function CompareUploadBox({
   label,
   tone,
-  meta,
+  payload,
   onPick,
   onClear,
 }: CompareUploadBoxProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [status, setStatus] = useState<UploadStatus>(
+    payload ? "ready" : "idle",
+  );
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [pendingName, setPendingName] = useState<string | null>(null);
   const t = TONE_CLASSES[tone];
 
   const accept = useCallback(
-    (file: File) => {
+    async (file: File) => {
       const ext = "." + (file.name.split(".").pop() ?? "").toLowerCase();
-      if (!ACCEPTED_EXTENSIONS.includes(ext)) return;
-      onPick({
-        fileName: file.name,
-        sizeBytes: file.size,
-        parsedAt: new Date().toISOString(),
-      });
+      if (!ACCEPTED_EXTENSIONS.includes(ext)) {
+        setStatus("error");
+        setErrorMsg(
+          `Desteklenmeyen dosya türü. Kabul edilen: ${ACCEPTED_EXTENSIONS.join(", ")}`,
+        );
+        return;
+      }
+
+      setStatus("parsing");
+      setErrorMsg(null);
+      setPendingName(file.name);
+
+      try {
+        const result = await parseCompareDocument(file);
+        const next: CompareUploadPayload = {
+          meta: {
+            fileName: result.fileName,
+            sizeBytes: result.sizeBytes,
+            parsedAt: result.parsedAt,
+            sections: result.sections,
+          },
+          sections: result.sections,
+          originalBuffer: result.originalBuffer,
+        };
+        setStatus("ready");
+        setPendingName(null);
+        onPick(next);
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : "Belge işlenemedi.";
+        setStatus("error");
+        setErrorMsg(friendlyError(msg));
+        setPendingName(null);
+      }
     },
     [onPick],
   );
+
+  const handleClear = useCallback(() => {
+    setStatus("idle");
+    setErrorMsg(null);
+    setPendingName(null);
+    onClear();
+  }, [onClear]);
 
   const onDrop = useCallback(
     (e: DragEvent<HTMLDivElement>) => {
       e.preventDefault();
       setDragging(false);
+      if (status === "parsing") return;
       const file = e.dataTransfer.files[0];
-      if (file) accept(file);
+      if (file) void accept(file);
     },
-    [accept],
+    [accept, status],
   );
+
+  const busy = status === "parsing";
+  const errored = status === "error";
 
   return (
     <div
       onDragOver={(e) => {
         e.preventDefault();
-        setDragging(true);
+        if (!busy) setDragging(true);
       }}
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
@@ -89,9 +153,11 @@ export function CompareUploadBox({
         ${
           dragging
             ? `border-accent-primary bg-accent-primary/5 ring-2 ${t.ring}`
-            : meta
-              ? "border-workspace-border bg-workspace-surface"
-              : "border-workspace-border bg-workspace-elevated hover:border-accent-primary/40 hover:bg-workspace-surface"
+            : errored
+              ? "border-accent-danger/40 bg-accent-danger/5"
+              : payload
+                ? "border-workspace-border bg-workspace-surface"
+                : "border-workspace-border bg-workspace-elevated hover:border-accent-primary/40 hover:bg-workspace-surface"
         }`}
     >
       <div
@@ -100,7 +166,23 @@ export function CompareUploadBox({
         {label}
       </div>
 
-      {meta ? (
+      {busy ? (
+        <div className="flex flex-col items-center text-center gap-3 w-full pt-4">
+          <div
+            className={`w-14 h-14 rounded-xl border ${t.chip} flex items-center justify-center`}
+          >
+            <Loader2 size={24} className="animate-spin" />
+          </div>
+          <div>
+            <p className="font-display text-base font-semibold text-text-primary break-all max-w-[280px]">
+              {pendingName ?? "Belge ayrıştırılıyor…"}
+            </p>
+            <p className="text-sm text-text-tertiary mt-0.5">
+              Metin çıkarılıyor, maddeler bölünüyor.
+            </p>
+          </div>
+        </div>
+      ) : payload ? (
         <div className="flex flex-col items-center text-center gap-3 w-full pt-4">
           <div
             className={`w-14 h-14 rounded-xl border ${t.chip} flex items-center justify-center`}
@@ -109,19 +191,45 @@ export function CompareUploadBox({
           </div>
           <div>
             <p className="font-display text-base font-semibold text-text-primary break-all max-w-[280px]">
-              {meta.fileName}
+              {payload.meta.fileName}
             </p>
             <p className="text-sm text-text-tertiary mt-0.5">
-              {formatSize(meta.sizeBytes)}
+              {formatSize(payload.meta.sizeBytes)} ·{" "}
+              {payload.sections.length} madde
             </p>
           </div>
           <button
             type="button"
-            onClick={onClear}
+            onClick={handleClear}
             className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text-secondary hover:text-accent-danger hover:bg-accent-danger/10 transition-colors"
           >
             <X size={14} />
             Kaldır
+          </button>
+        </div>
+      ) : errored ? (
+        <div className="flex flex-col items-center text-center gap-3 w-full pt-4">
+          <div className="w-14 h-14 rounded-xl border border-accent-danger/25 bg-accent-danger/10 text-accent-danger flex items-center justify-center">
+            <AlertTriangle size={22} />
+          </div>
+          <div>
+            <p className="font-display text-base font-semibold text-text-primary">
+              Ayrıştırma başarısız
+            </p>
+            <p className="text-sm text-text-tertiary mt-0.5 max-w-[320px]">
+              {errorMsg ?? "Belge işlenirken beklenmeyen bir hata oluştu."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("idle");
+              setErrorMsg(null);
+              inputRef.current?.click();
+            }}
+            className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-workspace-surface transition-colors"
+          >
+            Tekrar dene
           </button>
         </div>
       ) : (
@@ -154,10 +262,17 @@ export function CompareUploadBox({
         accept={ACCEPTED_EXTENSIONS.join(",")}
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) accept(file);
+          if (file) void accept(file);
           e.target.value = "";
         }}
       />
     </div>
   );
+}
+
+function friendlyError(message: string): string {
+  if (message.includes("DOCX_TOO_LARGE")) {
+    return "DOCX dosyası 10 MB sınırını aşıyor. Daha küçük bir kopya deneyin.";
+  }
+  return message;
 }

@@ -63,14 +63,14 @@ export default function NewCompareRunPage() {
           <CompareUploadBox
             label="v1 · Önceki"
             tone="v1"
-            meta={pendingV1?.meta ?? null}
+            payload={pendingV1}
             onPick={setV1}
             onClear={clearV1}
           />
           <CompareUploadBox
             label="v2 · Güncel"
             tone="v2"
-            meta={pendingV2?.meta ?? null}
+            payload={pendingV2}
             onPick={setV2}
             onClear={clearV2}
           />
