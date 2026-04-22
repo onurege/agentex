@@ -16,15 +16,7 @@ export function StageLayout({ currentStep, children }: StageLayoutProps) {
 
       {/* Scene container — fills remaining space */}
       <main className="flex-1 overflow-y-auto relative">
-        {/* Cinematic vignette overlay */}
-        <div
-          className="pointer-events-none absolute inset-0 z-10"
-          style={{
-            background:
-              "radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.3) 100%)",
-          }}
-        />
-        <div className="relative z-0 h-full">{children}</div>
+        {children}
       </main>
     </div>
   );

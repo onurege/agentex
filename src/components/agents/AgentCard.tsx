@@ -20,13 +20,13 @@ export function AgentCard({
   return (
     <div
       className={`
-        relative flex flex-col items-center p-6 rounded-xl
+        relative flex flex-col items-center p-6 rounded-xl h-full
         transition-all duration-200
-        min-w-[260px] min-h-[280px]
+        min-w-[260px] min-h-[380px]
         ${
           isSelected
             ? "bg-accent-primary/10 border-2 border-accent-primary/50 shadow-glow-blue"
-            : "bg-workspace-surface border border-workspace-border hover:border-text-muted/30"
+            : "bg-workspace-surface border border-workspace-border hover:border-text-muted/30 hover:shadow-soft"
         }
       `}
     >
@@ -77,24 +77,25 @@ export function AgentCard({
         {agent.title}
       </p>
 
-      {/* Expertise tags */}
-      <div className="flex flex-wrap justify-center gap-1.5 mb-3">
-        {agent.expertise.slice(0, 3).map((tag) => (
-          <span
-            key={tag}
-            className="px-2.5 py-1 rounded-md text-[13px] font-medium
-                       bg-workspace-elevated text-text-secondary
-                       border border-workspace-border"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
+      {/* Expertise + character — grows to fill so actions pin to bottom */}
+      <div className="flex-1 flex flex-col items-center w-full">
+        <div className="flex flex-wrap justify-center gap-1.5 mb-3">
+          {agent.expertise.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="px-2.5 py-1 rounded-md text-[13px] font-medium
+                         bg-workspace-elevated text-text-secondary
+                         border border-workspace-border"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
 
-      {/* Character line */}
-      <p className="text-[14px] text-text-tertiary text-center italic leading-relaxed mb-5 px-2">
-        &ldquo;{agent.characterLine}&rdquo;
-      </p>
+        <p className="text-[14px] text-text-tertiary text-center italic leading-relaxed mb-5 px-2">
+          &ldquo;{agent.characterLine}&rdquo;
+        </p>
+      </div>
 
       {/* Actions */}
       <div className="mt-auto flex items-center gap-3 w-full">

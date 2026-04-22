@@ -52,7 +52,7 @@ export default function AgentGalleryPage() {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-[1080px]"
         >
           {stageAgents.map((agent) => (
-            <StaggerItem key={agent.id}>
+            <StaggerItem key={agent.id} className="h-full">
               <AgentCard
                 agent={agent}
                 isSelected={selectedSet.has(agent.id)}
