@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { getPermissions } from "@/lib/config/roles";
 import { useSession } from "next-auth/react";
 import { ThemeToggle } from "@/components/app/ThemeToggle";
+import { BrandMark } from "@/components/app/BrandMark";
 
 interface NavItem {
   label: string;
@@ -99,10 +100,12 @@ export function ControlRoomSidebar() {
   return (
     <aside className="w-[240px] shrink-0 border-r border-workspace-border bg-workspace-surface flex flex-col">
       {/* Brand */}
-      <div className="px-5 h-[72px] flex items-center border-b border-workspace-border/50">
-        <Link href="/app/panel" className="flex items-center gap-2.5">
-          <span className="text-xl text-accent-primary">⬡</span>
-          <span className="text-base font-semibold text-text-primary">Control Room</span>
+      <div className="px-4 h-[72px] flex items-center border-b border-workspace-border/50">
+        <Link
+          href="/app/panel"
+          className="transition-opacity hover:opacity-80"
+        >
+          <BrandMark size="sm" />
         </Link>
       </div>
 

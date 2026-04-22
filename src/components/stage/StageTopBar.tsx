@@ -6,6 +6,7 @@ import { SITE } from "@/lib/config/site";
 import { getPermissions } from "@/lib/config/roles";
 import { UserMenu } from "@/components/app/UserMenu";
 import { ThemeToggle } from "@/components/app/ThemeToggle";
+import { BrandMark } from "@/components/app/BrandMark";
 
 export function StageTopBar() {
   const { data: session } = useSession();
@@ -15,13 +16,11 @@ export function StageTopBar() {
   return (
     <header className="flex items-center justify-between px-6 h-[72px] border-b border-workspace-border/50 bg-workspace-bg/80 backdrop-blur-sm shrink-0">
       {/* Left — Brand */}
-      <Link href={SITE.paths.app} className="flex items-center gap-3 group">
-        <span className="text-2xl leading-none text-accent-primary group-hover:text-accent-secondary transition-colors">
-          {SITE.logo}
-        </span>
-        <span className="text-lg font-semibold text-text-primary tracking-tight">
-          {SITE.name}
-        </span>
+      <Link
+        href={SITE.paths.app}
+        className="transition-opacity hover:opacity-80"
+      >
+        <BrandMark size="sm" />
       </Link>
 
       {/* Right — Panel + Avatar */}

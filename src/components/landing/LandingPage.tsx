@@ -15,6 +15,7 @@ import { SITE, brandString } from "@/lib/config/site";
 import { useFastMode } from "@/lib/motion/fast-mode";
 import { DURATION, EASE } from "@/lib/motion/tokens";
 import { ThemeToggle } from "@/components/app/ThemeToggle";
+import { BrandMark } from "@/components/app/BrandMark";
 
 const HOW_IT_WORKS = [
   {
@@ -123,14 +124,7 @@ export function LandingPage() {
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-workspace-border bg-workspace-surface/85 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-accent-primary text-workspace-surface flex items-center justify-center shadow-soft">
-              <span className="text-sm font-bold">{SITE.logo}</span>
-            </div>
-            <span className="text-lg font-display font-semibold tracking-tight">
-              {SITE.name}
-            </span>
-          </div>
+          <BrandMark size="sm" />
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Link
@@ -332,14 +326,7 @@ export function LandingPage() {
       {/* Footer */}
       <footer className="py-8 border-t border-workspace-border bg-workspace-bg">
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-accent-primary text-workspace-surface flex items-center justify-center">
-              <span className="text-xs font-bold">{SITE.logo}</span>
-            </div>
-            <span className="text-sm font-medium text-text-tertiary">
-              {SITE.name}
-            </span>
-          </div>
+          <BrandMark size="sm" />
           <p className="text-xs text-text-tertiary">{SITE.tagline}</p>
         </div>
       </footer>
