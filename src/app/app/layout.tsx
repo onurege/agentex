@@ -1,10 +1,8 @@
 /**
- * App layout — scopes workspace styles (dark theme) to the authenticated
- * app surface. Both Stage Experience and Control Room live under /app.
- *
- * Stage pages use StageLayout (with TopBar + ProgressBar).
- * Panel pages use ControlRoomLayout (with Sidebar).
- * This layout only provides the dark theme wrapper.
+ * App layout — authenticated shell under /app. Both Stage Experience
+ * and Control Room live here. Theme (light/dark) is resolved at the
+ * root via next-themes; this wrapper only paints the workspace
+ * background + ink color so it honors whichever theme is active.
  */
 export default function AppLayout({
   children,
@@ -12,7 +10,7 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="h-screen overflow-hidden dark bg-workspace-bg text-text-primary">
+    <div className="h-screen overflow-hidden bg-workspace-bg text-text-primary">
       {children}
     </div>
   );
