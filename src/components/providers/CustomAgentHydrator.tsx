@@ -9,6 +9,12 @@
 // gallery, stage pages) can read them synchronously from zustand.
 // Local mode is a no-op — zustand + localStorage already carries the
 // state.
+//
+// Timing matters: zustand/persist rehydrates from localStorage
+// asynchronously after mount. If we push DB-sourced custom agents
+// before persist finishes, its rehydrate step overwrites them. We
+// gate on persist.onFinishHydration() to merge *after* localStorage
+// has taken its turn.
 // ============================================================
 
 import { useEffect } from "react";
@@ -19,6 +25,22 @@ import {
   getPersistenceMode,
 } from "@/lib/persistence/factory";
 
+async function mergeFromDB(signal: { cancelled: boolean }): Promise<void> {
+  try {
+    const adapter = await getPersistenceAdapter();
+    const profiles = await adapter.agents.listProfiles();
+    if (signal.cancelled) return;
+    useControlRoomStore
+      .getState()
+      .hydrateCustomAgentsFromDTOs(
+        profiles.filter((p) => p.isUserCreated),
+      );
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[agents] hydrate custom agents failed:", err);
+  }
+}
+
 export function CustomAgentHydrator() {
   const { status } = useSession();
 
@@ -26,27 +48,22 @@ export function CustomAgentHydrator() {
     if (status !== "authenticated") return;
     if (getPersistenceMode() !== "db") return;
 
-    let cancelled = false;
-    (async () => {
-      try {
-        const adapter = await getPersistenceAdapter();
-        const profiles = await adapter.agents.listProfiles();
-        if (cancelled) return;
-        useControlRoomStore
-          .getState()
-          .hydrateCustomAgentsFromDTOs(
-            profiles.filter((p) => p.isUserCreated),
-          );
-      } catch (err) {
-        // Non-fatal: panel will still work off whatever zustand
-        // already has. Log for diagnosis.
-        // eslint-disable-next-line no-console
-        console.error("[agents] hydrate custom agents failed:", err);
-      }
-    })();
+    const signal = { cancelled: false };
+
+    // If persist already finished (fast localStorage, warm cache),
+    // merge immediately. Otherwise wait for the rehydration event.
+    // Both paths are safe — the merge is additive and idempotent.
+    const persist = useControlRoomStore.persist;
+    if (persist.hasHydrated()) {
+      void mergeFromDB(signal);
+    }
+    const unsubscribe = persist.onFinishHydration(() => {
+      if (!signal.cancelled) void mergeFromDB(signal);
+    });
 
     return () => {
-      cancelled = true;
+      signal.cancelled = true;
+      unsubscribe();
     };
   }, [status]);
 
