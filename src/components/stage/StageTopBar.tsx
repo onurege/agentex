@@ -23,8 +23,34 @@ export function StageTopBar() {
         <BrandMark size="sm" />
       </Link>
 
-      {/* Right — Panel + Avatar */}
+      {/* Right — Compare + Panel + theme + avatar */}
       <div className="flex items-center gap-3">
+        <Link
+          href="/app/compare"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
+                     text-text-secondary hover:text-text-primary
+                     bg-workspace-surface hover:bg-workspace-elevated
+                     border border-workspace-border hover:border-accent-primary/30
+                     transition-all duration-150 min-h-[44px]"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="shrink-0"
+          >
+            <path d="M12 3v18" />
+            <path d="M8 8l-4 4 4 4" />
+            <path d="M16 8l4 4-4 4" />
+          </svg>
+          <span>Karşılaştır</span>
+        </Link>
+
         {permissions.canAccessPanel && (
           <Link
             href={SITE.paths.panel}

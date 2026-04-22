@@ -10,6 +10,8 @@ import {
   MessageSquare,
   CheckCircle2,
   ArrowRight,
+  FileDiff,
+  Gavel,
 } from "lucide-react";
 import { SITE, brandString } from "@/lib/config/site";
 import { useFastMode } from "@/lib/motion/fast-mode";
@@ -201,6 +203,86 @@ export function LandingPage() {
 
           {/* Animated Scene Preview */}
           <ScenePreview />
+        </div>
+      </section>
+
+      {/* Dual-rail: two product flows under one platform */}
+      <section className="py-20 bg-workspace-bg">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <div className="inline-block text-[10px] font-mono font-semibold tracking-[0.2em] uppercase text-accent-warning mb-3">
+              — İki İş Akışı · Bir Platform —
+            </div>
+            <h2 className="font-display text-3xl md:text-4xl font-bold tracking-tight">
+              Belgenizde ne yapmak istediğinizi seçin
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Boardroom rail */}
+            <div className="group relative p-8 rounded-2xl border border-accent-primary/25 bg-workspace-surface hover:border-accent-primary/45 hover:shadow-medium transition-all">
+              <div className="w-12 h-12 rounded-xl bg-accent-primary/10 border border-accent-primary/25 flex items-center justify-center mb-4">
+                <Gavel size={22} className="text-accent-primary" />
+              </div>
+              <div className="text-[10px] font-mono font-semibold tracking-widest uppercase text-accent-primary mb-1">
+                Boardroom
+              </div>
+              <h3 className="font-display text-xl font-semibold text-text-primary mb-2">
+                Uzman Kurul Müzakeresi
+              </h3>
+              <p className="text-sm text-text-secondary leading-relaxed mb-5">
+                Tek belge üzerinde çok perspektifli analiz. Ajanlar tartışır,
+                görüş ayrılıklarını ortaya koyar, yapılandırılmış karar
+                üretir.
+              </p>
+              <ul className="space-y-1.5 text-sm text-text-secondary mb-4">
+                <li className="flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-accent-primary" />
+                  6'ya kadar uzman ajan
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-accent-primary" />
+                  Debate + verdict + aksiyon listesi
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-accent-primary" />
+                  Müzakere kaydı DOCX
+                </li>
+              </ul>
+            </div>
+
+            {/* Compare rail */}
+            <div className="group relative p-8 rounded-2xl border border-accent-warning/30 bg-workspace-surface hover:border-accent-warning/50 hover:shadow-medium transition-all">
+              <div className="w-12 h-12 rounded-xl bg-accent-warning/10 border border-accent-warning/25 flex items-center justify-center mb-4">
+                <FileDiff size={22} className="text-accent-warning" />
+              </div>
+              <div className="text-[10px] font-mono font-semibold tracking-widest uppercase text-accent-warning mb-1">
+                Compare
+              </div>
+              <h3 className="font-display text-xl font-semibold text-text-primary mb-2">
+                Versiyon Karşılaştırma
+              </h3>
+              <p className="text-sm text-text-secondary leading-relaxed mb-5">
+                İki sözleşme versiyonunu yan yana koyun. Ajan eklenen,
+                silinen ve değiştirilen her maddeyi risk seviyesiyle
+                raporlar.
+              </p>
+              <ul className="space-y-1.5 text-sm text-text-secondary mb-4">
+                <li className="flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-accent-warning" />
+                  Clause-level structural diff
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-accent-warning" />
+                  Yüksek/orta/düşük risk sınıflandırma
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-accent-warning" />
+                  Redline DOCX export
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 

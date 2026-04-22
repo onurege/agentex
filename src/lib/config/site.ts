@@ -13,7 +13,7 @@
 
 export const SITE = {
   // --- Brand Identity ---
-  name: "AI Boardroom",
+  name: "Consilera",
   tagline: "Uzman AI kurulu ile belge değerlendirme",
   logo: "⬡", // hexagon — boardroom table symbol
 
