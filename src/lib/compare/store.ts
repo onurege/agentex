@@ -16,7 +16,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CompareDocumentMeta, CompareRun } from "./types";
 import type { CompareSection } from "./parse";
-import { buildMockRun } from "./mock-engine";
+import { runDiffEngine } from "./diff-engine";
 
 export interface PendingUpload {
   meta: CompareDocumentMeta;
@@ -79,7 +79,12 @@ export const useCompareStore = create<CompareState>()(
         const { pendingV1, pendingV2 } = get();
         if (!pendingV1 || !pendingV2) return null;
 
-        const run = buildMockRun(pendingV1.meta, pendingV2.meta);
+        const run = runDiffEngine({
+          v1: pendingV1.meta,
+          v1Sections: pendingV1.sections,
+          v2: pendingV2.meta,
+          v2Sections: pendingV2.sections,
+        });
         set((s) => ({
           runs: { ...s.runs, [run.id]: run },
           runBuffers: {
