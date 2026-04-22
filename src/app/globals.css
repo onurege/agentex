@@ -11,11 +11,10 @@
 
   html, body {
     height: 100%;
-    overflow: hidden;
   }
 
   body {
-    @apply bg-workspace-bg text-text-primary font-sans antialiased;
+    @apply font-sans antialiased;
   }
 
   ::-webkit-scrollbar {

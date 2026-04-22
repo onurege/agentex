@@ -1,7 +1,7 @@
 "use client";
 
-import { Workspace } from "@/components/workspace/Workspace";
+import { LandingPage } from "@/components/landing/LandingPage";
 
 export default function Home() {
-  return <Workspace />;
+  return <LandingPage />;
 }
