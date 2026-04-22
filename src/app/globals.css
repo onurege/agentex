@@ -2,9 +2,131 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* ============================================================
+   AGENTEX — Editorial Palette (Navy + Cream · B)
+   ------------------------------------------------------------
+   Tokens are wired through CSS variables so every Tailwind
+   class (bg-workspace-surface, text-text-primary, …) follows
+   :root (light) vs .dark (night-mode) automatically. Values are
+   rgb triplets so Tailwind's `<alpha-value>` pipe still works.
+   ============================================================ */
 
 @layer base {
+  :root {
+    color-scheme: light;
+
+    /* Surfaces — warm ivory editorial */
+    --color-workspace-bg: 250 247 240;           /* #FAF7F0 */
+    --color-workspace-surface: 255 253 248;      /* #FFFDF8 — near-white with warmth */
+    --color-workspace-elevated: 253 250 243;     /* #FDFAF3 — slight lift */
+    --color-workspace-border: 227 219 201;       /* #E3DBC9 */
+    --color-workspace-border-subtle: 238 232 217;/* #EEE8D9 */
+    --color-workspace-paper: 11 31 58;           /* #0B1F3A — navy (ink on cream) */
+    --color-workspace-paper-dim: 51 65 85;       /* slate-700 */
+
+    /* Text */
+    --color-text-primary: 11 31 58;              /* #0B1F3A navy ink */
+    --color-text-secondary: 51 65 85;            /* slate-700 */
+    --color-text-tertiary: 100 116 139;          /* slate-500 */
+    --color-text-muted: 148 163 184;             /* slate-400 */
+
+    /* Accents — editorial heritage palette */
+    --color-accent-primary: 11 31 58;            /* navy — primary CTA */
+    --color-accent-secondary: 30 58 138;         /* indigo-900 — hover/alt */
+    --color-accent-success: 15 118 110;          /* teal-700 */
+    --color-accent-warning: 180 83 9;            /* amber-700 — brass */
+    --color-accent-danger: 153 27 27;            /* red-900 — burgundy */
+    --color-accent-info: 14 116 144;             /* cyan-700 */
+
+    /* Agent roles */
+    --color-agent-chief: 11 31 58;               /* navy */
+    --color-agent-legal: 76 29 149;              /* violet-900 plum */
+    --color-agent-finance: 15 118 110;           /* teal-700 */
+    --color-agent-tax: 180 83 9;                 /* brass */
+    --color-agent-sales: 153 27 27;              /* burgundy */
+    --color-agent-product: 124 45 18;            /* terra */
+
+    /* Legacy pixel tokens (kept for any stragglers) */
+    --color-pixel-amber: 180 83 9;
+    --color-pixel-green: 15 118 110;
+    --color-pixel-blue: 30 58 138;
+    --color-pixel-red: 153 27 27;
+    --color-pixel-purple: 76 29 149;
+    --color-pixel-orange: 124 45 18;
+
+    /* Shadows + glow — light = ink-tinted, subtle */
+    --shadow-soft: 0 1px 2px rgb(11 31 58 / 0.06), 0 2px 4px rgb(11 31 58 / 0.04);
+    --shadow-medium: 0 4px 12px rgb(11 31 58 / 0.08), 0 2px 4px rgb(11 31 58 / 0.04);
+    --shadow-glow-blue: 0 0 0 1px rgb(30 58 138 / 0.12), 0 4px 16px rgb(30 58 138 / 0.14);
+    --shadow-glow-success: 0 0 0 1px rgb(15 118 110 / 0.12), 0 4px 16px rgb(15 118 110 / 0.14);
+
+    /* Card-local shadows used in custom components */
+    --shadow-card: 0 1px 2px rgb(11 31 58 / 0.05), 0 1px 3px rgb(11 31 58 / 0.04);
+    --shadow-card-hover: 0 4px 10px rgb(11 31 58 / 0.08);
+    --shadow-btn: 0 1px 2px rgb(11 31 58 / 0.08);
+    --shadow-btn-hover: 0 2px 6px rgb(11 31 58 / 0.12);
+    --shadow-btn-active: 0 1px 1px rgb(11 31 58 / 0.1);
+    --shadow-bubble: 0 4px 12px rgb(11 31 58 / 0.08);
+
+    --terminal-glow: 0 0 1px rgb(30 58 138 / 0.2);
+  }
+
+  .dark {
+    color-scheme: dark;
+
+    /* Surfaces — deep midnight blue */
+    --color-workspace-bg: 10 18 32;              /* #0A1220 */
+    --color-workspace-surface: 17 26 46;         /* #111A2E */
+    --color-workspace-elevated: 22 33 55;        /* #162137 */
+    --color-workspace-border: 31 45 71;          /* #1F2D47 */
+    --color-workspace-border-subtle: 26 37 56;   /* #1A2538 */
+    --color-workspace-paper: 245 241 230;        /* cream */
+    --color-workspace-paper-dim: 203 213 225;    /* slate-300 */
+
+    /* Text — cream on midnight */
+    --color-text-primary: 245 241 230;           /* #F5F1E6 cream */
+    --color-text-secondary: 203 213 225;         /* slate-300 */
+    --color-text-tertiary: 148 163 184;          /* slate-400 */
+    --color-text-muted: 100 116 139;             /* slate-500 */
+
+    /* Accents — champagne brass + warm editorial pops */
+    --color-accent-primary: 224 184 117;         /* #E0B875 champagne */
+    --color-accent-secondary: 202 155 77;        /* #CA9B4D brass hover */
+    --color-accent-success: 45 212 191;          /* teal-400 */
+    --color-accent-warning: 251 191 36;          /* amber-400 */
+    --color-accent-danger: 248 113 113;          /* red-400 coral */
+    --color-accent-info: 34 211 238;             /* cyan-400 */
+
+    /* Agent roles */
+    --color-agent-chief: 224 184 117;            /* champagne */
+    --color-agent-legal: 167 139 250;            /* violet-400 */
+    --color-agent-finance: 45 212 191;           /* teal-400 */
+    --color-agent-tax: 251 191 36;               /* amber-400 */
+    --color-agent-sales: 248 113 113;            /* red-400 */
+    --color-agent-product: 251 146 60;           /* orange-400 */
+
+    --color-pixel-amber: 251 191 36;
+    --color-pixel-green: 45 212 191;
+    --color-pixel-blue: 96 165 250;
+    --color-pixel-red: 248 113 113;
+    --color-pixel-purple: 167 139 250;
+    --color-pixel-orange: 251 146 60;
+
+    --shadow-soft: 0 2px 8px rgb(0 0 0 / 0.4);
+    --shadow-medium: 0 4px 16px rgb(0 0 0 / 0.5);
+    --shadow-glow-blue: 0 0 0 1px rgb(224 184 117 / 0.18), 0 4px 20px rgb(224 184 117 / 0.18);
+    --shadow-glow-success: 0 0 0 1px rgb(45 212 191 / 0.18), 0 4px 20px rgb(45 212 191 / 0.18);
+
+    --shadow-card: 0 2px 6px rgb(0 0 0 / 0.35);
+    --shadow-card-hover: 0 6px 18px rgb(0 0 0 / 0.45);
+    --shadow-btn: 0 1px 3px rgb(0 0 0 / 0.4);
+    --shadow-btn-hover: 0 2px 8px rgb(0 0 0 / 0.5);
+    --shadow-btn-active: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-bubble: 0 2px 8px rgb(0 0 0 / 0.5);
+
+    --terminal-glow: 0 0 8px rgb(224 184 117 / 0.35);
+  }
+
   * {
     box-sizing: border-box;
   }
@@ -14,12 +136,25 @@
   }
 
   body {
-    @apply font-sans antialiased;
+    @apply bg-workspace-bg text-text-primary font-sans antialiased;
+    /* Soft editorial paper tint — ink-tinted cross-hatch on cream,
+       near-invisible but gives the boardroom a textured substrate. */
+    background-image:
+      radial-gradient(1px 1px at 12% 18%, rgb(11 31 58 / 0.03) 50%, transparent 50%),
+      radial-gradient(1px 1px at 72% 66%, rgb(11 31 58 / 0.03) 50%, transparent 50%);
+    background-size: 42px 42px, 42px 42px;
+    background-position: 0 0, 21px 21px;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(1px 1px at 12% 18%, rgb(224 184 117 / 0.04) 50%, transparent 50%),
+      radial-gradient(1px 1px at 72% 66%, rgb(224 184 117 / 0.04) 50%, transparent 50%);
   }
 
   ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -32,6 +167,12 @@
 
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-text-muted;
+  }
+
+  /* Selection — brass in dark, navy in light */
+  ::selection {
+    background-color: rgb(var(--color-accent-primary) / 0.22);
+    color: rgb(var(--color-text-primary));
   }
 }
 
@@ -47,8 +188,12 @@
 
   /* Card */
   .paper-card {
-    @apply bg-workspace-elevated border border-workspace-border rounded-lg;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    @apply bg-workspace-surface border border-workspace-border rounded-xl;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .paper-card:hover {
+    box-shadow: var(--shadow-card-hover);
   }
 
   /* Badges */
@@ -57,19 +202,19 @@
   }
 
   .badge-critical {
-    @apply bg-accent-danger/15 text-accent-danger border border-accent-danger/20;
+    @apply bg-accent-danger/12 text-accent-danger border border-accent-danger/25;
   }
 
   .badge-warning {
-    @apply bg-accent-warning/15 text-accent-warning border border-accent-warning/20;
+    @apply bg-accent-warning/15 text-accent-warning border border-accent-warning/25;
   }
 
   .badge-info {
-    @apply bg-accent-info/15 text-accent-info border border-accent-info/20;
+    @apply bg-accent-info/15 text-accent-info border border-accent-info/25;
   }
 
   .badge-positive {
-    @apply bg-accent-success/15 text-accent-success border border-accent-success/20;
+    @apply bg-accent-success/15 text-accent-success border border-accent-success/25;
   }
 
   /* Agent state indicators */
@@ -86,17 +231,17 @@
   .agent-state-synthesizing { @apply bg-accent-primary animate-pulse-slow; }
   .agent-state-done { @apply bg-accent-success; }
 
-  /* Button — modern style (replaces pixel-btn) */
+  /* Button — editorial, not pixel */
   .pixel-btn {
     @apply font-mono text-xs rounded-md transition-all duration-150;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    box-shadow: var(--shadow-btn);
   }
   .pixel-btn:hover {
-    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    box-shadow: var(--shadow-btn-hover);
   }
   .pixel-btn:active {
     transform: translateY(1px);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    box-shadow: var(--shadow-btn-active);
   }
 
   /* Canvas background */
@@ -106,14 +251,14 @@
 
   /* Speech bubble base */
   .speech-bubble {
-    @apply bg-workspace-elevated text-text-primary text-2xs font-mono px-2 py-1 rounded-lg;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    @apply bg-workspace-elevated text-text-primary text-2xs font-mono px-2 py-1 rounded-lg border border-workspace-border;
+    box-shadow: var(--shadow-bubble);
   }
 
-  /* Terminal text accent */
+  /* Terminal text accent — brass on dark, indigo ink on light */
   .terminal-text {
     @apply font-mono text-accent-primary;
-    text-shadow: 0 0 8px rgba(59,130,246,0.3);
+    text-shadow: var(--terminal-glow);
   }
 }
 
@@ -125,8 +270,8 @@
 }
 
 @keyframes seatPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
-  50%      { box-shadow: 0 0 0 6px rgba(59,130,246,0.1); }
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--color-accent-primary) / 0); }
+  50%      { box-shadow: 0 0 0 6px rgb(var(--color-accent-primary) / 0.12); }
 }
 
 @keyframes seatAppear {

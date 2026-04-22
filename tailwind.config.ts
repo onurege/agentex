@@ -1,6 +1,18 @@
 import type { Config } from "tailwindcss";
 
+// ============================================================
+// AGENTEX — Tailwind Tokens (Editorial B palette)
+// ------------------------------------------------------------
+// All color tokens are CSS-variable-backed so every class
+// (bg-workspace-surface, text-text-primary, …) automatically
+// honors :root (light) vs .dark. See src/app/globals.css for
+// the values.
+// ============================================================
+
+const rgbVar = (name: string) => `rgb(var(${name}) / <alpha-value>)`;
+
 const config: Config = {
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,47 +21,44 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Modern dark-neutral workspace
         workspace: {
-          bg: "#0F1117",
-          surface: "#161A22",
-          elevated: "#1C2029",
-          border: "#2A2F3A",
-          "border-subtle": "#22262F",
-          paper: "#E2E8F0",
-          "paper-dim": "#CBD5E1",
+          bg: rgbVar("--color-workspace-bg"),
+          surface: rgbVar("--color-workspace-surface"),
+          elevated: rgbVar("--color-workspace-elevated"),
+          border: rgbVar("--color-workspace-border"),
+          "border-subtle": rgbVar("--color-workspace-border-subtle"),
+          paper: rgbVar("--color-workspace-paper"),
+          "paper-dim": rgbVar("--color-workspace-paper-dim"),
         },
         accent: {
-          primary: "#3B82F6",
-          secondary: "#2563EB",
-          success: "#10B981",
-          warning: "#F59E0B",
-          danger: "#EF4444",
-          info: "#06B6D4",
+          primary: rgbVar("--color-accent-primary"),
+          secondary: rgbVar("--color-accent-secondary"),
+          success: rgbVar("--color-accent-success"),
+          warning: rgbVar("--color-accent-warning"),
+          danger: rgbVar("--color-accent-danger"),
+          info: rgbVar("--color-accent-info"),
         },
         text: {
-          primary: "#E2E8F0",
-          secondary: "#94A3B8",
-          tertiary: "#64748B",
-          muted: "#475569",
+          primary: rgbVar("--color-text-primary"),
+          secondary: rgbVar("--color-text-secondary"),
+          tertiary: rgbVar("--color-text-tertiary"),
+          muted: rgbVar("--color-text-muted"),
         },
-        // Agent role identity
         agent: {
-          chief: "#3B82F6",
-          legal: "#6366F1",
-          finance: "#10B981",
-          tax: "#F59E0B",
-          sales: "#EF4444",
-          product: "#8B5CF6",
+          chief: rgbVar("--color-agent-chief"),
+          legal: rgbVar("--color-agent-legal"),
+          finance: rgbVar("--color-agent-finance"),
+          tax: rgbVar("--color-agent-tax"),
+          sales: rgbVar("--color-agent-sales"),
+          product: rgbVar("--color-agent-product"),
         },
-        // Legacy compat tokens
         pixel: {
-          amber: "#F59E0B",
-          green: "#10B981",
-          blue: "#3B82F6",
-          red: "#EF4444",
-          purple: "#8B5CF6",
-          orange: "#F97316",
+          amber: rgbVar("--color-pixel-amber"),
+          green: rgbVar("--color-pixel-green"),
+          blue: rgbVar("--color-pixel-blue"),
+          red: rgbVar("--color-pixel-red"),
+          purple: rgbVar("--color-pixel-purple"),
+          orange: rgbVar("--color-pixel-orange"),
         },
       },
       fontFamily: {
@@ -81,10 +90,10 @@ const config: Config = {
         },
       },
       boxShadow: {
-        soft: "0 2px 8px rgba(0,0,0,0.3)",
-        medium: "0 4px 16px rgba(0,0,0,0.4)",
-        "glow-blue": "0 0 20px rgba(59,130,246,0.15)",
-        "glow-success": "0 0 16px rgba(16,185,129,0.15)",
+        soft: "var(--shadow-soft)",
+        medium: "var(--shadow-medium)",
+        "glow-blue": "var(--shadow-glow-blue)",
+        "glow-success": "var(--shadow-glow-success)",
       },
     },
   },

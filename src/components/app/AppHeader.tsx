@@ -6,6 +6,7 @@ import { SITE } from "@/lib/config/site";
 import { LogOut, ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { UserAvatar } from "./UserAvatar";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function AppHeader() {
   const { data: session, status } = useSession();
@@ -35,7 +36,10 @@ export function AppHeader() {
           <span className="text-base font-semibold text-text-primary">{SITE.name}</span>
         </Link>
 
-        {/* User */}
+        {/* Right cluster: theme toggle + user menu */}
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+
         {status === "loading" && (
           <div className="w-7 h-7 rounded-full bg-workspace-elevated animate-pulse" />
         )}
@@ -44,7 +48,7 @@ export function AppHeader() {
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-workspace-elevated transition-colors"
+              className="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-lg hover:bg-workspace-elevated transition-colors"
             >
               <UserAvatar
                 name={session.user.name ?? session.user.email}
@@ -83,6 +87,7 @@ export function AppHeader() {
             )}
           </div>
         )}
+        </div>
       </div>
     </header>
   );
