@@ -4,12 +4,13 @@
 // /app/compare/[id] — Compare run results
 // ============================================================
 //
-// Stats header + filterable findings list. Real redline preview
-// and DOCX export wire up in Faz 2 — for now we surface everything
-// the mock engine produced.
+// Stats header + filterable findings list + DOCX redline export.
+// Redline requires the v1 DOCX buffer which is held in-memory by
+// the store (non-persisted); the button disables when the buffer
+// is absent (e.g. after a page reload).
 // ============================================================
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import {
@@ -19,6 +20,7 @@ import {
   CheckCircle2,
   Circle,
   FileDiff,
+  Loader2,
 } from "lucide-react";
 import { CompareLayout } from "@/components/compare/CompareLayout";
 import { FindingCard } from "@/components/compare/FindingCard";
@@ -38,14 +40,84 @@ const RISK_FILTERS: { key: RiskFilter; label: string; icon: React.ElementType }[
 export default function CompareResultsPage() {
   const params = useParams<{ id: string }>();
   const run = useCompareStore((s) => s.getRun(params.id));
+  const runBuffers = useCompareStore((s) => s.runBuffers[params.id]);
 
   const [risk, setRisk] = useState<RiskFilter>("all");
+  const [exportStatus, setExportStatus] = useState<
+    "idle" | "working" | "error"
+  >("idle");
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     if (!run) return [];
     if (risk === "all") return run.findings;
     return run.findings.filter((f) => f.riskLevel === risk);
   }, [run, risk]);
+
+  const v1IsDocx = Boolean(run?.v1.fileName.toLowerCase().endsWith(".docx"));
+  const hasBuffer = Boolean(runBuffers?.v1);
+  const hasActionable = Boolean(
+    run?.findings.some((f) => f.type !== "cosmetic"),
+  );
+  const exportEnabled =
+    v1IsDocx && hasBuffer && hasActionable && exportStatus !== "working";
+
+  const exportDisabledReason = !v1IsDocx
+    ? "Redline yalnızca DOCX v1 yüklemeleri için çalışır."
+    : !hasBuffer
+      ? "Orijinal DOCX bellekte yok. Yeni bir karşılaştırma başlatıp tekrar deneyin."
+      : !hasActionable
+        ? "Redline'a aktarılabilecek yapısal değişiklik yok (yalnızca biçimsel farklar)."
+        : "";
+
+  const handleExport = useCallback(async () => {
+    if (!run || !runBuffers?.v1) return;
+    setExportStatus("working");
+    setExportError(null);
+
+    try {
+      const form = new FormData();
+      form.append(
+        "docx",
+        new Blob([runBuffers.v1], {
+          type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }),
+        run.v1.fileName,
+      );
+      form.append("findings", JSON.stringify(run.findings));
+      form.append("fileName", run.v1.fileName);
+
+      const res = await fetch("/api/compare/redline", {
+        method: "POST",
+        body: form,
+      });
+
+      if (!res.ok) {
+        let message = `Sunucu hatası (${res.status})`;
+        try {
+          const body = (await res.json()) as { error?: string };
+          if (body?.error) message = body.error;
+        } catch {
+          // non-JSON response — fall through with status code
+        }
+        throw new Error(message);
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const outName =
+        extractFilename(disposition) ??
+        `${run.v1.fileName.replace(/\.docx$/i, "")}-redline.docx`;
+
+      triggerDownload(blob, outName);
+      setExportStatus("idle");
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Redline oluşturulamadı.";
+      setExportStatus("error");
+      setExportError(msg);
+    }
+  }, [run, runBuffers]);
 
   if (!run) {
     // Direct-URL hit with a missing id — defer to not-found so users
@@ -79,16 +151,41 @@ export default function CompareResultsPage() {
               </h1>
             </div>
 
-            {/* Export is mock in Faz 1; real DOCX redline lands in Faz 2. */}
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-workspace-elevated text-text-tertiary border border-workspace-border cursor-not-allowed opacity-70"
-              title="Faz 2'de redline DOCX export eklenecek"
-            >
-              <Download size={15} />
-              DOCX Redline <span className="text-xs font-mono">(yakında)</span>
-            </button>
+            <div className="flex flex-col items-stretch md:items-end gap-1.5">
+              <button
+                type="button"
+                disabled={!exportEnabled}
+                onClick={handleExport}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border transition-all ${
+                  exportEnabled
+                    ? "bg-accent-primary text-workspace-surface border-accent-primary hover:bg-accent-secondary shadow-medium"
+                    : "bg-workspace-elevated text-text-tertiary border-workspace-border cursor-not-allowed opacity-70"
+                }`}
+                title={exportEnabled ? undefined : exportDisabledReason}
+              >
+                {exportStatus === "working" ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    Hazırlanıyor…
+                  </>
+                ) : (
+                  <>
+                    <Download size={15} />
+                    DOCX Redline indir
+                  </>
+                )}
+              </button>
+              {exportStatus === "error" && exportError && (
+                <p className="text-xs text-accent-danger text-right max-w-[280px]">
+                  {exportError}
+                </p>
+              )}
+              {exportStatus !== "error" && !exportEnabled && exportDisabledReason && (
+                <p className="text-xs text-text-tertiary text-right max-w-[280px]">
+                  {exportDisabledReason}
+                </p>
+              )}
+            </div>
           </div>
         </header>
 
@@ -201,4 +298,23 @@ function StatCard({
       </div>
     </div>
   );
+}
+
+function extractFilename(disposition: string): string | null {
+  const utf = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  if (utf) return decodeURIComponent(utf[1]);
+  const ascii = /filename="([^"]+)"/i.exec(disposition);
+  if (ascii) return ascii[1];
+  return null;
+}
+
+function triggerDownload(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
