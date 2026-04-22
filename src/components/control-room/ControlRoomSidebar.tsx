@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getPermissions } from "@/lib/config/roles";
 import { useSession } from "next-auth/react";
+import { ThemeToggle } from "@/components/app/ThemeToggle";
 
 interface NavItem {
   label: string;
@@ -133,8 +134,8 @@ export function ControlRoomSidebar() {
         })}
       </nav>
 
-      {/* Back to Stage */}
-      <div className="px-3 py-4 border-t border-workspace-border/50">
+      {/* Back to Stage + theme toggle */}
+      <div className="px-3 py-4 border-t border-workspace-border/50 space-y-1">
         <Link
           href="/app"
           className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm
@@ -146,6 +147,10 @@ export function ControlRoomSidebar() {
           </svg>
           <span>Sahneye Dön</span>
         </Link>
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className="text-xs text-text-muted">Tema</span>
+          <ThemeToggle />
+        </div>
       </div>
     </aside>
   );

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { SITE } from "@/lib/config/site";
 import { getPermissions } from "@/lib/config/roles";
 import { UserMenu } from "@/components/app/UserMenu";
+import { ThemeToggle } from "@/components/app/ThemeToggle";
 
 export function StageTopBar() {
   const { data: session } = useSession();
@@ -53,6 +54,8 @@ export function StageTopBar() {
             <span>Panel</span>
           </Link>
         )}
+
+        <ThemeToggle />
 
         {/* User menu — avatar + email + role + sign out */}
         <UserMenu />
