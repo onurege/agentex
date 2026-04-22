@@ -368,7 +368,7 @@ function ScenePreview() {
         style={{ aspectRatio: "16 / 9" }}
       >
         {/* Ambient glow — champagne */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(222,54,72,0.22),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(185,48,66,0.14),transparent_60%)]" />
 
         {/* Table disk */}
         <motion.div
@@ -389,7 +389,7 @@ function ScenePreview() {
           <motion.div
             animate={reduceMotion ? undefined : { y: [0, -4, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="flex h-20 w-16 flex-col items-center justify-center rounded-md border border-[#DE3648]/60 bg-gradient-to-b from-[#1E2A4A] to-[#151F38] shadow-lg"
+            className="flex h-20 w-16 flex-col items-center justify-center rounded-md border border-[#B93042]/60 bg-gradient-to-b from-[#1E2A4A] to-[#151F38] shadow-lg"
           >
             <FileText size={22} className="text-[#FCA80F]" />
             <div className="mt-2 flex w-8 flex-col gap-0.5">
@@ -426,9 +426,9 @@ function ScenePreview() {
                     ? undefined
                     : {
                         boxShadow: [
-                          "0 0 0 0 rgba(222,54,72,0.0)",
-                          "0 0 0 6px rgba(222,54,72,0.22)",
-                          "0 0 0 0 rgba(222,54,72,0.0)",
+                          "0 0 0 0 rgba(185,48,66,0.0)",
+                          "0 0 0 6px rgba(185,48,66,0.14)",
+                          "0 0 0 0 rgba(185,48,66,0.0)",
                         ],
                       }
                 }
@@ -438,7 +438,7 @@ function ScenePreview() {
                   ease: "easeInOut",
                   delay: i * 0.5,
                 }}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-[#DE3648]/55 bg-gradient-to-b from-[#1E2A4A] to-[#131D35] text-sm font-semibold text-[#F9FAFA]"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-[#B93042]/55 bg-gradient-to-b from-[#1E2A4A] to-[#131D35] text-sm font-semibold text-[#F9FAFA]"
               >
                 {seat.label}
               </motion.div>
@@ -449,7 +449,7 @@ function ScenePreview() {
         {/* Caption */}
         <div className="absolute bottom-4 left-0 right-0 text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[#243354] bg-[#0A1220]/85 px-3 py-1 font-mono text-xs font-medium text-[#F9FAFA] backdrop-blur">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#DE3648] animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[#B93042] animate-pulse" />
             Kurul oturumu — 6 uzman ajan
           </span>
         </div>

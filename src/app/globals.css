@@ -94,16 +94,18 @@
     --color-text-tertiary: 168 168 168;          /* #A8A8A8 */
     --color-text-muted: 105 114 125;             /* #69727D */
 
-    /* Accents — crimson brightened for dark bg contrast */
-    --color-accent-primary: 222 54 72;           /* #DE3648 brighter crimson */
-    --color-accent-secondary: 185 48 66;         /* #B93042 base hover */
+    /* Accents — crimson held at Univera base, dark hover goes sober
+       instead of brighter to avoid the "exploding red" feel on dark bg. */
+    --color-accent-primary: 185 48 66;           /* #B93042 base (same as light) */
+    --color-accent-secondary: 158 40 56;         /* #9E2838 darker hover */
     --color-accent-success: 45 212 191;          /* teal-400 */
     --color-accent-warning: 252 168 15;          /* #FCA80F amber — same */
     --color-accent-danger: 217 83 79;            /* #D9534F alert red */
     --color-accent-info: 91 192 222;             /* #5BC0DE info blue */
 
-    /* Agent roles — dark-mode-friendly versions */
-    --color-agent-chief: 222 54 72;              /* crimson bright */
+    /* Agent roles — same crimson as primary so chief CTA and chief
+       seat read identical; other roles are muted dark-mode variants. */
+    --color-agent-chief: 185 48 66;              /* base crimson */
     --color-agent-legal: 91 141 239;             /* #5B8DEF navy bright */
     --color-agent-finance: 45 212 191;           /* teal-400 */
     --color-agent-tax: 252 168 15;               /* amber */
@@ -113,14 +115,16 @@
     --color-pixel-amber: 252 168 15;
     --color-pixel-green: 45 212 191;
     --color-pixel-blue: 91 192 222;
-    --color-pixel-red: 222 54 72;
+    --color-pixel-red: 185 48 66;
     --color-pixel-purple: 167 139 250;
     --color-pixel-orange: 251 146 60;
 
+    /* Shadows — keep depth, drop the red-tinted glows from aggressive
+       0.22 alpha to ~0.12 so primary buttons don't bloom. */
     --shadow-soft: 0 2px 8px rgb(0 0 0 / 0.45);
     --shadow-medium: 0 4px 16px rgb(0 0 0 / 0.55);
-    --shadow-glow-blue: 0 0 0 1px rgb(222 54 72 / 0.22), 0 4px 20px rgb(222 54 72 / 0.22);
-    --shadow-glow-success: 0 0 0 1px rgb(45 212 191 / 0.2), 0 4px 20px rgb(45 212 191 / 0.2);
+    --shadow-glow-blue: 0 0 0 1px rgb(185 48 66 / 0.25), 0 4px 20px rgb(185 48 66 / 0.12);
+    --shadow-glow-success: 0 0 0 1px rgb(45 212 191 / 0.2), 0 4px 20px rgb(45 212 191 / 0.15);
 
     --shadow-card: 0 2px 6px rgb(0 0 0 / 0.4);
     --shadow-card-hover: 0 6px 18px rgb(0 0 0 / 0.5);
@@ -129,7 +133,7 @@
     --shadow-btn-active: 0 1px 2px rgb(0 0 0 / 0.45);
     --shadow-bubble: 0 2px 8px rgb(0 0 0 / 0.55);
 
-    --terminal-glow: 0 0 8px rgb(222 54 72 / 0.4);
+    --terminal-glow: 0 0 6px rgb(185 48 66 / 0.25);
   }
 
   * {
@@ -153,8 +157,8 @@
 
   .dark body {
     background-image:
-      radial-gradient(1px 1px at 12% 18%, rgb(222 54 72 / 0.055) 50%, transparent 50%),
-      radial-gradient(1px 1px at 72% 66%, rgb(252 168 15 / 0.04) 50%, transparent 50%);
+      radial-gradient(1px 1px at 12% 18%, rgb(185 48 66 / 0.04) 50%, transparent 50%),
+      radial-gradient(1px 1px at 72% 66%, rgb(252 168 15 / 0.03) 50%, transparent 50%);
   }
 
   ::-webkit-scrollbar {
