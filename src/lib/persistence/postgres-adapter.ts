@@ -129,6 +129,25 @@ class HttpAgentStore implements AgentStore {
   async getVersionHistory(agentKey: string): Promise<AgentVersionDTO[]> {
     return api(`/api/agents/${agentKey}/versions`);
   }
+
+  // ── Custom agents ─────────────────────────────────────
+
+  async createCustom(
+    input: import("./types").CreateCustomAgentDTO,
+  ): Promise<AgentProfileDTO> {
+    return api("/api/agents", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  async archiveCustom(agentKey: string): Promise<void> {
+    await api(`/api/agents/${agentKey}/archive`, { method: "POST" });
+  }
+
+  async restoreCustom(agentKey: string): Promise<void> {
+    await api(`/api/agents/${agentKey}/restore`, { method: "POST" });
+  }
 }
 
 // ─── Audit Store (HTTP → /api/audit) ──────────────────

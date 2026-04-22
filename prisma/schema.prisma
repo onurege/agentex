@@ -97,6 +97,17 @@ model AgentProfile {
 
   versions AgentVersion[] @relation("ProfileVersions")
 
+  // Custom-agent identity — populated when a user creates their own
+  // agent via the panel. System agents leave these nullable and rely
+  // on BOARDROOM_AGENTS for their baseline metadata.
+  displayName   String?
+  title         String?
+  avatar        String?
+  expertise     String[] @default([])
+  tone          String?
+  isUserCreated Boolean  @default(false)
+  archivedAt    DateTime?
+
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -104,6 +115,7 @@ model AgentProfile {
   @@unique([agentKey, ownerId])
   @@index([agentKey])
   @@index([ownerId])
+  @@index([isUserCreated])
 }
 
 // ─── Agent Version (Immutable snapshot on publish) ────

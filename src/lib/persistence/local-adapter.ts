@@ -83,6 +83,25 @@ class LocalAgentStore implements AgentStore {
     return useControlRoomStore.getState();
   }
 
+  // Project custom-agent identity (custom fields) onto a DTO. Built-in
+  // agents return nulls for these fields so the shape matches either
+  // way.
+  private customFields(agentKey: string) {
+    const custom = this.store.customAgents[agentKey];
+    return {
+      displayName: custom?.name ?? null,
+      title: custom?.title ?? null,
+      avatar: custom?.avatar ?? null,
+      expertise: custom?.expertise ?? [],
+      tone: custom?.thinkingStyle ?? null,
+      isUserCreated: Boolean(custom),
+      archivedAt: custom?.archivedAt ?? null,
+      // Local mode is single-user; ownerId is meaningful only in DB
+      // mode where the schema tracks users.
+      ownerId: null as string | null,
+    };
+  }
+
   async getProfile(agentKey: string): Promise<AgentProfileDTO | null> {
     const profile = this.store.getProfile(agentKey);
     return {
@@ -103,6 +122,7 @@ class LocalAgentStore implements AgentStore {
             publishedAt: profile.promptPublishedAt ?? new Date().toISOString(),
           }
         : null,
+      ...this.customFields(agentKey),
     };
   }
 
@@ -126,6 +146,7 @@ class LocalAgentStore implements AgentStore {
             publishedAt: profile.promptPublishedAt ?? new Date().toISOString(),
           }
         : null,
+      ...this.customFields(agentKey),
     }));
   }
 
@@ -179,6 +200,38 @@ class LocalAgentStore implements AgentStore {
 
   async getVersionHistory(_agentKey: string): Promise<AgentVersionDTO[]> {
     return [];
+  }
+
+  // ── Custom agents ─────────────────────────────────────
+
+  async createCustom(
+    input: import("./types").CreateCustomAgentDTO,
+  ): Promise<AgentProfileDTO> {
+    const result = this.store.createCustomAgent({
+      id: input.agentKey,
+      name: input.displayName,
+      title: input.title,
+      avatar: input.avatar,
+      expertise: input.expertise,
+      tone: input.tone ?? undefined,
+    });
+    if (!result.ok) {
+      // Surface the tagged error through an Error so the caller can
+      // inspect `.message` — the store's typed result stays the
+      // source of truth for the validation codes.
+      throw new Error(result.error);
+    }
+    const profile = await this.getProfile(input.agentKey);
+    if (!profile) throw new Error("profile_missing_after_create");
+    return profile;
+  }
+
+  async archiveCustom(agentKey: string): Promise<void> {
+    this.store.archiveCustomAgent(agentKey);
+  }
+
+  async restoreCustom(agentKey: string): Promise<void> {
+    this.store.restoreCustomAgent(agentKey);
   }
 }
 

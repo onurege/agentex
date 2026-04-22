@@ -22,6 +22,26 @@ export interface AgentProfileDTO {
   cvLastSaved: string | null;
   promptLastSaved: string | null;
   currentVersion: AgentVersionDTO | null;
+  // Custom-agent identity. Populated for user-created agents; null /
+  // empty on built-in system profiles that reuse BOARDROOM_AGENTS
+  // metadata for their baseline.
+  displayName: string | null;
+  title: string | null;
+  avatar: string | null;
+  expertise: string[];
+  tone: string | null;
+  isUserCreated: boolean;
+  archivedAt: string | null;
+  ownerId: string | null;
+}
+
+export interface CreateCustomAgentDTO {
+  agentKey: string;
+  displayName: string;
+  title: string;
+  avatar: string;
+  expertise: string[];
+  tone: string | null;
 }
 
 // ─── Audit DTO ────────────────────────────────────────
@@ -75,6 +95,13 @@ export interface AgentStore {
   publishPrompt(agentKey: string): Promise<AgentVersionDTO>;
   rollbackPrompt(agentKey: string): Promise<void>;
   getVersionHistory(agentKey: string): Promise<AgentVersionDTO[]>;
+
+  // Custom agents — user-created roles with their own identity rather
+  // than a tweak on top of a built-in. archiveCustom soft-deletes;
+  // restoreCustom undoes it.
+  createCustom(input: CreateCustomAgentDTO): Promise<AgentProfileDTO>;
+  archiveCustom(agentKey: string): Promise<void>;
+  restoreCustom(agentKey: string): Promise<void>;
 }
 
 export interface AuditStore {
