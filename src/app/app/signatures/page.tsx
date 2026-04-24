@@ -14,8 +14,10 @@ import { useEffect } from "react";
 import { AlertCircle, Sparkles } from "lucide-react";
 import { SignatureLayout } from "@/components/signatures/SignatureLayout";
 import { SignatureSourceCard } from "@/components/signatures/SignatureSourceCard";
+import { SignatureCropper } from "@/components/signatures/SignatureCropper";
 import { useSignaturesStore } from "@/lib/signatures/store";
 import { useHydrated } from "@/lib/draft/use-hydrated";
+import type { CropRegion } from "@/lib/signatures/types";
 
 export default function SignaturesPage() {
   const hydrated = useHydrated();
@@ -26,6 +28,24 @@ export default function SignaturesPage() {
   );
   const setSource = useSignaturesStore((s) => s.setSource);
   const clearSource = useSignaturesStore((s) => s.clearSource);
+  const setCrop = useSignaturesStore((s) => s.setCrop);
+  const setSignatureImage = useSignaturesStore((s) => s.setSignatureImage);
+
+  const handleCropComplete = (
+    side: "contract" | "reference",
+    region: CropRegion,
+    signatureDataUrl: string,
+  ) => {
+    if (!session) return;
+    setCrop(session.id, side, region);
+    setSignatureImage(session.id, side, signatureDataUrl);
+  };
+
+  const handleCropReset = (side: "contract" | "reference") => {
+    if (!session) return;
+    setCrop(session.id, side, null);
+    setSignatureImage(session.id, side, null);
+  };
 
   useEffect(() => {
     if (!hydrated) return;
@@ -97,18 +117,61 @@ export default function SignaturesPage() {
           />
         </div>
 
-        <div className="rounded-xl border border-dashed border-workspace-border bg-workspace-elevated p-8 text-center">
-          <p className="font-display text-lg font-semibold text-text-primary mb-1">
-            {bothLoaded
-              ? "Kırpma arayüzü bir sonraki commit'te"
-              : "Her iki belgeyi yükleyin"}
-          </p>
-          <p className="text-sm text-text-secondary">
-            {bothLoaded
-              ? "Yüklü belgelerde imza bölgesi seçimi + karşılaştırma akışı eklenecek."
-              : "Devam etmek için hem sözleşme hem imza sirküsü yüklü olmalı."}
-          </p>
-        </div>
+        {bothLoaded ? (
+          <>
+            <section className="mb-6">
+              <header className="mb-3">
+                <h2 className="font-display text-lg font-semibold text-text-primary">
+                  İmza bölgesini seçin
+                </h2>
+                <p className="text-sm text-text-secondary">
+                  Her sayfada imzayı çevreleyen bir dikdörtgen çizin.
+                  Kırpım kaydedildikçe alt köşede normalize edilmiş
+                  önizleme belirir.
+                </p>
+              </header>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <SignatureCropper
+                  label="Sözleşme"
+                  tone="contract"
+                  source={session.contract}
+                  onCropComplete={(r, d) =>
+                    handleCropComplete("contract", r, d)
+                  }
+                  onReset={() => handleCropReset("contract")}
+                />
+                <SignatureCropper
+                  label="İmza Sirküsü"
+                  tone="reference"
+                  source={session.reference}
+                  onCropComplete={(r, d) =>
+                    handleCropComplete("reference", r, d)
+                  }
+                  onReset={() => handleCropReset("reference")}
+                />
+              </div>
+            </section>
+
+            <div className="rounded-xl border border-dashed border-workspace-border bg-workspace-elevated p-8 text-center">
+              <p className="font-display text-lg font-semibold text-text-primary mb-1">
+                Karşılaştırma akışı bir sonraki commit'te
+              </p>
+              <p className="text-sm text-text-secondary">
+                İki bölge de kırpıldığında SSIM + pHash skorları ve
+                güven yüzdesi burada görünecek.
+              </p>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-xl border border-dashed border-workspace-border bg-workspace-elevated p-8 text-center">
+            <p className="font-display text-lg font-semibold text-text-primary mb-1">
+              Her iki belgeyi yükleyin
+            </p>
+            <p className="text-sm text-text-secondary">
+              Devam etmek için hem sözleşme hem imza sirküsü yüklü olmalı.
+            </p>
+          </div>
+        )}
       </div>
     </SignatureLayout>
   );
