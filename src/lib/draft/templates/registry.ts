@@ -8,6 +8,8 @@
 
 import type { DraftTemplate, TemplateId } from "../types";
 import { NDA_TEMPLATE } from "./nda";
+import { DISTRIBUTOR_TEMPLATE } from "./distributor";
+import { SERVICE_TEMPLATE } from "./service";
 
 export interface TemplateMeta {
   id: TemplateId;
@@ -51,12 +53,14 @@ export const TEMPLATE_META: Record<TemplateId, TemplateMeta> = {
 export const TEMPLATE_ORDER: TemplateId[] = ["nda", "distributor", "service"];
 
 /**
- * Tam DraftTemplate kaydı. Faz 1'de yalnızca NDA tanımlı; diğerleri
- * Faz 2'de eklenecek. Tanımsız şablon istenirse undefined döner ki
- * çağıran kullanıcı friendly bir hata gösterebilsin.
+ * Tam DraftTemplate kaydı — Faz 2 ile üç şablon da devrede. Tanımsız
+ * şablon istenirse undefined döner ki çağıran kullanıcı friendly bir
+ * hata gösterebilsin (MVP sonrasında yeni türler eklenirse).
  */
 const FULL_TEMPLATES: Partial<Record<TemplateId, DraftTemplate>> = {
   nda: NDA_TEMPLATE,
+  distributor: DISTRIBUTOR_TEMPLATE,
+  service: SERVICE_TEMPLATE,
 };
 
 export function getTemplate(id: TemplateId): DraftTemplate | undefined {
