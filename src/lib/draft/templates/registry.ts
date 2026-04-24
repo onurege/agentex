@@ -2,13 +2,12 @@
 // Draft Templates — Registry
 // ============================================================
 //
-// Şu an yalnızca meta veri (label/açıklama/ikon/tahmini süre)
-// barındırır — tam DraftTemplate tanımları (questions + clauses)
-// Faz 1'de bu dizine eklenecek (nda.ts, distributor.ts, service.ts).
-// Picker UI sadece meta'yı kullanır.
+// Hem lightweight meta (picker UI için) hem full DraftTemplate
+// (renderer + wizard için) erişimini tek yerden sağlar.
 // ============================================================
 
-import type { TemplateId } from "../types";
+import type { DraftTemplate, TemplateId } from "../types";
+import { NDA_TEMPLATE } from "./nda";
 
 export interface TemplateMeta {
   id: TemplateId;
@@ -50,3 +49,20 @@ export const TEMPLATE_META: Record<TemplateId, TemplateMeta> = {
 };
 
 export const TEMPLATE_ORDER: TemplateId[] = ["nda", "distributor", "service"];
+
+/**
+ * Tam DraftTemplate kaydı. Faz 1'de yalnızca NDA tanımlı; diğerleri
+ * Faz 2'de eklenecek. Tanımsız şablon istenirse undefined döner ki
+ * çağıran kullanıcı friendly bir hata gösterebilsin.
+ */
+const FULL_TEMPLATES: Partial<Record<TemplateId, DraftTemplate>> = {
+  nda: NDA_TEMPLATE,
+};
+
+export function getTemplate(id: TemplateId): DraftTemplate | undefined {
+  return FULL_TEMPLATES[id];
+}
+
+export function isTemplateImplemented(id: TemplateId): boolean {
+  return FULL_TEMPLATES[id] !== undefined;
+}
