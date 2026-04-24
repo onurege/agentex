@@ -22,8 +22,8 @@ interface BrandMarkProps {
 }
 
 const DIMENSIONS = {
-  sm: { logoH: 28, logoW: 96, textClass: "text-base font-display font-semibold" },
-  md: { logoH: 44, logoW: 148, textClass: "text-2xl font-display font-semibold" },
+  sm: { logoH: 52, logoW: 176, textClass: "text-base font-display font-semibold" },
+  md: { logoH: 80, logoW: 268, textClass: "text-2xl font-display font-semibold" },
 } as const;
 
 export function BrandMark({
@@ -58,7 +58,7 @@ export function BrandMark({
         <>
           <span
             aria-hidden
-            className="h-6 w-px bg-workspace-border"
+            className="w-px bg-workspace-border"
             style={{ height: size === "md" ? 28 : 20 }}
           />
           <span
