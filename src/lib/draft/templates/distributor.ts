@@ -179,6 +179,7 @@ export const DISTRIBUTOR_TEMPLATE: DraftTemplate = {
       step: 4,
       group: "Ticari Koşullar",
       label: "Fiyatlandırma modeli",
+      aiSuggestable: true,
       helpText:
         "Yeniden satış fiyatı tespiti (RPM) 4054 m.4 uyarınca yasak; tavsiye fiyatı tavsiye olarak kalır.",
       type: "radioGroup",
@@ -214,6 +215,7 @@ export const DISTRIBUTOR_TEMPLATE: DraftTemplate = {
       step: 4,
       group: "Ticari Koşullar",
       label: "Teminat türü",
+      aiSuggestable: true,
       type: "select",
       required: true,
       defaultValue: "none",
@@ -281,6 +283,7 @@ export const DISTRIBUTOR_TEMPLATE: DraftTemplate = {
       group: "Opsiyonel Maddeler",
       label:
         "Portföy tazminatı istemlerini açıkça dışla (TTK m.122 kıyasen)",
+      aiSuggestable: true,
       helpText:
         "Yargıtay içtihadı TTK m.122'yi tek satıcı/bayiye kıyasen uygular. Dışlama maddesi yoksa sözleşme sonu sürpriz tazminat doğabilir.",
       type: "checkbox",

@@ -170,6 +170,7 @@ export const NDA_TEMPLATE: DraftTemplate = {
       step: 3,
       group: "Gizli Bilgi",
       label: "Gizli bilginin kapsamı",
+      aiSuggestable: true,
       helpText:
         "Paylaşılacak bilgi türlerini seçin; sözleşmede tanım maddesinde tek tek sayılacak.",
       type: "multiCheckbox",
@@ -223,6 +224,7 @@ export const NDA_TEMPLATE: DraftTemplate = {
       step: 5,
       group: "Mali Koşullar",
       label: "Cezai şart eklensin mi?",
+      aiSuggestable: true,
       helpText:
         "TBK m.179-182: ihlal halinde götürü tazminat. Fahiş ise hakim tarafından indirilebilir (m.182/3).",
       type: "checkbox",
@@ -247,6 +249,7 @@ export const NDA_TEMPLATE: DraftTemplate = {
       step: 6,
       group: "Opsiyonel Maddeler",
       label: "Rekabet yasağı eklensin mi?",
+      aiSuggestable: true,
       helpText:
         "TBK m.444-447 sınırları: makul süre, coğrafi sınır ve iş konusu kısıtı. Çalışan NDA'sında kritik.",
       type: "checkbox",

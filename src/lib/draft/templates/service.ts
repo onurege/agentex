@@ -277,6 +277,7 @@ export const SERVICE_TEMPLATE: DraftTemplate = {
       step: 7,
       group: "Sorumluluk ve Fesih",
       label: "Sorumluluk üst sınırı (hizmet bedelinin X katı)",
+      aiSuggestable: true,
       helpText:
         "Standart piyasa pratiği 1-2 katı. Üst sınır konulmazsa Yüklenici zincirleme zararlardan sorumlu olabilir.",
       type: "number",
@@ -289,6 +290,7 @@ export const SERVICE_TEMPLATE: DraftTemplate = {
       step: 7,
       group: "Sorumluluk ve Fesih",
       label: "Dolaylı zararlar hariç tutulsun mu?",
+      aiSuggestable: true,
       helpText:
         "Kar kaybı, veri kaybı, itibar zararı gibi dolaylı zararların sorumluluk dışı bırakılması piyasa pratiğidir.",
       type: "checkbox",
