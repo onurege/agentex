@@ -16,6 +16,8 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import type { DraftTemplate, Question } from "@/lib/draft/types";
 import { useDraftStore } from "@/lib/draft/store";
+import { evaluateWarnings } from "@/lib/draft/warnings";
+import { WarningBanner } from "./WarningBanner";
 import { WizardQuestion } from "./WizardQuestion";
 
 interface WizardShellProps {
@@ -50,6 +52,8 @@ export function WizardShell({
     const v = session.answers[q.id];
     return !isEmpty(v);
   });
+
+  const activeWarnings = evaluateWarnings(template, session.answers);
 
   return (
     <div className="space-y-6">
@@ -110,6 +114,11 @@ export function WizardShell({
           />
         ))}
       </div>
+
+      {/* Template warnings — cevaplara göre filtrelenir, tüm adımlarda
+          görünür olabilir (örn. step 2'deki 'mutual' cevabı step 5'te
+          hâlâ geçerli bir uyarı doğurabilir). */}
+      <WarningBanner warnings={activeWarnings} />
 
       {/* Navigation */}
       <div className="flex items-center justify-between pt-4 border-t border-workspace-border">
