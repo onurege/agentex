@@ -1,18 +1,19 @@
 "use client";
 
 // ============================================================
-// /app/signatures — İmza Karşılaştırma Landing (Faz 0 stub)
+// /app/signatures — İmza Karşılaştırma (Faz 0 commit 2)
 // ============================================================
 //
-// MVP: tek-sayfa akış. Sözleşme + sirküsü yüklenir, imza bölgeleri
-// kırpılır, karşılaştırma sonucu gösterilir. Bu commit sadece
-// iskelet + "yeni oturum başlat" butonu. Upload + crop + compare
-// akışları sonraki commit'lerde eklenecek.
+// Tek sayfa akış: iki belge yüklenir, her birinden imza bölgesi
+// kırpılır (commit 3), sonra sinyaller hesaplanır (commit 4).
+// Bu commit upload + page preview kısmını ekler. Kırpma ve
+// karşılaştırma kartları placeholder olarak kalır.
 // ============================================================
 
 import { useEffect } from "react";
 import { AlertCircle, Sparkles } from "lucide-react";
 import { SignatureLayout } from "@/components/signatures/SignatureLayout";
+import { SignatureSourceCard } from "@/components/signatures/SignatureSourceCard";
 import { useSignaturesStore } from "@/lib/signatures/store";
 import { useHydrated } from "@/lib/draft/use-hydrated";
 
@@ -23,6 +24,8 @@ export default function SignaturesPage() {
   const session = useSignaturesStore((s) =>
     currentId ? s.sessions[currentId] : undefined,
   );
+  const setSource = useSignaturesStore((s) => s.setSource);
+  const clearSource = useSignaturesStore((s) => s.clearSource);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -41,10 +44,14 @@ export default function SignaturesPage() {
     );
   }
 
+  const bothLoaded = Boolean(
+    session.contract.pageDataUrl && session.reference.pageDataUrl,
+  );
+
   return (
     <SignatureLayout>
       <div className="max-w-5xl mx-auto px-6 py-10">
-        <header className="mb-8">
+        <header className="mb-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 text-xs font-mono font-semibold tracking-wider uppercase text-accent-primary bg-accent-primary/10 border border-accent-primary/20 rounded-full">
             <Sparkles size={12} />
             İmza Karşılaştırma
@@ -65,17 +72,41 @@ export default function SignaturesPage() {
             <span className="font-semibold text-accent-warning">Bu bir
             adli delil değildir.</span>{" "}
             Sonuç, bariz uyuşmazlıkları yakalamaya yönelik hızlı bir görsel
-            karşılaştırmadır. Sahtelik şüphesinde mutlaka grafoloji uzmanına
+            karşılaştırmadır. Sahtelik şüphesinde grafoloji uzmanına
             başvurulmalıdır.
           </div>
         </div>
 
-        <div className="rounded-xl border border-dashed border-workspace-border bg-workspace-elevated p-10 text-center">
+        {/* Upload grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+          <SignatureSourceCard
+            label="Sözleşme"
+            description="Üzerinde imza bulunan sözleşme sayfası."
+            tone="contract"
+            source={session.contract}
+            onLoad={(src) => setSource(session.id, "contract", src)}
+            onClear={() => clearSource(session.id, "contract")}
+          />
+          <SignatureSourceCard
+            label="İmza Sirküsü"
+            description="Referans olarak kullanılacak imza örneği."
+            tone="reference"
+            source={session.reference}
+            onLoad={(src) => setSource(session.id, "reference", src)}
+            onClear={() => clearSource(session.id, "reference")}
+          />
+        </div>
+
+        <div className="rounded-xl border border-dashed border-workspace-border bg-workspace-elevated p-8 text-center">
           <p className="font-display text-lg font-semibold text-text-primary mb-1">
-            Yükleme ve kırpma akışı bir sonraki commit'te
+            {bothLoaded
+              ? "Kırpma arayüzü bir sonraki commit'te"
+              : "Her iki belgeyi yükleyin"}
           </p>
           <p className="text-sm text-text-secondary">
-            Oturum hazır: <span className="font-mono text-xs">{session.id}</span>
+            {bothLoaded
+              ? "Yüklü belgelerde imza bölgesi seçimi + karşılaştırma akışı eklenecek."
+              : "Devam etmek için hem sözleşme hem imza sirküsü yüklü olmalı."}
           </p>
         </div>
       </div>
