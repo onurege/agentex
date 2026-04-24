@@ -98,6 +98,7 @@ export const SERVICE_TEMPLATE: DraftTemplate = {
         "Eserde sonuç taahhüdü vardır (ayıp sorumluluğu sert); vekâlette özen borcu yeterlidir. Yanlış nitelendirme hukuki risk yaratır.",
       type: "radioGroup",
       required: true,
+      aiSuggestable: true,
       defaultValue: "work",
       options: [
         {
@@ -247,6 +248,7 @@ export const SERVICE_TEMPLATE: DraftTemplate = {
         "FSEK m.48: mali hakların devri yazılı ve hak bazında olmalı. 'Tüm haklar devredildi' genel ifadesi yetersiz sayılır.",
       type: "radioGroup",
       required: true,
+      aiSuggestable: true,
       defaultValue: "transfer",
       options: [
         {

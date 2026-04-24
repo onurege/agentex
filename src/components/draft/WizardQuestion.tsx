@@ -10,18 +10,22 @@
 // ============================================================
 
 import { useId } from "react";
-import type { Question } from "@/lib/draft/types";
+import type { Question, TemplateId } from "@/lib/draft/types";
+import { AIExplainPopover } from "./AIExplainPopover";
 
 interface WizardQuestionProps {
   question: Question;
   value: unknown;
   onChange(value: unknown): void;
+  /** aiSuggestable soruların yanında "Bu ne demek?" butonu çıkması için. */
+  templateId?: TemplateId;
 }
 
 export function WizardQuestion({
   question,
   value,
   onChange,
+  templateId,
 }: WizardQuestionProps) {
   const uid = useId();
   const inputId = `q-${uid}-${question.id}`;
@@ -40,6 +44,9 @@ export function WizardQuestion({
             </span>
           )}
         </label>
+        {question.aiSuggestable && templateId && (
+          <AIExplainPopover templateId={templateId} questionId={question.id} />
+        )}
       </div>
       {question.helpText && (
         <p className="text-xs text-text-tertiary leading-relaxed">

@@ -126,6 +126,7 @@ export const DISTRIBUTOR_TEMPLATE: DraftTemplate = {
         "Çift yönlü münhasırlık Rekabet Kurulu 2002/2 Tebliği eşiklerine tabi — kritik hacimlerde bireysel muafiyet gerekli olabilir.",
       type: "radioGroup",
       required: true,
+      aiSuggestable: true,
       defaultValue: "none",
       options: [
         { value: "none", label: "Münhasırlık yok" },

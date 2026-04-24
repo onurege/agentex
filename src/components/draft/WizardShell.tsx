@@ -194,6 +194,7 @@ export function WizardShell({
             question={q}
             value={session.answers[q.id] ?? q.defaultValue}
             onChange={(value) => updateAnswer(sessionId, q.id, value)}
+            templateId={template.id}
           />
         ))}
       </div>

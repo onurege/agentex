@@ -133,6 +133,7 @@ export const NDA_TEMPLATE: DraftTemplate = {
         "Tek taraflıda yalnızca bir taraf bilgi ifşa eder; karşılıklıda her iki taraf da ifşa eder.",
       type: "radioGroup",
       required: true,
+      aiSuggestable: true,
       defaultValue: "mutual",
       options: [
         {
