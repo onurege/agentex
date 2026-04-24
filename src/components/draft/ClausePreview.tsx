@@ -11,7 +11,8 @@
 // wizard cevaplarından türediği için burada toggle edilmez.
 // ============================================================
 
-import { Fragment } from "react";
+import { Fragment, useCallback, useState } from "react";
+import { Download, Loader2 } from "lucide-react";
 import type { DraftSession, DraftTemplate } from "@/lib/draft/types";
 import { renderDraft } from "@/lib/draft/renderer";
 import { useDraftStore } from "@/lib/draft/store";
@@ -25,6 +26,12 @@ interface ClausePreviewProps {
 export function ClausePreview({ template, session }: ClausePreviewProps) {
   const { clauses, missingByClause } = renderDraft(template, session);
   const toggleClause = useDraftStore((s) => s.toggleClause);
+  const setStatus = useDraftStore((s) => s.setStatus);
+
+  const [exportState, setExportState] = useState<"idle" | "working" | "error">(
+    "idle",
+  );
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Kullanıcının aç/kapa yapabildiği opsiyonel maddeler:
   // defaultEnabled=true + gate yok. Gate'li olanlar wizard cevabına tabi.
@@ -36,8 +43,98 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
 
   const hasMissing = Object.keys(missingByClause).length > 0;
 
+  const handleExport = useCallback(async () => {
+    setExportState("working");
+    setExportError(null);
+    try {
+      const res = await fetch("/api/draft/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId: session.templateId,
+          sessionId: session.id,
+          answers: session.answers,
+          aiAccepted: session.aiAccepted,
+          disabledClauses: session.disabledClauses,
+        }),
+      });
+
+      if (!res.ok) {
+        let msg = `Sunucu hatası (${res.status})`;
+        try {
+          const body = (await res.json()) as { error?: string };
+          if (body?.error) msg = body.error;
+        } catch {
+          // non-JSON response — fall through
+        }
+        throw new Error(msg);
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const fileName =
+        extractFilename(disposition) ??
+        `${template.label}-${new Date().toISOString().slice(0, 10)}.docx`;
+      triggerDownload(blob, fileName);
+      setStatus(session.id, "complete");
+      setExportState("idle");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "DOCX oluşturulamadı.";
+      setExportState("error");
+      setExportError(msg);
+    }
+  }, [
+    session.templateId,
+    session.id,
+    session.answers,
+    session.aiAccepted,
+    session.disabledClauses,
+    setStatus,
+    template.label,
+  ]);
+
+  const canExport = clauses.length > 0 && exportState !== "working";
+
   return (
     <div className="flex flex-col gap-4">
+      {/* Export action */}
+      <div className="flex flex-col items-stretch gap-1.5">
+        <button
+          type="button"
+          disabled={!canExport}
+          onClick={handleExport}
+          className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border transition-all ${
+            canExport
+              ? "bg-accent-primary text-workspace-surface border-accent-primary hover:bg-accent-secondary shadow-medium"
+              : "bg-workspace-elevated text-text-tertiary border-workspace-border cursor-not-allowed opacity-70"
+          }`}
+        >
+          {exportState === "working" ? (
+            <>
+              <Loader2 size={15} className="animate-spin" />
+              DOCX hazırlanıyor…
+            </>
+          ) : (
+            <>
+              <Download size={15} />
+              DOCX İndir
+            </>
+          )}
+        </button>
+        {hasMissing && exportState !== "error" && (
+          <p className="text-xs text-text-tertiary text-center">
+            Eksik alanlar DOCX'te{" "}
+            <span className="text-accent-danger font-mono">[ … ]</span> olarak
+            kalır; yine de indirebilirsiniz.
+          </p>
+        )}
+        {exportState === "error" && exportError && (
+          <p className="text-xs text-accent-danger text-center">
+            {exportError}
+          </p>
+        )}
+      </div>
+
       {hasMissing && (
         <div className="rounded-lg border border-accent-warning/30 bg-accent-warning/[0.06] px-4 py-3 text-sm text-text-secondary">
           <span className="font-semibold text-accent-warning">Eksik alan:</span>{" "}
@@ -103,6 +200,25 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
       )}
     </div>
   );
+}
+
+function extractFilename(disposition: string): string | null {
+  const utf = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  if (utf) return decodeURIComponent(utf[1]);
+  const ascii = /filename="([^"]+)"/i.exec(disposition);
+  if (ascii) return ascii[1];
+  return null;
+}
+
+function triggerDownload(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 const MISSING_RE = /(\[ [^\]]+ \])/g;
