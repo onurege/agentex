@@ -11,12 +11,13 @@
 // wizard cevaplarından türediği için burada toggle edilmez.
 // ============================================================
 
-import { Fragment, useCallback, useState } from "react";
+import { Fragment, useCallback, useMemo, useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import type { DraftSession, DraftTemplate } from "@/lib/draft/types";
 import { renderDraft } from "@/lib/draft/renderer";
 import { useDraftStore } from "@/lib/draft/store";
 import { ClauseToggle } from "./ClauseToggle";
+import { AISuggestBox } from "./AISuggestBox";
 
 interface ClausePreviewProps {
   template: DraftTemplate;
@@ -40,6 +41,17 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
     if (!c.defaultEnabled) return false;
     return true;
   });
+
+  // aiEditable clause id'lerini hızlı erişim için set'te tutuyoruz.
+  const aiEditableSet = useMemo(
+    () =>
+      new Set(
+        template.clauses
+          .filter((c) => c.aiEditable)
+          .map((c) => c.id),
+      ),
+    [template],
+  );
 
   const hasMissing = Object.keys(missingByClause).length > 0;
 
@@ -165,6 +177,16 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
                 <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
                   {renderBodyWithHighlights(c.body)}
                 </p>
+                {aiEditableSet.has(c.clauseId) && (
+                  <div className="mt-2">
+                    <AISuggestBox
+                      templateId={template.id}
+                      clauseId={c.clauseId}
+                      clauseTitle={c.title}
+                      session={session}
+                    />
+                  </div>
+                )}
               </section>
             ))
           )}
