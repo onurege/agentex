@@ -6,34 +6,40 @@
 //
 // Template'in questions dizisini step numarasına göre gruplar,
 // aktif adımda görünür (dependsOn matched) soruları render eder
-// ve Geri / İleri navigasyonunu yönetir. Son adımda "Önizlemeye
-// geç" CTA'sı gösterir. Değer değişimi doğrudan store'a yazar
-// (updateAnswer). Clause toggle + preview panel commit 4'te
-// WizardShell'in sağına eklenecek.
+// ve Geri / İleri navigasyonunu yönetir. Son adımda "Kurula
+// Gönder" CTA'sı açılır: ajan seçimi modal'ı + DOCX export +
+// boardroom flow store'una otomatik ingest + /app/setup'a
+// yönlendirme zincirini tetikler.
 // ============================================================
 
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ArrowRight, Check, Send } from "lucide-react";
 import type { DraftTemplate, Question } from "@/lib/draft/types";
 import { useDraftStore } from "@/lib/draft/store";
 import { evaluateWarnings } from "@/lib/draft/warnings";
+import { useBoardroomFlowStore } from "@/lib/boardroom-flow-store";
 import { WarningBanner } from "./WarningBanner";
 import { WizardQuestion } from "./WizardQuestion";
+import { BoardPickerModal } from "./BoardPickerModal";
 
 interface WizardShellProps {
   template: DraftTemplate;
   sessionId: string;
-  /** Last step → Preview modu. Commit 4 split layout bunu override edecek. */
-  onComplete?(): void;
 }
 
 export function WizardShell({
   template,
   sessionId,
-  onComplete,
 }: WizardShellProps) {
+  const router = useRouter();
   const session = useDraftStore((s) => s.getSession(sessionId));
   const updateAnswer = useDraftStore((s) => s.updateAnswer);
+  const setDraftStatus = useDraftStore((s) => s.setStatus);
+
+  const [showBoardPicker, setShowBoardPicker] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const steps = useMemo(() => deriveSteps(template), [template]);
   const [currentStep, setCurrentStep] = useState(1);
@@ -67,6 +73,70 @@ export function WizardShell({
   });
 
   const activeWarnings = evaluateWarnings(template, session.answers);
+
+  const sendToBoard = useCallback(
+    async (agentIds: string[]) => {
+      if (!session) return;
+      setSending(true);
+      setSendError(null);
+      try {
+        const res = await fetch("/api/draft/export", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            templateId: session.templateId,
+            sessionId: session.id,
+            answers: session.answers,
+            aiAccepted: session.aiAccepted,
+            disabledClauses: session.disabledClauses,
+          }),
+        });
+        if (!res.ok) {
+          let message = `Sunucu hatası (${res.status})`;
+          try {
+            const body = (await res.json()) as { error?: string };
+            if (body?.error) message = body.error;
+          } catch {
+            // non-JSON — fall through with status code
+          }
+          throw new Error(message);
+        }
+        const blob = await res.blob();
+        const disposition = res.headers.get("Content-Disposition") ?? "";
+        const fileName =
+          extractFilename(disposition) ??
+          `${template.label}-${new Date().toISOString().slice(0, 10)}.docx`;
+        const file = new File([blob], fileName, {
+          type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        });
+
+        const flow = useBoardroomFlowStore.getState();
+        flow.setSelectedAgentIds(agentIds);
+        flow.setContextNotes(
+          `Sıfırdan üretilen ${template.label} taslağı (draft:${session.id}).`,
+        );
+        await flow.ingestFile(file);
+
+        const finalStatus = useBoardroomFlowStore.getState().uploadStatus;
+        if (finalStatus !== "success") {
+          const msg =
+            useBoardroomFlowStore.getState().uploadError ??
+            "Kurula yükleme başarısız.";
+          throw new Error(msg);
+        }
+
+        setDraftStatus(session.id, "complete");
+        setShowBoardPicker(false);
+        router.push("/app/setup");
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : "Kurula gönderilemedi.";
+        setSendError(msg);
+        setSending(false);
+      }
+    },
+    [session, template, router, setDraftStatus],
+  );
 
   return (
     <div className="space-y-6">
@@ -154,12 +224,12 @@ export function WizardShell({
         {isLastStep ? (
           <button
             type="button"
-            disabled={!canAdvance}
-            onClick={() => onComplete?.()}
+            disabled={!canAdvance || sending}
+            onClick={() => setShowBoardPicker(true)}
             className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-sm font-semibold bg-accent-primary text-workspace-surface hover:bg-accent-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Önizlemeye geç
-            <ArrowRight size={15} />
+            <Send size={15} />
+            Kurula Gönder
           </button>
         ) : (
           <button
@@ -173,8 +243,28 @@ export function WizardShell({
           </button>
         )}
       </div>
+
+      <BoardPickerModal
+        open={showBoardPicker}
+        working={sending}
+        error={sendError}
+        onClose={() => {
+          if (sending) return;
+          setShowBoardPicker(false);
+          setSendError(null);
+        }}
+        onConfirm={(ids) => void sendToBoard(ids)}
+      />
     </div>
   );
+}
+
+function extractFilename(disposition: string): string | null {
+  const utf = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  if (utf) return decodeURIComponent(utf[1]);
+  const ascii = /filename="([^"]+)"/i.exec(disposition);
+  if (ascii) return ascii[1];
+  return null;
 }
 
 function deriveSteps(template: DraftTemplate): number[] {

@@ -11,7 +11,6 @@
 
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
-import { useRef } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { DraftLayout } from "@/components/draft/DraftLayout";
 import { WizardShell } from "@/components/draft/WizardShell";
@@ -28,7 +27,6 @@ export default function DraftWizardPage() {
   const params = useParams<{ id: string }>();
   const hydrated = useHydrated();
   const session = useDraftStore((s) => s.getSession(params.id));
-  const previewRef = useRef<HTMLDivElement | null>(null);
 
   if (!hydrated) {
     return (
@@ -82,23 +80,11 @@ export default function DraftWizardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-6">
             {/* Left — wizard */}
             <section className="rounded-xl border border-workspace-border bg-workspace-surface p-6 md:p-8 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
-              <WizardShell
-                template={template}
-                sessionId={session.id}
-                onComplete={() => {
-                  previewRef.current?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  });
-                }}
-              />
+              <WizardShell template={template} sessionId={session.id} />
             </section>
 
             {/* Right — preview */}
-            <section
-              ref={previewRef}
-              className="lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto"
-            >
+            <section className="lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
               <ClausePreview template={template} session={session} />
             </section>
           </div>
