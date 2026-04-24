@@ -12,7 +12,7 @@
 // WizardShell'in sağına eklenecek.
 // ============================================================
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import type { DraftTemplate, Question } from "@/lib/draft/types";
 import { useDraftStore } from "@/lib/draft/store";
@@ -37,6 +37,19 @@ export function WizardShell({
 
   const steps = useMemo(() => deriveSteps(template), [template]);
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Soru tanımındaki defaultValue'ları store'a seed et — kullanıcı
+  // alana dokunmasa bile required check pass olsun. Sadece mount'ta
+  // + template/session değişince çalışır; mevcut cevapları ezmez.
+  useEffect(() => {
+    const current = useDraftStore.getState().sessions[sessionId];
+    if (!current) return;
+    for (const q of template.questions) {
+      if (q.defaultValue === undefined) continue;
+      if (current.answers[q.id] !== undefined) continue;
+      useDraftStore.getState().updateAnswer(sessionId, q.id, q.defaultValue);
+    }
+  }, [template, sessionId]);
 
   if (!session) return null;
 
