@@ -33,18 +33,42 @@ export interface CropRegion {
 
 export type ComparisonVerdict = "match" | "borderline" | "no_match";
 
-export interface ComparisonResult {
-  /** 0-1 arası normalize edilmiş tek güven skoru. */
+export interface ComparisonSignals {
+  ssim: number;        // 0 (zıt) .. 1 (özdeş)
+  phashHamming: number; // 0 (özdeş) .. 64 (tamamen farklı) — 64-bit hash
+  aspectRatioDelta: number; // |ar1 - ar2| / max(ar1, ar2), 0 ideal
+}
+
+/** Bir referans örneğine karşı tek bir karşılaştırma sonucu. */
+export interface SpecimenMatch {
+  /** UI için okunur etiket ("Örnek 1", "Örnek 2", …) */
+  label: string;
+  /** Hangi referansın hangisi olduğunu izlemek için kararlı id. */
+  specimenId: string;
   confidence: number;
   verdict: ComparisonVerdict;
-  /** Bireysel sinyaller — debugging / transparency için UI'da gösterilir. */
-  signals: {
-    ssim: number;        // 0 (zıt) .. 1 (özdeş)
-    phashHamming: number; // 0 (özdeş) .. 64 (tamamen farklı) — 64-bit hash
-    aspectRatioDelta: number; // |ar1 - ar2| / max(ar1, ar2), 0 ideal
-  };
+  signals: ComparisonSignals;
+}
+
+export interface ComparisonResult {
+  /** En iyi eşleşen örneğin güveni — top-line verdict bu. */
+  confidence: number;
+  verdict: ComparisonVerdict;
+  /** En yüksek skoru veren örneğin id'si. */
+  bestMatchSpecimenId: string;
+  /** Her referans örneğine karşı sonuç (primary + additionals). */
+  specimenMatches: SpecimenMatch[];
+  /** Geriye dönük uyum için — bestMatch'in sinyalleri. */
+  signals: ComparisonSignals;
   /** ISO tarih — ne zaman hesaplandı. */
   computedAt: string;
+}
+
+/** İmza sirküsünden birden fazla örnek alınabiliyor; her biri ayrı crop. */
+export interface ReferenceSpecimen {
+  id: string;
+  crop: CropRegion;
+  signatureDataUrl: string;
 }
 
 /** Store'daki tek karşılaştırma oturumu. */
@@ -52,11 +76,17 @@ export interface SignatureSession {
   id: string;
   createdAt: string;
   updatedAt: string;
-  /** Sözleşme belgesinden alınan imza. */
+  /** Sözleşme belgesinden alınan tek imza. */
   contract: SignatureSource;
-  /** İmza sirküsünden alınan referans imza. */
+  /** İmza sirküsü sayfası + birincil (primary) imza kırpımı. */
   reference: SignatureSource;
-  /** İki kırpım da hazırsa hesaplanır. */
+  /**
+   * Referans sayfasından alınan EK imza örnekleri. Primary
+   * (reference.crop) her zaman var; bunlar üstüne eklenir
+   * (tipik: sirküsünde 2-3 örnek imza).
+   */
+  referenceSpecimens: ReferenceSpecimen[];
+  /** Tüm kırpımlar hazırsa hesaplanır. */
   result: ComparisonResult | null;
 }
 

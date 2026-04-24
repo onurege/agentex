@@ -15,10 +15,14 @@ import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { SignatureLayout } from "@/components/signatures/SignatureLayout";
 import { SignatureSourceCard } from "@/components/signatures/SignatureSourceCard";
 import { SignatureCropper } from "@/components/signatures/SignatureCropper";
+import { ReferenceSpecimensPanel } from "@/components/signatures/ReferenceSpecimensPanel";
 import { ComparisonResultCard } from "@/components/signatures/ComparisonResultCard";
 import { useSignaturesStore } from "@/lib/signatures/store";
 import { useHydrated } from "@/lib/draft/use-hydrated";
-import { compareSignatures } from "@/lib/signatures/compare";
+import {
+  compareAgainstSpecimens,
+  type SpecimenInput,
+} from "@/lib/signatures/compare";
 import type { CropRegion } from "@/lib/signatures/types";
 
 export default function SignaturesPage() {
@@ -33,6 +37,12 @@ export default function SignaturesPage() {
   const setCrop = useSignaturesStore((s) => s.setCrop);
   const setSignatureImage = useSignaturesStore((s) => s.setSignatureImage);
   const setResult = useSignaturesStore((s) => s.setResult);
+  const addReferenceSpecimen = useSignaturesStore(
+    (s) => s.addReferenceSpecimen,
+  );
+  const removeReferenceSpecimen = useSignaturesStore(
+    (s) => s.removeReferenceSpecimen,
+  );
 
   const [computing, setComputing] = useState(false);
   const [computeError, setComputeError] = useState<string | null>(null);
@@ -53,14 +63,29 @@ export default function SignaturesPage() {
       const contractAspect =
         session.contract.crop.width /
         Math.max(session.contract.crop.height, 1);
-      const referenceAspect =
-        session.reference.crop.width /
-        Math.max(session.reference.crop.height, 1);
-      const result = await compareSignatures({
+
+      // Primary + additional örnekleri tek listeye topla.
+      const specimens: SpecimenInput[] = [
+        {
+          id: "primary",
+          label: "Örnek 1 (birincil)",
+          dataUrl: session.reference.signatureDataUrl,
+          aspect:
+            session.reference.crop.width /
+            Math.max(session.reference.crop.height, 1),
+        },
+        ...session.referenceSpecimens.map((sp, idx) => ({
+          id: sp.id,
+          label: `Örnek ${idx + 2}`,
+          dataUrl: sp.signatureDataUrl,
+          aspect: sp.crop.width / Math.max(sp.crop.height, 1),
+        })),
+      ];
+
+      const result = await compareAgainstSpecimens({
         contractDataUrl: session.contract.signatureDataUrl,
-        referenceDataUrl: session.reference.signatureDataUrl,
         contractAspect,
-        referenceAspect,
+        specimens,
       });
       setResult(session.id, result);
     } catch (err) {
@@ -73,6 +98,8 @@ export default function SignaturesPage() {
   }, [session, setResult]);
 
   // İki kırpım da hazırsa ve kayıtlı bir sonuç yoksa otomatik hesapla.
+  // referenceSpecimens değişimi de tetikleyicidir (store result'ı zaten
+  // null'a çekiyor; effect burada yeniden çalışır).
   useEffect(() => {
     if (!session) return;
     if (
@@ -87,6 +114,7 @@ export default function SignaturesPage() {
     session,
     session?.contract.signatureDataUrl,
     session?.reference.signatureDataUrl,
+    session?.referenceSpecimens.length,
     session?.result,
     computing,
     runComparison,
@@ -201,15 +229,32 @@ export default function SignaturesPage() {
                   }
                   onReset={() => handleCropReset("contract")}
                 />
-                <SignatureCropper
-                  label="İmza Sirküsü"
-                  tone="reference"
-                  source={session.reference}
-                  onCropComplete={(r, d) =>
-                    handleCropComplete("reference", r, d)
-                  }
-                  onReset={() => handleCropReset("reference")}
-                />
+                <div className="flex flex-col gap-4">
+                  <SignatureCropper
+                    label="İmza Sirküsü"
+                    tone="reference"
+                    source={session.reference}
+                    onCropComplete={(r, d) =>
+                      handleCropComplete("reference", r, d)
+                    }
+                    onReset={() => handleCropReset("reference")}
+                  />
+                  {session.reference.crop && (
+                    <ReferenceSpecimensPanel
+                      referenceSource={session.reference}
+                      specimens={session.referenceSpecimens}
+                      onAdd={(crop, signatureDataUrl) =>
+                        addReferenceSpecimen(session.id, {
+                          crop,
+                          signatureDataUrl,
+                        })
+                      }
+                      onRemove={(id) =>
+                        removeReferenceSpecimen(session.id, id)
+                      }
+                    />
+                  )}
+                </div>
               </div>
             </section>
 

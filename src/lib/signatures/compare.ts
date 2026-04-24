@@ -24,38 +24,105 @@
 //   <  0.50 → no_match
 // ============================================================
 
-import type { ComparisonResult, ComparisonVerdict } from "./types";
+import type {
+  ComparisonResult,
+  ComparisonSignals,
+  ComparisonVerdict,
+  SpecimenMatch,
+} from "./types";
 import { TARGET_HEIGHT, TARGET_WIDTH } from "./preprocess";
 
-export interface CompareInput {
-  contractDataUrl: string;
-  referenceDataUrl: string;
-  /** Preprocess'ten gelen aspect ratio'lar (normalize öncesi bbox). */
-  contractAspect: number;
-  referenceAspect: number;
+export interface SpecimenInput {
+  id: string;
+  label: string;
+  dataUrl: string;
+  aspect: number;
 }
 
-export async function compareSignatures(
-  input: CompareInput,
+export interface CompareManyInput {
+  contractDataUrl: string;
+  contractAspect: number;
+  specimens: SpecimenInput[];
+}
+
+/**
+ * Sözleşme imzasını N referans örneğine karşı sırayla karşılaştırır.
+ * En yüksek güven veren örnek top-line verdict olarak döner; tümü
+ * specimenMatches[] altında gösterilir.
+ */
+export async function compareAgainstSpecimens(
+  input: CompareManyInput,
 ): Promise<ComparisonResult> {
-  const [a, b] = await Promise.all([
-    greyBytesFromDataUrl(input.contractDataUrl),
-    greyBytesFromDataUrl(input.referenceDataUrl),
-  ]);
+  if (input.specimens.length === 0) {
+    throw new Error("Karşılaştırılacak referans örneği yok.");
+  }
 
-  const ssim = ssimScore(a, b, TARGET_WIDTH, TARGET_HEIGHT);
-  const hashA = dhash(a, TARGET_WIDTH, TARGET_HEIGHT);
-  const hashB = dhash(b, TARGET_WIDTH, TARGET_HEIGHT);
+  const contractGrey = await greyBytesFromDataUrl(input.contractDataUrl);
+
+  const matches: SpecimenMatch[] = [];
+  for (const specimen of input.specimens) {
+    const referenceGrey = await greyBytesFromDataUrl(specimen.dataUrl);
+    const pair = scorePair(
+      contractGrey,
+      referenceGrey,
+      input.contractAspect,
+      specimen.aspect,
+    );
+    matches.push({
+      specimenId: specimen.id,
+      label: specimen.label,
+      confidence: pair.confidence,
+      verdict: pair.verdict,
+      signals: pair.signals,
+    });
+  }
+
+  // En yüksek güveni seç
+  let best = matches[0];
+  for (const m of matches) {
+    if (m.confidence > best.confidence) best = m;
+  }
+
+  return {
+    confidence: best.confidence,
+    verdict: best.verdict,
+    bestMatchSpecimenId: best.specimenId,
+    specimenMatches: matches,
+    signals: best.signals,
+    computedAt: new Date().toISOString(),
+  };
+}
+
+// --- Pairwise scoring (contractGrey × referenceGrey) ------------------------
+
+interface PairScore {
+  confidence: number;
+  verdict: ComparisonVerdict;
+  signals: ComparisonSignals;
+}
+
+function scorePair(
+  contractGrey: Uint8Array,
+  referenceGrey: Uint8Array,
+  contractAspect: number,
+  referenceAspect: number,
+): PairScore {
+  const ssim = ssimScore(
+    contractGrey,
+    referenceGrey,
+    TARGET_WIDTH,
+    TARGET_HEIGHT,
+  );
+  const hashA = dhash(contractGrey, TARGET_WIDTH, TARGET_HEIGHT);
+  const hashB = dhash(referenceGrey, TARGET_WIDTH, TARGET_HEIGHT);
   const phashHamming = hamming(hashA, hashB);
-
   const aspectRatioDelta =
-    Math.abs(input.contractAspect - input.referenceAspect) /
-    Math.max(input.contractAspect, input.referenceAspect, 0.001);
+    Math.abs(contractAspect - referenceAspect) /
+    Math.max(contractAspect, referenceAspect, 0.001);
 
   const ssimNorm = clamp01(ssim);
   const phashNorm = 1 - phashHamming / 64;
   const aspectNorm = 1 - Math.min(1, aspectRatioDelta);
-
   const confidence =
     0.55 * ssimNorm + 0.3 * phashNorm + 0.15 * aspectNorm;
 
@@ -74,7 +141,6 @@ export async function compareSignatures(
       phashHamming,
       aspectRatioDelta,
     },
-    computedAt: new Date().toISOString(),
   };
 }
 

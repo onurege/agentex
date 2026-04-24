@@ -16,6 +16,7 @@ import { persist } from "zustand/middleware";
 import type {
   ComparisonResult,
   CropRegion,
+  ReferenceSpecimen,
   SignatureSession,
   SignatureSource,
 } from "./types";
@@ -40,12 +41,23 @@ interface SignaturesState {
   ): void;
   setResult(sessionId: string, result: ComparisonResult | null): void;
 
+  /** İmza sirküsünden ek imza örneği ekle — id döner. */
+  addReferenceSpecimen(
+    sessionId: string,
+    specimen: Omit<ReferenceSpecimen, "id">,
+  ): string;
+  removeReferenceSpecimen(sessionId: string, specimenId: string): void;
+
   clearSource(sessionId: string, side: Side): void;
   deleteSession(id: string): void;
 }
 
 function generateId(): string {
   return `sig_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function generateSpecimenId(): string {
+  return `spec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 }
 
 function emptySession(id: string): SignatureSession {
@@ -56,6 +68,7 @@ function emptySession(id: string): SignatureSession {
     updatedAt: now,
     contract: { ...EMPTY_SOURCE },
     reference: { ...EMPTY_SOURCE },
+    referenceSpecimens: [],
     result: null,
   };
 }
@@ -87,13 +100,18 @@ export const useSignaturesStore = create<SignaturesState>()(
         set((s) => {
           const session = s.sessions[sessionId];
           if (!session) return s;
+          // Referans kaynağı değişirse ek örnekler de sıfırlanmalı —
+          // farklı bir sayfa için önceki kırpımlar anlamsız.
+          const extra =
+            side === "reference" ? { referenceSpecimens: [] } : {};
           return {
             sessions: {
               ...s.sessions,
               [sessionId]: {
                 ...session,
                 [side]: source,
-                result: null, // yeni kaynak → eski sonucu geçersiz kıl
+                ...extra,
+                result: null,
                 updatedAt: new Date().toISOString(),
               },
             },
@@ -153,12 +171,57 @@ export const useSignaturesStore = create<SignaturesState>()(
         set((s) => {
           const session = s.sessions[sessionId];
           if (!session) return s;
+          const extra =
+            side === "reference" ? { referenceSpecimens: [] } : {};
           return {
             sessions: {
               ...s.sessions,
               [sessionId]: {
                 ...session,
                 [side]: { ...EMPTY_SOURCE },
+                ...extra,
+                result: null,
+                updatedAt: new Date().toISOString(),
+              },
+            },
+          };
+        }),
+
+      addReferenceSpecimen: (sessionId, specimen) => {
+        const id = generateSpecimenId();
+        set((s) => {
+          const session = s.sessions[sessionId];
+          if (!session) return s;
+          return {
+            sessions: {
+              ...s.sessions,
+              [sessionId]: {
+                ...session,
+                referenceSpecimens: [
+                  ...session.referenceSpecimens,
+                  { id, ...specimen },
+                ],
+                result: null,
+                updatedAt: new Date().toISOString(),
+              },
+            },
+          };
+        });
+        return id;
+      },
+
+      removeReferenceSpecimen: (sessionId, specimenId) =>
+        set((s) => {
+          const session = s.sessions[sessionId];
+          if (!session) return s;
+          return {
+            sessions: {
+              ...s.sessions,
+              [sessionId]: {
+                ...session,
+                referenceSpecimens: session.referenceSpecimens.filter(
+                  (sp) => sp.id !== specimenId,
+                ),
                 result: null,
                 updatedAt: new Date().toISOString(),
               },

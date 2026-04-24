@@ -123,11 +123,11 @@ export function ComparisonResultCard({
         />
       </div>
 
-      {/* Signals */}
+      {/* Signals (en iyi eşleşen örneğin sinyalleri) */}
       <div className="px-6 py-5 border-t border-workspace-border">
         <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold uppercase tracking-widest text-text-tertiary mb-3">
           <ShieldAlert size={11} />
-          Sinyaller (Saydam)
+          En iyi eşleşmenin sinyalleri
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <SignalTile
@@ -147,6 +147,60 @@ export function ComparisonResultCard({
           />
         </div>
       </div>
+
+      {/* Çoklu örnek kırılımı — birden fazla referans varsa */}
+      {result.specimenMatches.length > 1 && (
+        <div className="px-6 py-5 border-t border-workspace-border">
+          <div className="text-[11px] font-mono font-semibold uppercase tracking-widest text-text-tertiary mb-3">
+            Her referans örneğine karşı
+          </div>
+          <ul className="space-y-2">
+            {result.specimenMatches.map((m) => {
+              const isBest = m.specimenId === result.bestMatchSpecimenId;
+              const verdictStyle = VERDICT_MAP[m.verdict];
+              const verdictTone = TONE_CLASSES[verdictStyle.tone];
+              return (
+                <li
+                  key={m.specimenId}
+                  className={`flex items-center gap-3 p-3 rounded-lg border ${
+                    isBest
+                      ? "border-accent-primary/40 bg-accent-primary/[0.04]"
+                      : "border-workspace-border bg-workspace-elevated"
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-text-primary">
+                        {m.label}
+                      </span>
+                      {isBest && (
+                        <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-primary/15 text-accent-primary border border-accent-primary/30">
+                          en iyi
+                        </span>
+                      )}
+                      <span
+                        className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ${verdictTone.bg} ${verdictTone.text} border ${verdictTone.border}`}
+                      >
+                        {verdictStyle.label}
+                      </span>
+                    </div>
+                    <div className="text-xs text-text-tertiary font-mono mt-1">
+                      SSIM %{Math.round(m.signals.ssim * 100)} · pHash{" "}
+                      {m.signals.phashHamming}/64 · aspect %
+                      {Math.round(m.signals.aspectRatioDelta * 100)}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-display text-lg font-bold text-text-primary">
+                      %{Math.round(m.confidence * 100)}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {/* Footer action */}
       <footer className="px-6 py-4 border-t border-workspace-border bg-workspace-elevated flex items-center justify-between gap-4">
