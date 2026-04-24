@@ -10,13 +10,15 @@
 // karşılaştırma kartları placeholder olarak kalır.
 // ============================================================
 
-import { useEffect } from "react";
-import { AlertCircle, Sparkles } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { SignatureLayout } from "@/components/signatures/SignatureLayout";
 import { SignatureSourceCard } from "@/components/signatures/SignatureSourceCard";
 import { SignatureCropper } from "@/components/signatures/SignatureCropper";
+import { ComparisonResultCard } from "@/components/signatures/ComparisonResultCard";
 import { useSignaturesStore } from "@/lib/signatures/store";
 import { useHydrated } from "@/lib/draft/use-hydrated";
+import { compareSignatures } from "@/lib/signatures/compare";
 import type { CropRegion } from "@/lib/signatures/types";
 
 export default function SignaturesPage() {
@@ -30,6 +32,65 @@ export default function SignaturesPage() {
   const clearSource = useSignaturesStore((s) => s.clearSource);
   const setCrop = useSignaturesStore((s) => s.setCrop);
   const setSignatureImage = useSignaturesStore((s) => s.setSignatureImage);
+  const setResult = useSignaturesStore((s) => s.setResult);
+
+  const [computing, setComputing] = useState(false);
+  const [computeError, setComputeError] = useState<string | null>(null);
+
+  const runComparison = useCallback(async () => {
+    if (!session) return;
+    if (
+      !session.contract.signatureDataUrl ||
+      !session.reference.signatureDataUrl ||
+      !session.contract.crop ||
+      !session.reference.crop
+    ) {
+      return;
+    }
+    setComputing(true);
+    setComputeError(null);
+    try {
+      const contractAspect =
+        session.contract.crop.width /
+        Math.max(session.contract.crop.height, 1);
+      const referenceAspect =
+        session.reference.crop.width /
+        Math.max(session.reference.crop.height, 1);
+      const result = await compareSignatures({
+        contractDataUrl: session.contract.signatureDataUrl,
+        referenceDataUrl: session.reference.signatureDataUrl,
+        contractAspect,
+        referenceAspect,
+      });
+      setResult(session.id, result);
+    } catch (err) {
+      setComputeError(
+        err instanceof Error ? err.message : "Karşılaştırma başarısız.",
+      );
+    } finally {
+      setComputing(false);
+    }
+  }, [session, setResult]);
+
+  // İki kırpım da hazırsa ve kayıtlı bir sonuç yoksa otomatik hesapla.
+  useEffect(() => {
+    if (!session) return;
+    if (
+      session.contract.signatureDataUrl &&
+      session.reference.signatureDataUrl &&
+      !session.result &&
+      !computing
+    ) {
+      void runComparison();
+    }
+  }, [
+    session,
+    session?.contract.signatureDataUrl,
+    session?.reference.signatureDataUrl,
+    session?.result,
+    computing,
+    runComparison,
+  ]);
 
   const handleCropComplete = (
     side: "contract" | "reference",
@@ -152,15 +213,46 @@ export default function SignaturesPage() {
               </div>
             </section>
 
-            <div className="rounded-xl border border-dashed border-workspace-border bg-workspace-elevated p-8 text-center">
-              <p className="font-display text-lg font-semibold text-text-primary mb-1">
-                Karşılaştırma akışı bir sonraki commit'te
-              </p>
-              <p className="text-sm text-text-secondary">
-                İki bölge de kırpıldığında SSIM + pHash skorları ve
-                güven yüzdesi burada görünecek.
-              </p>
-            </div>
+            {session.result ? (
+              <ComparisonResultCard
+                result={session.result}
+                contract={session.contract}
+                reference={session.reference}
+                onRecompute={() => void runComparison()}
+                computing={computing}
+              />
+            ) : computing ? (
+              <div className="rounded-xl border border-workspace-border bg-workspace-surface p-8 text-center flex flex-col items-center gap-2">
+                <Loader2 size={20} className="animate-spin text-accent-primary" />
+                <p className="text-sm text-text-secondary">
+                  Sinyaller hesaplanıyor…
+                </p>
+              </div>
+            ) : computeError ? (
+              <div className="rounded-xl border border-accent-danger/30 bg-accent-danger/[0.05] p-6 text-center">
+                <p className="text-sm text-accent-danger font-semibold mb-2">
+                  Karşılaştırma başarısız
+                </p>
+                <p className="text-xs text-text-tertiary mb-3">{computeError}</p>
+                <button
+                  type="button"
+                  onClick={() => void runComparison()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-workspace-surface border border-workspace-border hover:border-accent-primary/30 text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Tekrar dene
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-workspace-border bg-workspace-elevated p-8 text-center">
+                <p className="font-display text-lg font-semibold text-text-primary mb-1">
+                  İki bölgeyi de kırpın
+                </p>
+                <p className="text-sm text-text-secondary">
+                  Her iki belgede imza bölgesi seçildiğinde sinyaller
+                  otomatik hesaplanır.
+                </p>
+              </div>
+            )}
           </>
         ) : (
           <div className="rounded-xl border border-dashed border-workspace-border bg-workspace-elevated p-8 text-center">
