@@ -11,6 +11,7 @@
 // ============================================================
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Loader2, X } from "lucide-react";
 import { BOARDROOM_AGENTS } from "@/lib/boardroom-agents";
 import { useControlRoomStore } from "@/lib/control-room-store";
@@ -69,12 +70,13 @@ export function BoardPickerModal({
   }, [customAgents]);
 
   if (!open) return null;
+  if (typeof document === "undefined") return null;
 
   const canConfirm = selected.length >= 2 && !working;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       role="dialog"
       aria-modal
       aria-labelledby="board-picker-title"
@@ -202,6 +204,7 @@ export function BoardPickerModal({
           </div>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
