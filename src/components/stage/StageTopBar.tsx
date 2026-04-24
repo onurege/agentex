@@ -78,6 +78,32 @@ export function StageTopBar() {
           <span>Karşılaştır</span>
         </Link>
 
+        <Link
+          href="/app/signatures"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
+                     text-text-secondary hover:text-text-primary
+                     bg-workspace-surface hover:bg-workspace-elevated
+                     border border-workspace-border hover:border-accent-primary/30
+                     transition-all duration-150 min-h-[44px]"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="shrink-0"
+          >
+            <path d="M4 12c3-6 10-6 13 0" />
+            <path d="M4 16c3 6 10 6 13 0" />
+            <circle cx="18" cy="12" r="2" />
+          </svg>
+          <span>İmza</span>
+        </Link>
+
         {permissions.canAccessPanel && (
           <Link
             href={SITE.paths.panel}
