@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { DraftLayout } from "@/components/draft/DraftLayout";
 import { useDraftStore } from "@/lib/draft/store";
+import { useHydrated } from "@/lib/draft/use-hydrated";
 import {
   TEMPLATE_META,
   type TemplateMeta,
@@ -48,8 +49,14 @@ function formatDate(iso: string): string {
 }
 
 export default function DraftModuleLanding() {
-  const sessions = useDraftStore((s) => s.listSessions());
+  const hydrated = useHydrated();
+  const rawSessions = useDraftStore((s) => s.listSessions());
   const deleteSession = useDraftStore((s) => s.deleteSession);
+
+  // Persist rehydrate olmadan sessions dizisini render etme — SSR ve ilk
+  // client render aynı (boş) durumu görmeli, ardından effect tetiklenince
+  // gerçek taslaklar gösterilir. Aksi halde hydration mismatch hatası çıkar.
+  const sessions = hydrated ? rawSessions : [];
 
   const hasSessions = sessions.length > 0;
   const counts = useMemo(() => {

@@ -12,11 +12,12 @@
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { useRef } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { DraftLayout } from "@/components/draft/DraftLayout";
 import { WizardShell } from "@/components/draft/WizardShell";
 import { ClausePreview } from "@/components/draft/ClausePreview";
 import { useDraftStore } from "@/lib/draft/store";
+import { useHydrated } from "@/lib/draft/use-hydrated";
 import {
   getTemplate,
   isTemplateImplemented,
@@ -25,12 +26,23 @@ import {
 
 export default function DraftWizardPage() {
   const params = useParams<{ id: string }>();
+  const hydrated = useHydrated();
   const session = useDraftStore((s) => s.getSession(params.id));
   const previewRef = useRef<HTMLDivElement | null>(null);
 
+  if (!hydrated) {
+    return (
+      <DraftLayout>
+        <div className="max-w-7xl mx-auto px-6 py-16 flex items-center justify-center gap-2 text-text-tertiary">
+          <Loader2 size={16} className="animate-spin" />
+          <span className="text-sm">Yükleniyor…</span>
+        </div>
+      </DraftLayout>
+    );
+  }
+
   if (!session) {
-    if (typeof window !== "undefined") notFound();
-    return null;
+    notFound();
   }
 
   const template = getTemplate(session.templateId);
