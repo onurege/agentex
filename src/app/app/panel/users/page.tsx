@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { Plus, Trash2 } from "lucide-react";
 import type { UserRole } from "@/lib/config/roles";
 
 interface UserRow {
@@ -12,6 +13,7 @@ interface UserRow {
   role: UserRole;
   active: boolean;
   createdAt: string;
+  deletedAt?: string | null;
 }
 
 const ROLE_OPTIONS: Array<{ value: UserRole; label: string }> = [
@@ -46,7 +48,17 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ kind: "success" | "error"; message: string } | null>(null);
-  const [pendingRoleFor, setPendingRoleFor] = useState<string | null>(null);
+  const [pendingFor, setPendingFor] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(true);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "user" as UserRole,
+    active: true,
+  });
+  const [passwordDrafts, setPasswordDrafts] = useState<Record<string, string>>({});
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -76,51 +88,97 @@ export default function UsersPage() {
     return () => clearTimeout(id);
   }, [toast]);
 
-  const handleRoleChange = useCallback(
-    async (userId: string, newRole: UserRole) => {
+  async function createUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPendingFor("create");
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createForm),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setToast({ kind: "error", message: userErrorMessage(body.error, "Kullanıcı oluşturulamadı.") });
+        return;
+      }
+      setUsers((rows) => [...rows, body as UserRow]);
+      setCreateForm({ name: "", email: "", password: "", role: "user", active: true });
+      setToast({ kind: "success", message: "Kullanıcı oluşturuldu." });
+    } catch {
+      setToast({ kind: "error", message: "Ağ hatası — kullanıcı oluşturulamadı." });
+    } finally {
+      setPendingFor(null);
+    }
+  }
+
+  const updateUser = useCallback(
+    async (userId: string, patch: Partial<Pick<UserRow, "role" | "active" | "name">> & { password?: string }) => {
       const previous = users;
-      // Optimistic update
-      setUsers((rows) => rows.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
-      setPendingRoleFor(userId);
+      setUsers((rows) => rows.map((u) => (u.id === userId ? { ...u, ...patch } : u)));
+      setPendingFor(userId);
 
       try {
         const res = await fetch(`/api/users/${userId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ role: newRole }),
+          body: JSON.stringify(patch),
         });
-
+        const body = await res.json().catch(() => ({}));
         if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          setUsers(previous); // rollback
-          if (body.error === "last_super_admin") {
-            setToast({ kind: "error", message: "En az bir süper yönetici kalmalı." });
-          } else if (body.error === "cannot_change_own_role") {
-            setToast({ kind: "error", message: "Kendi rolünüzü değiştiremezsiniz." });
-          } else {
-            setToast({ kind: "error", message: "Rol değiştirilemedi." });
-          }
+          setUsers(previous);
+          setToast({ kind: "error", message: userErrorMessage(body.error, "Kullanıcı güncellenemedi.") });
           return;
         }
-
-        setToast({ kind: "success", message: "Rol güncellendi." });
+        setToast({ kind: "success", message: "Kullanıcı güncellendi." });
       } catch {
         setUsers(previous);
-        setToast({ kind: "error", message: "Ağ hatası — rol değiştirilemedi." });
+        setToast({ kind: "error", message: "Ağ hatası — kullanıcı güncellenemedi." });
       } finally {
-        setPendingRoleFor(null);
+        setPendingFor(null);
       }
     },
     [users],
   );
 
+  async function deleteUser(userId: string) {
+    const previous = users;
+    setPendingFor(userId);
+    try {
+      const res = await fetch(`/api/users/${userId}`, { method: "DELETE" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setToast({ kind: "error", message: userErrorMessage(body.error, "Kullanıcı silinemedi.") });
+        return;
+      }
+      setUsers((rows) => rows.filter((u) => u.id !== userId));
+      setToast({ kind: "success", message: "Kullanıcı silindi." });
+    } catch {
+      setUsers(previous);
+      setToast({ kind: "error", message: "Ağ hatası — kullanıcı silinemedi." });
+    } finally {
+      setPendingFor(null);
+      setConfirmDeleteId(null);
+    }
+  }
+
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold text-text-primary mb-2">Users</h1>
-        <p className="text-lg text-text-secondary">
-          Kullanıcı yönetimi ve panel erişim kontrolü.
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-text-primary mb-2">Kullanıcılar</h1>
+          <p className="text-lg text-text-secondary">
+            Super admin kullanıcı ekleyebilir, yetkilendirebilir, pasife alabilir ve silebilir.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCreate((value) => !value)}
+          className="inline-flex items-center gap-2 rounded-xl bg-accent-primary px-4 py-3 text-sm font-semibold text-white shadow-soft hover:bg-accent-secondary"
+        >
+          <Plus size={16} />
+          Yeni Kullanıcı
+        </button>
       </div>
 
       {toast && (
@@ -135,91 +193,197 @@ export default function UsersPage() {
         </div>
       )}
 
-      <div className="rounded-xl bg-workspace-surface border border-workspace-border overflow-hidden">
-        <div className="grid grid-cols-[1fr_1.5fr_160px_90px_120px] gap-4 px-6 py-4 border-b border-workspace-border bg-workspace-elevated/50">
-          {["Kullanıcı", "Email", "Rol", "Aktif", "Katılma"].map((col) => (
-            <span
-              key={col}
-              className="text-[13px] font-semibold text-text-muted uppercase tracking-wide"
+      {showCreate && (
+        <form
+          onSubmit={createUser}
+          className="mb-8 rounded-2xl border border-workspace-border bg-workspace-surface p-6 shadow-soft"
+        >
+          <div className="mb-4">
+            <h2 className="font-display text-xl font-bold text-text-primary">Kullanıcı ekle</h2>
+            <p className="text-sm text-text-secondary">
+              Google girişi kapalıdır; kullanıcılar e-posta ve geçici şifre ile açılır.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.2fr_1fr_180px_120px]">
+            <input
+              value={createForm.name}
+              onChange={(event) => setCreateForm((form) => ({ ...form, name: event.target.value }))}
+              placeholder="Ad Soyad"
+              className="h-12 rounded-xl border border-workspace-border bg-workspace-bg px-4 text-sm text-text-primary outline-none focus:border-accent-primary/50"
+            />
+            <input
+              value={createForm.email}
+              onChange={(event) => setCreateForm((form) => ({ ...form, email: event.target.value }))}
+              type="email"
+              required
+              placeholder="eposta@firma.com"
+              className="h-12 rounded-xl border border-workspace-border bg-workspace-bg px-4 text-sm text-text-primary outline-none focus:border-accent-primary/50"
+            />
+            <input
+              value={createForm.password}
+              onChange={(event) => setCreateForm((form) => ({ ...form, password: event.target.value }))}
+              type="password"
+              required
+              minLength={10}
+              placeholder="Geçici şifre"
+              className="h-12 rounded-xl border border-workspace-border bg-workspace-bg px-4 text-sm text-text-primary outline-none focus:border-accent-primary/50"
+            />
+            <select
+              value={createForm.role}
+              onChange={(event) => setCreateForm((form) => ({ ...form, role: event.target.value as UserRole }))}
+              className="h-12 rounded-xl border border-workspace-border bg-workspace-bg px-4 text-sm text-text-primary outline-none focus:border-accent-primary/50"
             >
+              {ROLE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              disabled={pendingFor === "create"}
+              className="h-12 rounded-xl bg-accent-primary px-4 text-sm font-semibold text-white hover:bg-accent-secondary disabled:opacity-50"
+            >
+              {pendingFor === "create" ? "Ekleniyor..." : "Ekle"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="overflow-hidden rounded-xl border border-workspace-border bg-workspace-surface">
+        <div className="grid grid-cols-[1.2fr_1.5fr_160px_110px_180px_120px_130px] gap-4 border-b border-workspace-border bg-workspace-elevated/50 px-6 py-4">
+          {["Kullanıcı", "Email", "Rol", "Aktif", "Şifre", "Katılma", "İşlem"].map((col) => (
+            <span key={col} className="text-[13px] font-semibold uppercase tracking-wide text-text-muted">
               {col}
             </span>
           ))}
         </div>
 
-        {loading && (
-          <div className="px-6 py-10 text-center text-text-muted">Yükleniyor…</div>
-        )}
-
-        {error && !loading && (
-          <div className="px-6 py-10 text-center text-accent-danger">{error}</div>
-        )}
-
+        {loading && <div className="px-6 py-10 text-center text-text-muted">Yükleniyor…</div>}
+        {error && !loading && <div className="px-6 py-10 text-center text-accent-danger">{error}</div>}
         {!loading && !error && users.length === 0 && (
-          <div className="px-6 py-10 text-center text-text-muted">
-            Henüz kullanıcı yok.
-          </div>
+          <div className="px-6 py-10 text-center text-text-muted">Henüz kullanıcı yok.</div>
         )}
 
         {!loading &&
           !error &&
           users.map((u) => {
             const isSelf = u.id === callerId;
-            const isPending = pendingRoleFor === u.id;
+            const isPending = pendingFor === u.id;
+            const passwordDraft = passwordDrafts[u.id] ?? "";
 
             return (
               <div
                 key={u.id}
-                className="grid grid-cols-[1fr_1.5fr_160px_90px_120px] gap-4 px-6 py-4 border-b border-workspace-border/30 items-center"
+                className="grid grid-cols-[1.2fr_1.5fr_160px_110px_180px_120px_130px] items-center gap-4 border-b border-workspace-border/30 px-6 py-4"
               >
-                <span className="text-base font-medium text-text-primary truncate">
-                  {u.name ?? "—"}
-                </span>
-                <span className="text-base text-text-secondary truncate">
+                <input
+                  value={u.name ?? ""}
+                  onChange={(event) =>
+                    setUsers((rows) => rows.map((row) => (row.id === u.id ? { ...row, name: event.target.value } : row)))
+                  }
+                  onBlur={(event) => void updateUser(u.id, { name: event.target.value })}
+                  disabled={isPending}
+                  placeholder="—"
+                  className="h-10 min-w-0 rounded-lg border border-transparent bg-transparent px-2 text-base font-medium text-text-primary outline-none hover:border-workspace-border focus:border-accent-primary/40"
+                />
+                <span className="truncate text-base text-text-secondary">
                   {u.email}
-                  {isSelf && (
-                    <span className="ml-2 text-[12px] font-medium text-accent-primary">
-                      (siz)
-                    </span>
-                  )}
+                  {isSelf && <span className="ml-2 text-[12px] font-medium text-accent-primary">(siz)</span>}
                 </span>
 
-                <div className="flex items-center gap-2">
-                  <select
-                    value={u.role}
-                    onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
-                    disabled={isSelf || isPending}
-                    title={isSelf ? "Kendi rolünüzü değiştiremezsiniz" : undefined}
-                    className={`
-                      text-[13px] font-semibold px-2.5 py-1 rounded-full border outline-none
-                      ${ROLE_BADGE_STYLE[u.role]}
-                      ${isSelf || isPending ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-workspace-elevated"}
-                      border-workspace-border
-                    `}
-                  >
-                    {ROLE_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <span
-                  className={`text-[13px] font-medium ${
-                    u.active ? "text-accent-success" : "text-text-muted"
+                <select
+                  value={u.role}
+                  onChange={(event) => void updateUser(u.id, { role: event.target.value as UserRole })}
+                  disabled={isSelf || isPending}
+                  className={`rounded-full border border-workspace-border px-2.5 py-1 text-[13px] font-semibold outline-none ${ROLE_BADGE_STYLE[u.role]} ${
+                    isSelf || isPending ? "cursor-not-allowed opacity-60" : "cursor-pointer"
                   }`}
                 >
-                  {u.active ? "Evet" : "Hayır"}
-                </span>
+                  {ROLE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
 
-                <span className="text-[13px] text-text-muted">
-                  {formatDate(u.createdAt)}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => void updateUser(u.id, { active: !u.active })}
+                  disabled={isSelf || isPending}
+                  className={`rounded-full px-3 py-1 text-[13px] font-semibold ${
+                    u.active ? "bg-accent-success/10 text-accent-success" : "bg-workspace-elevated text-text-muted"
+                  } ${isSelf || isPending ? "cursor-not-allowed opacity-60" : ""}`}
+                >
+                  {u.active ? "Aktif" : "Pasif"}
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    value={passwordDraft}
+                    onChange={(event) => setPasswordDrafts((drafts) => ({ ...drafts, [u.id]: event.target.value }))}
+                    type="password"
+                    minLength={10}
+                    placeholder="Yeni şifre"
+                    className="h-9 w-28 rounded-lg border border-workspace-border bg-workspace-bg px-2 text-xs outline-none focus:border-accent-primary/40"
+                  />
+                  <button
+                    type="button"
+                    disabled={isPending || passwordDraft.length < 10}
+                    onClick={() => {
+                      void updateUser(u.id, { password: passwordDraft });
+                      setPasswordDrafts((drafts) => ({ ...drafts, [u.id]: "" }));
+                    }}
+                    className="text-xs font-semibold text-accent-primary disabled:text-text-muted"
+                  >
+                    Kaydet
+                  </button>
+                </div>
+
+                <span className="text-[13px] text-text-muted">{formatDate(u.createdAt)}</span>
+
+                {confirmDeleteId === u.id ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void deleteUser(u.id)}
+                      className="text-xs font-semibold text-accent-danger"
+                    >
+                      Onayla
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="text-xs font-semibold text-text-muted"
+                    >
+                      İptal
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isSelf || isPending}
+                    onClick={() => setConfirmDeleteId(u.id)}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-danger disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Trash2 size={13} />
+                    Sil
+                  </button>
+                )}
               </div>
             );
           })}
       </div>
     </div>
   );
+}
+
+function userErrorMessage(error: unknown, fallback: string): string {
+  if (error === "email_taken") return "Bu e-posta ile aktif bir kullanıcı var.";
+  if (error === "weak_password") return "Şifre en az 10 karakter olmalı.";
+  if (error === "invalid_email") return "Geçerli bir e-posta girin.";
+  if (error === "last_super_admin") return "En az bir aktif super admin kalmalı.";
+  if (error === "cannot_change_own_role") return "Kendi rolünüzü değiştiremezsiniz.";
+  if (error === "cannot_delete_self") return "Kendi kullanıcınızı silemezsiniz.";
+  return fallback;
 }

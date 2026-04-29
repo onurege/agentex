@@ -19,6 +19,7 @@ import {
 
 export async function getServerUserRole(): Promise<UserRole> {
   const session = await getServerSession(authOptions);
+  if (session?.user && !session.user.active) return "user";
   return session?.user?.role ?? "user";
 }
 
@@ -37,6 +38,10 @@ export async function requireServerPermission(
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
+    redirect("/");
+  }
+
+  if (!session.user.active) {
     redirect("/");
   }
 

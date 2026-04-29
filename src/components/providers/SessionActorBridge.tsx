@@ -17,8 +17,10 @@ export function SessionActorBridge() {
   const { data: session } = useSession();
 
   useEffect(() => {
-    setCurrentActor(session?.user?.id ?? null);
-  }, [session?.user?.id]);
+    setCurrentActor(
+      session?.user?.name ?? session?.user?.email ?? session?.user?.id ?? null,
+    );
+  }, [session?.user?.email, session?.user?.id, session?.user?.name]);
 
   return null;
 }

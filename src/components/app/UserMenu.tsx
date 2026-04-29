@@ -21,7 +21,9 @@ export function UserMenu() {
   const { data: session } = useSession();
   const { enabled: fastEnabled, manual, systemReduced, toggleManual } = useFastMode();
   const [open, setOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const signingOutRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -50,6 +52,19 @@ export function UserMenu() {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  async function handleSignOut() {
+    if (signingOutRef.current) return;
+    signingOutRef.current = true;
+    setSigningOut(true);
+    setOpen(false);
+
+    try {
+      await signOut({ redirect: false, callbackUrl: "/" });
+    } finally {
+      window.location.replace("/");
+    }
+  }
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -84,7 +99,7 @@ export function UserMenu() {
           role="menu"
           className="absolute right-0 top-full mt-2 w-64 rounded-xl
                      bg-workspace-surface border border-workspace-border shadow-xl
-                     overflow-hidden z-50"
+                     overflow-hidden z-[1000] pointer-events-auto"
         >
           <div className="px-4 py-3 border-b border-workspace-border/50">
             <p className="text-sm font-semibold text-text-primary truncate">
@@ -149,14 +164,17 @@ export function UserMenu() {
           <button
             type="button"
             role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              void signOut({ callbackUrl: "/" });
+            disabled={signingOut}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              void handleSignOut();
             }}
+            onClick={() => void handleSignOut()}
             className="w-full text-left px-4 py-3 text-sm text-text-secondary
                        hover:bg-workspace-elevated hover:text-text-primary
                        transition-colors motion-reduce:transition-none
-                       flex items-center gap-2"
+                       flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait"
           >
             <svg
               width="16"
@@ -172,7 +190,7 @@ export function UserMenu() {
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            Çıkış Yap
+            {signingOut ? "Çıkış yapılıyor..." : "Çıkış Yap"}
           </button>
         </div>
       )}

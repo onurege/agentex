@@ -8,6 +8,7 @@ import {
   notFound,
 } from "@/lib/api-auth";
 import type { UserRole } from "@/lib/config/roles";
+import { hashPassword, isStrongEnoughPassword } from "@/lib/password";
 
 const VALID_ROLES: UserRole[] = ["user", "authorized_user", "super_admin"];
 
@@ -20,25 +21,59 @@ export async function PATCH(
   if (caller.role !== "super_admin") return forbidden();
   if (caller.id === params.id) return badRequest("cannot_change_own_role");
 
-  let body: { role?: unknown };
+  let body: {
+    role?: unknown;
+    active?: unknown;
+    name?: unknown;
+    password?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
     return badRequest("invalid_json");
   }
 
-  if (typeof body.role !== "string" || !VALID_ROLES.includes(body.role as UserRole)) {
+  const hasRole = body.role !== undefined;
+  const hasActive = body.active !== undefined;
+  const hasName = body.name !== undefined;
+  const hasPassword = body.password !== undefined;
+
+  if (hasRole && (typeof body.role !== "string" || !VALID_ROLES.includes(body.role as UserRole))) {
     return badRequest("invalid_role");
   }
-  const newRole = body.role as UserRole;
+  if (hasActive && typeof body.active !== "boolean") return badRequest("invalid_active");
+  if (hasName && typeof body.name !== "string") return badRequest("invalid_name");
+  if (hasPassword && (typeof body.password !== "string" || !isStrongEnoughPassword(body.password))) {
+    return badRequest("weak_password");
+  }
+  if (!hasRole && !hasActive && !hasName && !hasPassword) return badRequest("empty_update");
 
   const target = await prisma.user.findUnique({ where: { id: params.id } });
   if (!target) return notFound("user_not_found");
+  if (target.deletedAt) return notFound("user_not_found");
 
-  // No-op guard: skip DB write + audit if role unchanged.
-  if (target.role === newRole) {
+  const newRole = hasRole ? (body.role as UserRole) : (target.role as UserRole);
+  const newActive = hasActive ? Boolean(body.active) : target.active;
+  const newName = hasName ? (body.name as string).trim() || null : target.name;
+
+  // No-op short-circuit: detect via the request *intent* (hasPassword) rather
+  // than comparing hashes. Each hashPassword() call yields a fresh salt, so
+  // hash equality is never true even when re-submitting the same plaintext —
+  // checking it would force us to spend ~200ms in pbkdf2 just to throw the
+  // result away.
+  if (
+    !hasPassword &&
+    target.role === newRole &&
+    target.active === newActive &&
+    target.name === newName
+  ) {
     return NextResponse.json({ ok: true, unchanged: true });
   }
+
+  const newPasswordHash =
+    hasPassword && typeof body.password === "string"
+      ? await hashPassword(body.password)
+      : target.passwordHash;
 
   // Transactional: count remaining super_admins AFTER the hypothetical
   // update and refuse to drop the last one. Count + update in a single
@@ -54,18 +89,113 @@ export async function PATCH(
           throw new Error("LAST_SUPER_ADMIN");
         }
       }
+      if (target.role === "super_admin" && !newActive) {
+        const remaining = await tx.user.count({
+          where: {
+            role: "super_admin",
+            active: true,
+            deletedAt: null,
+            id: { not: params.id },
+          },
+        });
+        if (remaining === 0) {
+          throw new Error("LAST_SUPER_ADMIN");
+        }
+      }
 
       await tx.user.update({
         where: { id: params.id },
-        data: { role: newRole },
+        data: {
+          role: newRole,
+          active: newActive,
+          name: newName,
+          passwordHash: newPasswordHash,
+        },
       });
 
       await tx.auditLog.create({
         data: {
-          action: "role_changed",
+          action: hasRole && !hasActive && !hasName && !hasPassword ? "role_changed" : "user_updated",
           targetType: "user",
           targetId: params.id,
-          summary: `${target.email}: ${target.role} → ${newRole}`,
+          summary: `${target.email} kullanıcısı güncellendi`,
+          module: "admin",
+          severity: "warning",
+          metadata: {
+            previousRole: target.role,
+            newRole,
+            previousActive: target.active,
+            newActive,
+            nameChanged: target.name !== newName,
+            passwordChanged: hasPassword,
+          },
+          actorId: caller.id,
+        },
+      });
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message === "LAST_SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "last_super_admin" },
+        { status: 400 },
+      );
+    }
+    throw err;
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const caller = await getAuthUser();
+  if (!caller) return unauthorized();
+  if (caller.role !== "super_admin") return forbidden();
+  if (caller.id === params.id) return badRequest("cannot_delete_self");
+
+  const target = await prisma.user.findUnique({ where: { id: params.id } });
+  if (!target || target.deletedAt) return notFound("user_not_found");
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      if (target.role === "super_admin") {
+        const remaining = await tx.user.count({
+          where: {
+            role: "super_admin",
+            active: true,
+            deletedAt: null,
+            id: { not: params.id },
+          },
+        });
+        if (remaining === 0) throw new Error("LAST_SUPER_ADMIN");
+      }
+
+      await tx.user.update({
+        where: { id: params.id },
+        data: {
+          active: false,
+          deletedAt: new Date(),
+          passwordHash: null,
+        },
+      });
+
+      // Revocation under JWT strategy: the jwt callback re-fetches the user
+      // on every request and gates `token.active` on `dbUser.active && !deletedAt`.
+      // Once we flip those flags here, the next request from the deleted user
+      // is rejected — no Session-row deletion is needed (and would be a no-op
+      // since JWT mode does not write to the Session table).
+
+      await tx.auditLog.create({
+        data: {
+          action: "user_deleted",
+          targetType: "user",
+          targetId: params.id,
+          summary: `${target.email} kullanıcısı silindi`,
+          module: "admin",
+          severity: "critical",
+          metadata: { role: target.role },
           actorId: caller.id,
         },
       });
