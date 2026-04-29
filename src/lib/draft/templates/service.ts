@@ -32,6 +32,20 @@ export const SERVICE_TEMPLATE: DraftTemplate = {
       required: true,
     },
     {
+      id: "client.nameStyle",
+      step: 1,
+      group: "Taraflar",
+      label: "İş Sahibi — Ticari Unvan Görünümü",
+      helpText: "Şirket unvanının sözleşme metninde nasıl görüneceğini seçin.",
+      type: "radioGroup",
+      required: true,
+      defaultValue: "uppercase",
+      options: [
+        { value: "uppercase", label: "Tamamı büyük harf" },
+        { value: "lowercase_bold", label: "Küçük harf ve kalın" },
+      ],
+    },
+    {
       id: "client.taxNo",
       step: 1,
       group: "Taraflar",
@@ -62,6 +76,20 @@ export const SERVICE_TEMPLATE: DraftTemplate = {
       label: "Yüklenici — Unvan / Ad Soyad",
       type: "text",
       required: true,
+    },
+    {
+      id: "contractor.nameStyle",
+      step: 1,
+      group: "Taraflar",
+      label: "Yüklenici — Ticari Unvan Görünümü",
+      helpText: "Şirket unvanının sözleşme metninde nasıl görüneceğini seçin.",
+      type: "radioGroup",
+      required: true,
+      defaultValue: "uppercase",
+      options: [
+        { value: "uppercase", label: "Tamamı büyük harf" },
+        { value: "lowercase_bold", label: "Küçük harf ve kalın" },
+      ],
     },
     {
       id: "contractor.taxNo",

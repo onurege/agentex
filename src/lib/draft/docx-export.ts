@@ -31,6 +31,7 @@ import type {
   DraftSession,
   DraftTemplate,
 } from "./types";
+import { formatAnswer } from "./renderer";
 
 const C = {
   ink: "0F172A",
@@ -126,13 +127,7 @@ function clauseBlock(c: ClauseText): Paragraph[] {
         new Paragraph({
           alignment: AlignmentType.JUSTIFIED,
           spacing: { after: 120, line: 300 },
-          children: [
-            new TextRun({
-              text: p,
-              size: SZ.body,
-              color: C.ink,
-            }),
-          ],
+          children: inlineTextRuns(p, SZ.body),
         }),
     );
 
@@ -162,12 +157,19 @@ function signatureBlock(
   );
   const [a, b] = nameQuestions;
 
+  const partyAName = a
+    ? formatAnswer(template, a.id, session.answers[a.id] || "Taraf A", session.answers)
+    : "Taraf A";
+  const partyBName = b
+    ? formatAnswer(template, b.id, session.answers[b.id] || "Taraf B", session.answers)
+    : "Taraf B";
+
   const partyACol = buildPartyColumn(
-    (session.answers[a?.id ?? ""] as string) || "Taraf A",
+    stripInlineBold(partyAName),
     partyRepresentative(template, session, a?.id ?? ""),
   );
   const partyBCol = buildPartyColumn(
-    (session.answers[b?.id ?? ""] as string) || "Taraf B",
+    stripInlineBold(partyBName),
     partyRepresentative(template, session, b?.id ?? ""),
   );
 
@@ -205,6 +207,22 @@ function signatureBlock(
       }),
     ],
   });
+}
+
+function inlineTextRuns(text: string, size: number): TextRun[] {
+  return text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((part) => {
+    const isBold = /^\*\*[^*]+\*\*$/.test(part);
+    return new TextRun({
+      text: isBold ? part.slice(2, -2) : part,
+      bold: isBold,
+      size,
+      color: C.ink,
+    });
+  });
+}
+
+function stripInlineBold(text: string): string {
+  return text.replace(/\*\*([^*]+)\*\*/g, "$1");
 }
 
 function partyRepresentative(

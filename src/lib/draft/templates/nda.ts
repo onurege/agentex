@@ -53,6 +53,21 @@ export const NDA_TEMPLATE: DraftTemplate = {
       ],
     },
     {
+      id: "partyA.nameStyle",
+      step: 1,
+      group: "Taraflar",
+      label: "Taraf A — Ticari Unvan Görünümü",
+      helpText: "Şirket unvanının sözleşme metninde nasıl görüneceğini seçin.",
+      type: "radioGroup",
+      required: true,
+      defaultValue: "uppercase",
+      dependsOn: { questionId: "partyA.type", equals: "company" },
+      options: [
+        { value: "uppercase", label: "Tamamı büyük harf" },
+        { value: "lowercase_bold", label: "Küçük harf ve kalın" },
+      ],
+    },
+    {
       id: "partyA.taxNo",
       step: 1,
       group: "Taraflar",
@@ -96,6 +111,21 @@ export const NDA_TEMPLATE: DraftTemplate = {
       options: [
         { value: "company", label: "Şirket / Tüzel Kişi" },
         { value: "individual", label: "Gerçek Kişi" },
+      ],
+    },
+    {
+      id: "partyB.nameStyle",
+      step: 1,
+      group: "Taraflar",
+      label: "Taraf B — Ticari Unvan Görünümü",
+      helpText: "Şirket unvanının sözleşme metninde nasıl görüneceğini seçin.",
+      type: "radioGroup",
+      required: true,
+      defaultValue: "uppercase",
+      dependsOn: { questionId: "partyB.type", equals: "company" },
+      options: [
+        { value: "uppercase", label: "Tamamı büyük harf" },
+        { value: "lowercase_bold", label: "Küçük harf ve kalın" },
       ],
     },
     {

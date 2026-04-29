@@ -27,7 +27,10 @@ function buildSession(
 
 describe("resolveTemplate", () => {
   it("replaces simple {{var}} placeholders", () => {
-    const session = buildSession({ "partyA.name": "Univera A.Ş." });
+    const session = buildSession({
+      "partyA.name": "Univera A.Ş.",
+      "partyA.type": "individual",
+    });
     const out = resolveTemplate("Satıcı: {{partyA.name}}", session, NDA_TEMPLATE);
     expect(out).toBe("Satıcı: Univera A.Ş.");
   });
@@ -74,6 +77,21 @@ describe("formatAnswer", () => {
   it("renders date as long Turkish format", () => {
     const out = formatAnswer(NDA_TEMPLATE, "effectiveDate", "2026-03-15");
     expect(out).toMatch(/2026/);
+  });
+
+  it("formats company names as uppercase by default", () => {
+    const out = formatAnswer(NDA_TEMPLATE, "partyA.name", "Univera A.Ş.", {
+      "partyA.type": "company",
+    });
+    expect(out).toBe("UNİVERA A.Ş.");
+  });
+
+  it("formats company names as lowercase bold when selected", () => {
+    const out = formatAnswer(NDA_TEMPLATE, "partyA.name", "Univera A.Ş.", {
+      "partyA.type": "company",
+      "partyA.nameStyle": "lowercase_bold",
+    });
+    expect(out).toBe("**univera a.ş.**");
   });
 });
 

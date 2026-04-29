@@ -620,9 +620,9 @@ export async function renderNegotiationRecordDocx(
   ];
 
   const doc = new Document({
-    creator: "AI Boardroom",
+    creator: "Consulera",
     title: `Kurul Müzakere Kaydı — ${data.documentName}`,
-    description: "AI Boardroom kurul tartışma çıktısı",
+    description: "Consulera uzman değerlendirme çıktısı",
     styles: {
       default: {
         document: {

@@ -40,6 +40,20 @@ export const DISTRIBUTOR_TEMPLATE: DraftTemplate = {
       required: true,
     },
     {
+      id: "supplier.nameStyle",
+      step: 1,
+      group: "Taraflar",
+      label: "Sağlayıcı — Ticari Unvan Görünümü",
+      helpText: "Şirket unvanının sözleşme metninde nasıl görüneceğini seçin.",
+      type: "radioGroup",
+      required: true,
+      defaultValue: "uppercase",
+      options: [
+        { value: "uppercase", label: "Tamamı büyük harf" },
+        { value: "lowercase_bold", label: "Küçük harf ve kalın" },
+      ],
+    },
+    {
       id: "supplier.taxNo",
       step: 1,
       group: "Taraflar",
@@ -70,6 +84,20 @@ export const DISTRIBUTOR_TEMPLATE: DraftTemplate = {
       label: "Bayi — Ticari Unvan",
       type: "text",
       required: true,
+    },
+    {
+      id: "dealer.nameStyle",
+      step: 1,
+      group: "Taraflar",
+      label: "Bayi — Ticari Unvan Görünümü",
+      helpText: "Şirket unvanının sözleşme metninde nasıl görüneceğini seçin.",
+      type: "radioGroup",
+      required: true,
+      defaultValue: "uppercase",
+      options: [
+        { value: "uppercase", label: "Tamamı büyük harf" },
+        { value: "lowercase_bold", label: "Küçük harf ve kalın" },
+      ],
     },
     {
       id: "dealer.taxNo",

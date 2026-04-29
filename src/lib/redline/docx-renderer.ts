@@ -49,7 +49,7 @@ const PARAGRAPH_REGEX = /<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g;
 const TEXT_REGEX = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g;
 const PPR_REGEX = /<w:pPr(?:\s[^>]*)?>[\s\S]*?<\/w:pPr>|<w:pPr(?:\s[^>]*)?\/>/;
 
-const DEFAULT_AUTHOR = "AI Boardroom";
+const DEFAULT_AUTHOR = "Consulera";
 
 // Explicit revision styling. Two layers are applied per change:
 //

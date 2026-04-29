@@ -122,7 +122,7 @@ export function resolveTemplate(
         const q = template.questions.find((q) => q.id === path);
         return `[ ${q?.label ?? path} ]`;
       }
-      return formatAnswer(template, path, value);
+      return formatAnswer(template, path, value, answers);
     },
   );
 
@@ -140,9 +140,14 @@ export function formatAnswer(
   template: DraftTemplate,
   questionId: string,
   value: unknown,
+  answers?: Record<string, unknown>,
 ): string {
   const q = template.questions.find((q) => q.id === questionId);
   if (!q) return String(value ?? "");
+
+  if (questionId.endsWith(".name") && typeof value === "string") {
+    return formatPartyName(template, questionId, value, answers);
+  }
 
   if (q.type === "multiCheckbox" && Array.isArray(value)) {
     return value
@@ -179,6 +184,30 @@ export function formatAnswer(
   }
 
   return String(value);
+}
+
+function formatPartyName(
+  template: DraftTemplate,
+  questionId: string,
+  value: string,
+  answers?: Record<string, unknown>,
+): string {
+  const prefix = questionId.replace(/\.name$/, "");
+  const typeQuestion = template.questions.find((q) => q.id === `${prefix}.type`);
+  const partyType = answers?.[`${prefix}.type`];
+
+  if (typeQuestion && partyType !== "company") return value;
+
+  const style = answers?.[`${prefix}.nameStyle`] ?? "uppercase";
+  if (style === "lowercase_bold") {
+    return `**${value.toLocaleLowerCase("tr-TR")}**`;
+  }
+
+  if (style === "uppercase") {
+    return value.toLocaleUpperCase("tr-TR");
+  }
+
+  return value;
 }
 
 // --- Missing answer detection -----------------------------------------------
