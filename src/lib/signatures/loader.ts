@@ -86,6 +86,13 @@ async function getPdfjs(): Promise<typeof import("pdfjs-dist")> {
   return pdfjsPromise;
 }
 
+// Pre-check extraction needs only the structured first-page fields
+// (ÜNVAN, VKN, ticaret sicili, yetki türü, temsil süresi, sirkü tarihi).
+// Pages 2+ in a sirkü are usually a Ticaret Sicili Gazetesi annex —
+// dense, low-signal noise for our regex; capping the scan keeps the
+// pre-check trigger snappy on multi-page filings.
+const PRECHECK_TEXT_PAGE_LIMIT = 2;
+
 async function loadPdf(file: File): Promise<SignatureSource> {
   const arrayBuffer = await readAsArrayBuffer(file);
   const pdfjsLib = await getPdfjs();
@@ -99,37 +106,24 @@ async function loadPdf(file: File): Promise<SignatureSource> {
   const pdf = await loadingTask.promise;
   const page = await pdf.getPage(1);
 
-  // 2x scale — imza bölgesinin piksel çözünürlüğü için yeterli detay.
+  // Run page render and text extraction concurrently. Both consume the
+  // same pdf object but pdf.js handles concurrent getPage / getTextContent
+  // calls fine, and on a 3-page sirkü this halves total wait time before
+  // /api/signatures/precheck can fire.
+  const [dataUrl, rawText] = await Promise.all([
+    renderFirstPageToDataUrl(page),
+    extractPdfText(pdf, PRECHECK_TEXT_PAGE_LIMIT).catch(() => null),
+  ]);
+
   const viewport = page.getViewport({ scale: 2 });
-  const canvas = document.createElement("canvas");
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    throw new SignatureLoadError("Canvas 2D context alınamadı.");
-  }
-
-  await page.render({
-    canvas,
-    canvasContext: ctx,
-    viewport,
-  }).promise;
-
-  const dataUrl = canvas.toDataURL("image/png");
-
-  // Text layer extraction across ALL pages — sirkü gazete eklerinde
-  // kritik alanlar (Mersis, ticaret sicili, yetki süresi) ilk sayfa
-  // dışına da düşebiliyor. Hata durumunda null döner; pre-check de
-  // sessizce atlar.
-  const rawText = await extractPdfText(pdf).catch(() => null);
 
   return {
     fileName: file.name,
     fileType: "pdf",
     fileSize: file.size,
     pageDataUrl: dataUrl,
-    pageWidth: canvas.width,
-    pageHeight: canvas.height,
+    pageWidth: viewport.width,
+    pageHeight: viewport.height,
     crop: null,
     rawCropDataUrl: null,
     signatureDataUrl: null,
@@ -139,34 +133,55 @@ async function loadPdf(file: File): Promise<SignatureSource> {
   };
 }
 
-async function extractPdfText(
-  pdf: Awaited<ReturnType<Awaited<ReturnType<typeof getPdfjs>>["getDocument"]>["promise"]>,
-): Promise<string> {
-  const pageTexts: string[] = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const lineMap = new Map<number, string[]>();
-    for (const item of content.items) {
-      if (typeof (item as { str?: unknown }).str !== "string") continue;
-      const str = (item as { str: string }).str;
-      // Group items by their y position so the visual line order survives;
-      // pdf.js returns items in scan order which is usually left-to-right
-      // but column-broken sirkü filings interleave label and value blocks.
-      const transform = (item as { transform?: number[] }).transform;
-      const y = transform ? Math.round(transform[5]) : 0;
-      const key = -y; // higher y = top of page; sort ascending → top first
-      const arr = lineMap.get(key) ?? [];
-      arr.push(str);
-      lineMap.set(key, arr);
-    }
-    const orderedKeys = Array.from(lineMap.keys()).sort((a, b) => a - b);
-    const pageText = orderedKeys
-      .map((k) => (lineMap.get(k) ?? []).join(" ").trim())
-      .filter(Boolean)
-      .join("\n");
-    pageTexts.push(pageText);
+type PdfPage = import("pdfjs-dist").PDFPageProxy;
+
+async function renderFirstPageToDataUrl(page: PdfPage): Promise<string> {
+  // 2x scale — imza bölgesinin piksel çözünürlüğü için yeterli detay.
+  const viewport = page.getViewport({ scale: 2 });
+  const canvas = document.createElement("canvas");
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new SignatureLoadError("Canvas 2D context alınamadı.");
   }
+  await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+  return canvas.toDataURL("image/png");
+}
+
+async function extractPdfText(
+  pdf: import("pdfjs-dist").PDFDocumentProxy,
+  pageLimit: number,
+): Promise<string> {
+  const pageCount = Math.min(pdf.numPages, pageLimit);
+  // Fan out getPage / getTextContent across the capped page range so
+  // text extraction completes in roughly the time of the slowest single
+  // page rather than the sum of all pages.
+  const pageTexts = await Promise.all(
+    Array.from({ length: pageCount }, async (_, i) => {
+      const page = await pdf.getPage(i + 1);
+      const content = await page.getTextContent();
+      const lineMap = new Map<number, string[]>();
+      for (const item of content.items) {
+        if (typeof (item as { str?: unknown }).str !== "string") continue;
+        const str = (item as { str: string }).str;
+        // Group items by their y position so the visual line order survives;
+        // pdf.js returns items in scan order which is usually left-to-right
+        // but column-broken sirkü filings interleave label and value blocks.
+        const transform = (item as { transform?: number[] }).transform;
+        const y = transform ? Math.round(transform[5]) : 0;
+        const key = -y;
+        const arr = lineMap.get(key) ?? [];
+        arr.push(str);
+        lineMap.set(key, arr);
+      }
+      const orderedKeys = Array.from(lineMap.keys()).sort((a, b) => a - b);
+      return orderedKeys
+        .map((k) => (lineMap.get(k) ?? []).join(" ").trim())
+        .filter(Boolean)
+        .join("\n");
+    }),
+  );
   return pageTexts.join("\n\n");
 }
 
