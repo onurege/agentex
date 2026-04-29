@@ -10,7 +10,7 @@
 // karşılaştırma kartları placeholder olarak kalır.
 // ============================================================
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { SignatureLayout } from "@/components/signatures/SignatureLayout";
 import { SignatureSourceCard } from "@/components/signatures/SignatureSourceCard";
@@ -57,6 +57,7 @@ export default function SignaturesPage() {
   const [computeNotice, setComputeNotice] = useState<string | null>(null);
   const [precheckRunning, setPrecheckRunning] = useState(false);
   const [precheckError, setPrecheckError] = useState<string | null>(null);
+  const precheckInflightRef = useRef(false);
 
   const sessionId = session?.id;
   const contractText = session?.contract.rawText ?? null;
@@ -78,16 +79,24 @@ export default function SignaturesPage() {
   // that case. Source change clears precheckResult in the store and
   // resets precheckError above, so a new upload re-runs this effect
   // exactly once per source pair.
+  //
+  // We gate in-flight requests via a ref (precheckInflightRef) instead
+  // of putting the running flag in deps. The naive approach — depending
+  // on a precheckRunning state — would cancel the in-flight effect the
+  // moment we set the spinner on, leaving the spinner stuck forever
+  // because the cancellation flag prevented the finally block from
+  // clearing it.
   useEffect(() => {
     if (!sessionId) return;
     if (!contractText || !referenceText) return;
     if (precheckResult) return;
-    if (precheckRunning) return;
     if (precheckError) return;
+    if (precheckInflightRef.current) return;
+
+    precheckInflightRef.current = true;
+    setPrecheckRunning(true);
 
     let cancelled = false;
-    setPrecheckRunning(true);
-    setPrecheckError(null);
 
     void (async () => {
       try {
@@ -117,7 +126,12 @@ export default function SignaturesPage() {
           );
         }
       } finally {
-        if (!cancelled) setPrecheckRunning(false);
+        precheckInflightRef.current = false;
+        // Always clear the spinner, even on cancellation. The cancelled
+        // flag only protects against writing stale results into store
+        // state; the spinner should always reflect the most recent
+        // attempt's lifecycle.
+        setPrecheckRunning(false);
       }
     })();
 
@@ -131,7 +145,6 @@ export default function SignaturesPage() {
     contractFileName,
     referenceFileName,
     precheckResult,
-    precheckRunning,
     precheckError,
     setPrecheckResult,
   ]);
