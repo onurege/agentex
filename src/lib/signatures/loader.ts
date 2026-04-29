@@ -51,16 +51,43 @@ async function loadImage(file: File): Promise<SignatureSource> {
     pageWidth: width,
     pageHeight: height,
     crop: null,
+    rawCropDataUrl: null,
     signatureDataUrl: null,
+    processedAspectRatio: null,
+    inkDensity: null,
   };
+}
+
+// pdfjs-dist 5.x pure-ESM → Next.js 14 webpack'in ESM sarmalama yolunda
+// "Object.defineProperty called on non-object" TypeError'ı üretiyor
+// (__webpack_require__.r(exports)'ta exports primitive geliyor). Webpack'i
+// tamamen bypass ediyoruz: kütüphaneyi public/ altından browser ESM loader
+// ile doğrudan yükleyip webpack'e hiç göstermiyoruz.
+//
+// webpackIgnore magic comment → webpack bu import'u bundle'a katmaz.
+// İmza hâlâ tarayıcıdan çıkmıyor (tüm asset'ler same-origin, CDN yok).
+let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
+
+async function getPdfjs(): Promise<typeof import("pdfjs-dist")> {
+  if (!pdfjsPromise) {
+    pdfjsPromise = (
+      // @ts-expect-error — webpackIgnore: webpack dokunmuyor, TS de resolve edemiyor; runtime'da browser ESM loader'ı çözer
+      import(/* webpackIgnore: true */ "/pdf.min.mjs") as Promise<
+        typeof import("pdfjs-dist")
+      >
+    ).then((mod) => {
+      if (!mod.GlobalWorkerOptions.workerSrc) {
+        mod.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+      }
+      return mod;
+    });
+  }
+  return pdfjsPromise;
 }
 
 async function loadPdf(file: File): Promise<SignatureSource> {
   const arrayBuffer = await readAsArrayBuffer(file);
-  const pdfjsLib = await import("pdfjs-dist");
-  // Bundled worker'a gerek yok; workerSrc'i boş set ederek fake worker
-  // modu etkin olur (ingestion modülündeki pattern ile aynı).
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+  const pdfjsLib = await getPdfjs();
 
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(arrayBuffer),
@@ -97,7 +124,10 @@ async function loadPdf(file: File): Promise<SignatureSource> {
     pageWidth: canvas.width,
     pageHeight: canvas.height,
     crop: null,
+    rawCropDataUrl: null,
     signatureDataUrl: null,
+    processedAspectRatio: null,
+    inkDensity: null,
   };
 }
 

@@ -13,6 +13,7 @@
 import {
   AlertTriangle,
   CheckCircle2,
+  Loader2,
   RotateCcw,
   ShieldAlert,
   XCircle,
@@ -25,6 +26,8 @@ interface ComparisonResultCardProps {
   reference: SignatureSource;
   onRecompute(): void;
   computing: boolean;
+  statusMessage?: string | null;
+  errorMessage?: string | null;
 }
 
 const VERDICT_MAP = {
@@ -75,6 +78,8 @@ export function ComparisonResultCard({
   reference,
   onRecompute,
   computing,
+  statusMessage,
+  errorMessage,
 }: ComparisonResultCardProps) {
   const v = VERDICT_MAP[result.verdict];
   const t = TONE_CLASSES[v.tone];
@@ -110,13 +115,13 @@ export function ComparisonResultCard({
       {/* Side-by-side signatures */}
       <div className="grid grid-cols-2 divide-x divide-workspace-border">
         <SignaturePanel
-          label="Sözleşme"
+          label="Sözleşme maskesi"
           fileName={contract.fileName}
           dataUrl={contract.signatureDataUrl}
           toneClass="text-accent-info"
         />
         <SignaturePanel
-          label="İmza Sirküsü"
+          label="Sirkü maskesi"
           fileName={reference.fileName}
           dataUrl={reference.signatureDataUrl}
           toneClass="text-accent-primary"
@@ -129,7 +134,7 @@ export function ComparisonResultCard({
           <ShieldAlert size={11} />
           En iyi eşleşmenin sinyalleri
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <SignalTile
             label="SSIM (yapısal benzerlik)"
             value={`${Math.round(result.signals.ssim * 100)}%`}
@@ -144,6 +149,11 @@ export function ComparisonResultCard({
             label="En-boy oranı farkı"
             value={`${Math.round(result.signals.aspectRatioDelta * 100)}%`}
             hint="Orijinal kırpım şekli farkı"
+          />
+          <SignalTile
+            label="Mürekkep yoğunluğu farkı"
+            value={`${Math.round(result.signals.inkDensityDelta * 100)}%`}
+            hint="Maske içindeki stroke yoğunluğu"
           />
         </div>
       </div>
@@ -187,7 +197,8 @@ export function ComparisonResultCard({
                     <div className="text-xs text-text-tertiary font-mono mt-1">
                       SSIM %{Math.round(m.signals.ssim * 100)} · pHash{" "}
                       {m.signals.phashHamming}/64 · aspect %
-                      {Math.round(m.signals.aspectRatioDelta * 100)}
+                      {Math.round(m.signals.aspectRatioDelta * 100)} · ink %
+                      {Math.round(m.signals.inkDensityDelta * 100)}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -204,18 +215,31 @@ export function ComparisonResultCard({
 
       {/* Footer action */}
       <footer className="px-6 py-4 border-t border-workspace-border bg-workspace-elevated flex items-center justify-between gap-4">
-        <p className="text-xs text-text-tertiary leading-relaxed max-w-lg">
-          Sonuç <span className="font-mono">{formatTime(result.computedAt)}</span> itibariyle
-          hesaplandı. Kırpımlardan biri değiştirilirse sonuç otomatik sıfırlanır.
-        </p>
+        <div className="text-xs leading-relaxed max-w-lg">
+          <p className="text-text-tertiary">
+            Sonuç <span className="font-mono">{formatTime(result.computedAt)}</span> itibariyle
+            hesaplandı. Kırpımlardan biri değiştirilirse sonuç otomatik sıfırlanır.
+          </p>
+          {computing ? (
+            <p className="mt-1 text-accent-primary font-medium">Sinyaller yeniden hesaplanıyor…</p>
+          ) : errorMessage ? (
+            <p className="mt-1 text-accent-danger font-medium">{errorMessage}</p>
+          ) : statusMessage ? (
+            <p className="mt-1 text-accent-success font-medium">{statusMessage}</p>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={onRecompute}
           disabled={computing}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-workspace-surface border border-workspace-border hover:border-accent-primary/30 text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          <RotateCcw size={12} />
-          Yeniden hesapla
+          {computing ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <RotateCcw size={12} />
+          )}
+          {computing ? "Hesaplanıyor..." : "Yeniden hesapla"}
         </button>
       </footer>
     </section>
@@ -287,6 +311,7 @@ function formatTime(iso: string): string {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      second: "2-digit",
     });
   } catch {
     return iso;

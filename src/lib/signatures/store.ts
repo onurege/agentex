@@ -3,16 +3,15 @@
 // ============================================================
 //
 // İmza karşılaştırma oturumları. Boardroom / Compare / Draft ile
-// izole; kendi localStorage namespace'i. Privacy için page image
-// + signature data URL'leri localStorage'a yazar; kullanıcı cihaz
-// dışına çıkmaz. Büyük dosyalarda storage quota sorunu çıkarsa
-// partialize'dan çıkarılabilir (MVP kapsamı dışı).
+// izole. Rendered sayfa + imza data URL'leri birkaç MB tuttuğu için
+// localStorage quota'sını (5-10 MB) aşıyor; bu yüzden persist
+// KULLANMIYORUZ — oturum ephemeral: tab açık kaldığı sürece yaşar,
+// refresh'te sıfırlanır. Signatures zaten tek-atış workflow.
 // ============================================================
 
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type {
   ComparisonResult,
   CropRegion,
@@ -38,6 +37,11 @@ interface SignaturesState {
     sessionId: string,
     side: Side,
     dataUrl: string | null,
+    meta?: {
+      rawCropDataUrl: string | null;
+      processedAspectRatio: number | null;
+      inkDensity: number | null;
+    },
   ): void;
   setResult(sessionId: string, result: ComparisonResult | null): void;
 
@@ -74,8 +78,7 @@ function emptySession(id: string): SignatureSession {
 }
 
 export const useSignaturesStore = create<SignaturesState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       sessions: {},
       currentSessionId: null,
 
@@ -135,16 +138,23 @@ export const useSignaturesStore = create<SignaturesState>()(
           };
         }),
 
-      setSignatureImage: (sessionId, side, dataUrl) =>
+      setSignatureImage: (sessionId, side, dataUrl, meta) =>
         set((s) => {
           const session = s.sessions[sessionId];
           if (!session) return s;
+          const nextSource = {
+            ...session[side],
+            signatureDataUrl: dataUrl,
+            rawCropDataUrl: meta?.rawCropDataUrl ?? null,
+            processedAspectRatio: meta?.processedAspectRatio ?? null,
+            inkDensity: meta?.inkDensity ?? null,
+          };
           return {
             sessions: {
               ...s.sessions,
               [sessionId]: {
                 ...session,
-                [side]: { ...session[side], signatureDataUrl: dataUrl },
+                [side]: nextSource,
                 updatedAt: new Date().toISOString(),
               },
             },
@@ -240,12 +250,4 @@ export const useSignaturesStore = create<SignaturesState>()(
           };
         }),
     }),
-    {
-      name: "agentex-signatures-v1",
-      partialize: (s) => ({
-        sessions: s.sessions,
-        currentSessionId: s.currentSessionId,
-      }),
-    },
-  ),
 );

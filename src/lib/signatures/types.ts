@@ -20,8 +20,14 @@ export interface SignatureSource {
   pageHeight: number;
   /** Kullanıcının çizdiği kırpım; x/y/w/h piksel cinsinden. */
   crop: CropRegion | null;
-  /** Kırpılan + preprocessed imza görüntüsü (data URL). */
+  /** Kullanıcının seçtiği ham kırpım — kullanıcı kontrol önizlemesi. */
+  rawCropDataUrl: string | null;
+  /** Kırpılan + imza stroke maskesi çıkarılmış görüntü (data URL). */
   signatureDataUrl: string | null;
+  /** Maskenin tight bbox en-boy oranı; karşılaştırmada kullanılır. */
+  processedAspectRatio: number | null;
+  /** Maskedeki mürekkep yoğunluğu (0-1); kaşe/yazı gürültüsünü azaltan sinyal. */
+  inkDensity: number | null;
 }
 
 export interface CropRegion {
@@ -37,6 +43,7 @@ export interface ComparisonSignals {
   ssim: number;        // 0 (zıt) .. 1 (özdeş)
   phashHamming: number; // 0 (özdeş) .. 64 (tamamen farklı) — 64-bit hash
   aspectRatioDelta: number; // |ar1 - ar2| / max(ar1, ar2), 0 ideal
+  inkDensityDelta: number; // |density1 - density2| / max(density1, density2)
 }
 
 /** Bir referans örneğine karşı tek bir karşılaştırma sonucu. */
@@ -68,7 +75,10 @@ export interface ComparisonResult {
 export interface ReferenceSpecimen {
   id: string;
   crop: CropRegion;
+  rawCropDataUrl: string | null;
   signatureDataUrl: string;
+  processedAspectRatio: number;
+  inkDensity: number;
 }
 
 /** Store'daki tek karşılaştırma oturumu. */
@@ -98,5 +108,8 @@ export const EMPTY_SOURCE: SignatureSource = {
   pageWidth: 0,
   pageHeight: 0,
   crop: null,
+  rawCropDataUrl: null,
   signatureDataUrl: null,
+  processedAspectRatio: null,
+  inkDensity: null,
 };

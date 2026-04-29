@@ -18,13 +18,14 @@ import type {
   ReferenceSpecimen,
   SignatureSource,
 } from "@/lib/signatures/types";
+import type { PreprocessResult } from "@/lib/signatures/preprocess";
 
 const MAX_SPECIMENS = 2; // primary + 2 ek = toplam 3
 
 interface ReferenceSpecimensPanelProps {
   referenceSource: SignatureSource;
   specimens: ReferenceSpecimen[];
-  onAdd(crop: CropRegion, signatureDataUrl: string): void;
+  onAdd(crop: CropRegion, result: PreprocessResult): void;
   onRemove(specimenId: string): void;
 }
 
@@ -42,7 +43,10 @@ export function ReferenceSpecimensPanel({
     () => ({
       ...referenceSource,
       crop: null,
+      rawCropDataUrl: null,
       signatureDataUrl: null,
+      processedAspectRatio: null,
+      inkDensity: null,
     }),
     [referenceSource],
   );
@@ -109,7 +113,7 @@ export function ReferenceSpecimensPanel({
         </ul>
       ) : (
         <p className="text-xs text-text-tertiary mb-3 italic">
-          Henüz ek örnek yok. Primary kırpım zaten "Örnek 1" olarak
+          Henüz ek örnek yok. Primary kırpım zaten &quot;Örnek 1&quot; olarak
           kullanılıyor.
         </p>
       )}
@@ -134,8 +138,8 @@ export function ReferenceSpecimensPanel({
             label="Ek örnek"
             tone="reference"
             source={adderSource}
-            onCropComplete={(region, dataUrl) => {
-              onAdd(region, dataUrl);
+            onCropComplete={(region, result) => {
+              onAdd(region, result);
               setAdding(false);
             }}
             onReset={() => {

@@ -1,9 +1,9 @@
 // ============================================================
-// Signatures — Compare (SSIM + dHash + aspect delta)
+// Signatures — Compare (SSIM + dHash + aspect delta + mask quality)
 // ============================================================
 //
 // Preprocess'ten çıkmış iki 256×128 gri tonlamalı imzayı alır,
-// üç bağımsız sinyali hesaplayıp tek bir güven yüzdesine
+// bağımsız sinyalleri hesaplayıp tek bir güven yüzdesine
 // ağırlıklı olarak çevirir. Bütünüyle tarayıcıda çalışır; pure
 // JS, extra bağımlılık yok.
 //
@@ -14,9 +14,8 @@
 //   3. aspectRatioDelta — orijinal kırpımdaki en-boy oranı farkı
 //      (normalize sonrası "bu iki imzanın şekli aslında ne kadar
 //      farklıydı" bilgisini saklar)
-//
-// Güven hesabı (ağırlıklı ortalama):
-//   confidence = 0.55 · ssim  +  0.3 · (1 − hamming/64)  +  0.15 · (1 − min(1, aspectDelta))
+//   4. mask quality — kaşe/yazı kirliliği ve aşırı yoğun maskeyi
+//      SSIM / dHash'ın skoru yapay yükseltmesine karşı frenler
 //
 // Band:
 //   >= 0.75 → match
@@ -37,11 +36,13 @@ export interface SpecimenInput {
   label: string;
   dataUrl: string;
   aspect: number;
+  inkDensity: number;
 }
 
 export interface CompareManyInput {
   contractDataUrl: string;
   contractAspect: number;
+  contractInkDensity: number;
   specimens: SpecimenInput[];
 }
 
@@ -67,6 +68,8 @@ export async function compareAgainstSpecimens(
       referenceGrey,
       input.contractAspect,
       specimen.aspect,
+      input.contractInkDensity,
+      specimen.inkDensity,
     );
     matches.push({
       specimenId: specimen.id,
@@ -106,6 +109,8 @@ function scorePair(
   referenceGrey: Uint8Array,
   contractAspect: number,
   referenceAspect: number,
+  contractInkDensity: number,
+  referenceInkDensity: number,
 ): PairScore {
   const ssim = ssimScore(
     contractGrey,
@@ -119,12 +124,31 @@ function scorePair(
   const aspectRatioDelta =
     Math.abs(contractAspect - referenceAspect) /
     Math.max(contractAspect, referenceAspect, 0.001);
+  const inkDensityDelta =
+    Math.abs(contractInkDensity - referenceInkDensity) /
+    Math.max(contractInkDensity, referenceInkDensity, 0.001);
+  const contractQuality = analyzeMaskQuality(contractGrey);
+  const referenceQuality = analyzeMaskQuality(referenceGrey);
+  const pairQuality = combineMaskQuality(
+    contractQuality,
+    referenceQuality,
+    inkDensityDelta,
+  );
 
   const ssimNorm = clamp01(ssim);
   const phashNorm = 1 - phashHamming / 64;
   const aspectNorm = 1 - Math.min(1, aspectRatioDelta);
-  const confidence =
-    0.55 * ssimNorm + 0.3 * phashNorm + 0.15 * aspectNorm;
+  const inkDensityNorm = 1 - Math.min(1, inkDensityDelta);
+  const minInkDensity = Math.min(contractInkDensity, referenceInkDensity);
+  const inkPresenceNorm = clamp01(minInkDensity / 0.01);
+  const visualConfidence =
+    0.45 * ssimNorm +
+    0.25 * phashNorm +
+    0.15 * aspectNorm +
+    0.15 * inkDensityNorm;
+  const rawConfidence = visualConfidence * (0.35 + 0.65 * inkPresenceNorm);
+  const cappedConfidence = Math.min(rawConfidence, pairQuality.maxConfidence);
+  const confidence = cappedConfidence * pairQuality.multiplier;
 
   const verdict: ComparisonVerdict =
     confidence >= 0.75
@@ -140,8 +164,181 @@ function scorePair(
       ssim: clamp01(ssim),
       phashHamming,
       aspectRatioDelta,
+      inkDensityDelta,
     },
   };
+}
+
+interface MaskQuality {
+  inkRatio: number;
+  rowContamination: number;
+  continuity: number;
+  quality: number;
+}
+
+interface PairMaskQuality {
+  multiplier: number;
+  maxConfidence: number;
+}
+
+function analyzeMaskQuality(grey: Uint8Array): MaskQuality {
+  const bbox = tightBoundingBox(grey, TARGET_WIDTH, TARGET_HEIGHT);
+  const bboxW = bbox.maxX - bbox.minX + 1;
+  const bboxH = bbox.maxY - bbox.minY + 1;
+  const darkPixels = countDarkPixels(grey, bbox);
+  const inkRatio = darkPixels / Math.max(bboxW * bboxH, 1);
+  const rowContamination = measureRowContamination(grey, bbox);
+  const continuity = measureContinuity(grey, bbox);
+
+  let quality = 1;
+  if (inkRatio > 0.34) quality -= Math.min(0.45, (inkRatio - 0.34) * 1.6);
+  if (inkRatio < 0.01) quality -= 0.45;
+  if (rowContamination > 0.14) {
+    quality -= Math.min(0.5, (rowContamination - 0.14) * 2.2);
+  }
+  if (continuity < 0.32) quality -= 0.22;
+
+  return {
+    inkRatio,
+    rowContamination,
+    continuity,
+    quality: clamp01(quality),
+  };
+}
+
+function combineMaskQuality(
+  contract: MaskQuality,
+  reference: MaskQuality,
+  inkDensityDelta: number,
+): PairMaskQuality {
+  const worstQuality = Math.min(contract.quality, reference.quality);
+  const worstContamination = Math.max(
+    contract.rowContamination,
+    reference.rowContamination,
+  );
+  const worstInkRatio = Math.max(contract.inkRatio, reference.inkRatio);
+
+  let maxConfidence = 1;
+  let multiplier = 0.75 + 0.25 * worstQuality;
+
+  if (inkDensityDelta >= 0.55) {
+    maxConfidence = Math.min(maxConfidence, 0.49);
+    multiplier *= 0.88;
+  } else if (inkDensityDelta >= 0.38) {
+    maxConfidence = Math.min(maxConfidence, 0.58);
+    multiplier *= 0.94;
+  }
+
+  if (worstContamination >= 0.2 || worstInkRatio >= 0.42) {
+    maxConfidence = Math.min(maxConfidence, 0.48);
+    multiplier *= 0.82;
+  } else if (worstContamination >= 0.14 || worstInkRatio >= 0.34) {
+    maxConfidence = Math.min(maxConfidence, 0.58);
+    multiplier *= 0.9;
+  }
+
+  if (worstQuality < 0.55) {
+    maxConfidence = Math.min(maxConfidence, 0.52);
+  }
+
+  return { multiplier: clamp01(multiplier), maxConfidence };
+}
+
+function tightBoundingBox(
+  grey: Uint8Array,
+  width: number,
+  height: number,
+): { minX: number; minY: number; maxX: number; maxY: number } {
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (grey[y * width + x] >= 220) continue;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+
+  if (maxX < 0 || maxY < 0) {
+    return { minX: 0, minY: 0, maxX: width - 1, maxY: height - 1 };
+  }
+
+  return { minX, minY, maxX, maxY };
+}
+
+function countDarkPixels(
+  grey: Uint8Array,
+  bbox: { minX: number; minY: number; maxX: number; maxY: number },
+): number {
+  let count = 0;
+  for (let y = bbox.minY; y <= bbox.maxY; y++) {
+    for (let x = bbox.minX; x <= bbox.maxX; x++) {
+      if (grey[y * TARGET_WIDTH + x] < 220) count++;
+    }
+  }
+  return count;
+}
+
+function measureRowContamination(
+  grey: Uint8Array,
+  bbox: { minX: number; minY: number; maxX: number; maxY: number },
+): number {
+  let contaminatedRows = 0;
+  const bboxW = bbox.maxX - bbox.minX + 1;
+  const bboxH = bbox.maxY - bbox.minY + 1;
+
+  for (let y = bbox.minY; y <= bbox.maxY; y++) {
+    let count = 0;
+    let runs = 0;
+    let inRun = false;
+
+    for (let x = bbox.minX; x <= bbox.maxX; x++) {
+      if (grey[y * TARGET_WIDTH + x] >= 220) {
+        inRun = false;
+        continue;
+      }
+      count++;
+      if (!inRun) {
+        runs++;
+        inRun = true;
+      }
+    }
+
+    const fill = count / Math.max(bboxW, 1);
+    if (runs >= 4 && fill >= 0.16) contaminatedRows++;
+  }
+
+  return contaminatedRows / Math.max(bboxH, 1);
+}
+
+function measureContinuity(
+  grey: Uint8Array,
+  bbox: { minX: number; minY: number; maxX: number; maxY: number },
+): number {
+  const bboxH = bbox.maxY - bbox.minY + 1;
+  let best = 0;
+
+  for (let x = bbox.minX; x <= bbox.maxX; x++) {
+    let support = 0;
+    for (let y = bbox.minY; y <= bbox.maxY; y++) {
+      let hasInk = false;
+      for (let xx = Math.max(bbox.minX, x - 2); xx <= Math.min(bbox.maxX, x + 2); xx++) {
+        if (grey[y * TARGET_WIDTH + xx] < 220) {
+          hasInk = true;
+          break;
+        }
+      }
+      if (hasInk) support++;
+    }
+    if (support > best) best = support;
+  }
+
+  return best / Math.max(bboxH, 1);
 }
 
 // --- Grayscale loader -------------------------------------------------------

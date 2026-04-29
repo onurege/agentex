@@ -23,7 +23,12 @@ import {
   compareAgainstSpecimens,
   type SpecimenInput,
 } from "@/lib/signatures/compare";
+import type {
+  PreprocessResult,
+  SignatureMaskAnalysis,
+} from "@/lib/signatures/preprocess";
 import type { CropRegion } from "@/lib/signatures/types";
+import { logClientActivity } from "@/lib/client-activity";
 
 export default function SignaturesPage() {
   const hydrated = useHydrated();
@@ -46,6 +51,7 @@ export default function SignaturesPage() {
 
   const [computing, setComputing] = useState(false);
   const [computeError, setComputeError] = useState<string | null>(null);
+  const [computeNotice, setComputeNotice] = useState<string | null>(null);
 
   const runComparison = useCallback(async () => {
     if (!session) return;
@@ -55,14 +61,18 @@ export default function SignaturesPage() {
       !session.contract.crop ||
       !session.reference.crop
     ) {
+      setComputeError("Karşılaştırma için iki belgeden de imza alanı seçilmelidir.");
+      setComputeNotice(null);
       return;
     }
     setComputing(true);
     setComputeError(null);
+    setComputeNotice(null);
     try {
       const contractAspect =
-        session.contract.crop.width /
-        Math.max(session.contract.crop.height, 1);
+        session.contract.processedAspectRatio ??
+        session.contract.crop.width / Math.max(session.contract.crop.height, 1);
+      const contractInkDensity = session.contract.inkDensity ?? 0;
 
       // Primary + additional örnekleri tek listeye topla.
       const specimens: SpecimenInput[] = [
@@ -71,27 +81,60 @@ export default function SignaturesPage() {
           label: "Örnek 1 (birincil)",
           dataUrl: session.reference.signatureDataUrl,
           aspect:
-            session.reference.crop.width /
-            Math.max(session.reference.crop.height, 1),
+            session.reference.processedAspectRatio ??
+            session.reference.crop.width / Math.max(session.reference.crop.height, 1),
+          inkDensity: session.reference.inkDensity ?? 0,
         },
         ...session.referenceSpecimens.map((sp, idx) => ({
           id: sp.id,
           label: `Örnek ${idx + 2}`,
           dataUrl: sp.signatureDataUrl,
-          aspect: sp.crop.width / Math.max(sp.crop.height, 1),
+          aspect: sp.processedAspectRatio,
+          inkDensity: sp.inkDensity,
         })),
       ];
 
       const result = await compareAgainstSpecimens({
         contractDataUrl: session.contract.signatureDataUrl,
         contractAspect,
+        contractInkDensity,
         specimens,
       });
       setResult(session.id, result);
-    } catch (err) {
-      setComputeError(
-        err instanceof Error ? err.message : "Karşılaştırma başarısız.",
+      setComputeNotice(
+        `Hesaplama tamamlandı: ${new Date(result.computedAt).toLocaleTimeString("tr-TR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })}`,
       );
+      await logClientActivity({
+        action: "signature_compared",
+        targetType: "signature",
+        targetId: session.id,
+        summary: "İmza karşılaştırma sinyalleri hesaplandı",
+        module: "signatures",
+        severity: result.verdict === "no_match" ? "warning" : "info",
+        metadata: {
+          verdict: result.verdict,
+          confidence: result.confidence,
+          specimenCount: specimens.length,
+          signals: result.signals,
+        },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Karşılaştırma başarısız.";
+      setComputeError(message);
+      setComputeNotice(null);
+      void logClientActivity({
+        action: "signature_failed",
+        targetType: "signature",
+        targetId: session.id,
+        summary: `İmza karşılaştırma başarısız: ${message}`,
+        module: "signatures",
+        severity: "error",
+        metadata: { error: message },
+      });
     } finally {
       setComputing(false);
     }
@@ -123,17 +166,53 @@ export default function SignaturesPage() {
   const handleCropComplete = (
     side: "contract" | "reference",
     region: CropRegion,
-    signatureDataUrl: string,
+    result: PreprocessResult,
   ) => {
     if (!session) return;
+    setComputeError(null);
+    setComputeNotice(null);
     setCrop(session.id, side, region);
-    setSignatureImage(session.id, side, signatureDataUrl);
+    setSignatureImage(session.id, side, result.dataUrl, {
+      rawCropDataUrl: result.rawDataUrl,
+      processedAspectRatio: result.aspectRatio,
+      inkDensity: result.inkDensity,
+    });
+    void logClientActivity({
+      action: "signature_crop_selected",
+      targetType: "signature",
+      targetId: session.id,
+      summary: `${side === "contract" ? "Dökümandaki" : "Sirküdeki"} imza alanı seçildi`,
+      module: "signatures",
+      metadata: {
+        side,
+        crop: region,
+        aspectRatio: result.aspectRatio,
+        inkDensity: result.inkDensity,
+      },
+    });
   };
 
   const handleCropReset = (side: "contract" | "reference") => {
     if (!session) return;
+    setComputeError(null);
+    setComputeNotice(null);
     setCrop(session.id, side, null);
     setSignatureImage(session.id, side, null);
+  };
+
+  const handleMaskUpdate = (
+    side: "contract" | "reference",
+    dataUrl: string,
+    analysis: SignatureMaskAnalysis,
+  ) => {
+    if (!session) return;
+    setComputeError(null);
+    setComputeNotice(null);
+    setSignatureImage(session.id, side, dataUrl, {
+      rawCropDataUrl: session[side].rawCropDataUrl,
+      processedAspectRatio: analysis.aspectRatio,
+      inkDensity: analysis.inkDensity,
+    });
   };
 
   useEffect(() => {
@@ -166,12 +245,11 @@ export default function SignaturesPage() {
             İmza Karşılaştırma
           </div>
           <h1 className="font-display text-3xl md:text-4xl font-bold text-text-primary mb-3 tracking-tight">
-            Sözleşmedeki imzayı sirküsüyle karşılaştırın
+            Dökümandaki imzayı imza sirküleri ile karşılaştırın
           </h1>
           <p className="text-base text-text-secondary max-w-2xl leading-relaxed">
-            İki belgedeki imza bölgelerini kırpın; sistem SSIM ve perceptual
-            hash sinyalleriyle görsel benzerliği ölçer ve bir ilk-filtre
-            değerlendirmesi sunar.
+            İki belgedeki imza bölgelerini kırpın; sistem ham görüntüyü değil,
+            kaşe ve yazı gürültüsü azaltılmış imza maskesini karşılaştırır.
           </p>
         </header>
 
@@ -193,7 +271,21 @@ export default function SignaturesPage() {
             description="Üzerinde imza bulunan sözleşme sayfası."
             tone="contract"
             source={session.contract}
-            onLoad={(src) => setSource(session.id, "contract", src)}
+            onLoad={(src) => {
+              setSource(session.id, "contract", src);
+              void logClientActivity({
+                action: "signature_source_uploaded",
+                targetType: "signature",
+                targetId: session.id,
+                summary: "Dökümandaki imza kaynağı yüklendi",
+                module: "signatures",
+                metadata: {
+                  side: "contract",
+                  fileName: src.fileName,
+                  fileType: src.fileType,
+                },
+              });
+            }}
             onClear={() => clearSource(session.id, "contract")}
           />
           <SignatureSourceCard
@@ -201,7 +293,21 @@ export default function SignaturesPage() {
             description="Referans olarak kullanılacak imza örneği."
             tone="reference"
             source={session.reference}
-            onLoad={(src) => setSource(session.id, "reference", src)}
+            onLoad={(src) => {
+              setSource(session.id, "reference", src);
+              void logClientActivity({
+                action: "signature_source_uploaded",
+                targetType: "signature",
+                targetId: session.id,
+                summary: "İmza sirküsü kaynağı yüklendi",
+                module: "signatures",
+                metadata: {
+                  side: "reference",
+                  fileName: src.fileName,
+                  fileType: src.fileType,
+                },
+              });
+            }}
             onClear={() => clearSource(session.id, "reference")}
           />
         </div>
@@ -215,8 +321,8 @@ export default function SignaturesPage() {
                 </h2>
                 <p className="text-sm text-text-secondary">
                   Her sayfada imzayı çevreleyen bir dikdörtgen çizin.
-                  Kırpım kaydedildikçe alt köşede normalize edilmiş
-                  önizleme belirir.
+                  Kırpım kaydedildikçe ham seçim ve sistemin karşılaştıracağı
+                  imza maskesi altta görünür.
                 </p>
               </header>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -226,6 +332,9 @@ export default function SignaturesPage() {
                   source={session.contract}
                   onCropComplete={(r, d) =>
                     handleCropComplete("contract", r, d)
+                  }
+                  onMaskUpdate={(dataUrl, analysis) =>
+                    handleMaskUpdate("contract", dataUrl, analysis)
                   }
                   onReset={() => handleCropReset("contract")}
                 />
@@ -237,16 +346,22 @@ export default function SignaturesPage() {
                     onCropComplete={(r, d) =>
                       handleCropComplete("reference", r, d)
                     }
+                    onMaskUpdate={(dataUrl, analysis) =>
+                      handleMaskUpdate("reference", dataUrl, analysis)
+                    }
                     onReset={() => handleCropReset("reference")}
                   />
                   {session.reference.crop && (
                     <ReferenceSpecimensPanel
                       referenceSource={session.reference}
                       specimens={session.referenceSpecimens}
-                      onAdd={(crop, signatureDataUrl) =>
+                      onAdd={(crop, result) =>
                         addReferenceSpecimen(session.id, {
                           crop,
-                          signatureDataUrl,
+                          rawCropDataUrl: result.rawDataUrl,
+                          signatureDataUrl: result.dataUrl,
+                          processedAspectRatio: result.aspectRatio,
+                          inkDensity: result.inkDensity,
                         })
                       }
                       onRemove={(id) =>
@@ -265,6 +380,8 @@ export default function SignaturesPage() {
                 reference={session.reference}
                 onRecompute={() => void runComparison()}
                 computing={computing}
+                statusMessage={computeNotice}
+                errorMessage={computeError}
               />
             ) : computing ? (
               <div className="rounded-xl border border-workspace-border bg-workspace-surface p-8 text-center flex flex-col items-center gap-2">

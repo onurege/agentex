@@ -50,7 +50,7 @@ export function SignatureLayout({ pageTitle, children }: SignatureLayoutProps) {
                        hover:bg-workspace-elevated transition-colors min-h-[40px]"
           >
             <ArrowLeft size={16} />
-            <span className="hidden sm:inline">Sahneye Dön</span>
+            <span className="hidden sm:inline">Ana Sayfaya Dön</span>
           </Link>
           <ThemeToggle />
           <UserMenu />
