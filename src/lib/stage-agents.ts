@@ -41,7 +41,10 @@ export interface StageAgent extends BoardroomAgent {
 }
 
 /**
- * Build a PublishedStagePrompt from a profile, or null if no published prompt.
+ * Build a PublishedStagePrompt from a profile when the user has
+ * explicitly published a Prompt Studio version. Returns null when there
+ * is no published prompt; callers fall back to the agent's built-in
+ * default block via buildEffectivePrompt.
  */
 function buildPublishedPrompt(profile: AgentProfile | undefined): PublishedStagePrompt | null {
   if (!profile?.promptPublished) return null;
@@ -57,11 +60,40 @@ function buildPublishedPrompt(profile: AgentProfile | undefined): PublishedStage
 }
 
 /**
+ * Resolve the prompt block the pipeline should use for an agent:
+ * the user's published prompt when present, otherwise the agent's
+ * built-in default. The shape stays a PublishedStagePrompt either way
+ * so downstream consumers don't need to special-case the path.
+ *
+ * hasCustomPrompt remains the source-of-truth flag for the UI to show
+ * whether the runtime prompt is user-curated or shipped defaults.
+ */
+function buildEffectivePrompt(
+  base: BoardroomAgent,
+  profile: AgentProfile | undefined,
+): PublishedStagePrompt | null {
+  const published = buildPublishedPrompt(profile);
+  if (published) return published;
+  if (base.defaultPrompt) {
+    return {
+      systemPrompt: base.defaultPrompt.systemPrompt,
+      rolePrompt: base.defaultPrompt.rolePrompt,
+      outputRules: base.defaultPrompt.outputRules,
+      guardrails: base.defaultPrompt.guardrails,
+      hasCustomPrompt: false,
+      promptVersion: 0,
+      publishedAt: null,
+    };
+  }
+  return null;
+}
+
+/**
  * Merge published CV + prompt data onto a base BoardroomAgent.
  * Only uses published data — never draft.
  */
 function mergePublished(base: BoardroomAgent, cv: AgentCVData | null, profile: AgentProfile | undefined): StageAgent {
-  const publishedPrompt = buildPublishedPrompt(profile);
+  const publishedPrompt = buildEffectivePrompt(base, profile);
 
   if (!cv) {
     return {
