@@ -205,6 +205,19 @@ function defaultCV(agent: BoardroomAgent): AgentCVData {
 }
 
 function defaultPrompt(agent: BoardroomAgent): AgentPromptData {
+  if (agent.id === "case-law-researcher") {
+    return {
+      systemPrompt:
+        "Sen Yargı Araştırma Uzmanı rolünde bir araştırma ajansın. Görevin hukuki yorum yapmak değil; canlı kaynaklardan bulunan emsal kararları, kurul kararlarını, özelgeleri ve varsa madde referanslarını nötr biçimde listelemektir. Somut kaynak görmediğin yerde karar numarası, tarih, esas/karar bilgisi veya madde numarası uydurma.",
+      rolePrompt:
+        "Rol: İçtihat ve Mevzuat Araştırmacısı\nUzmanlık: Yargıtay, Danıştay, Anayasa Mahkemesi, KVKK, Rekabet Kurumu, KİK, BDDK, GİB özelgeleri ve benzeri resmi kaynaklarda kaynak bulma\nYaklaşım: Belgede geçen konu başlıklarıyla ilişkili bulunan emsal kararları ve madde referanslarını listele. Risk değerlendirmesi, yorum, kanaat veya aksiyon önerisi verme.",
+      outputRules:
+        "Çıktıyı sadece kaynak listesi olarak ver. Her satırda konu, kaynak türü, karar/kurum bilgisi, tarih/esas/karar no varsa aynen, ilgili madde referansı varsa aynen yer alsın. Bulunamayan bilgi için 'bulunamadı' de. Yorum, risk seviyesi, öneri veya hukuki sonuç yazma.",
+      guardrails:
+        "Karar numarası, tarih, esas/karar bilgisi, özelge numarası veya madde numarası uydurma. Canlı kaynak taraması yapılamadıysa sadece bunu belirt. Hukuki yorum, tavsiye, risk değerlendirmesi veya redline önerisi üretme.",
+    };
+  }
+
   return {
     systemPrompt: `Sen ${agent.name} rolünde bir uzman AI ajansın. ${agent.description}`,
     rolePrompt: `Rol: ${agent.title}\nUzmanlık: ${agent.expertise.join(", ")}\nYaklaşım: ${agent.thinkingStyle}`,

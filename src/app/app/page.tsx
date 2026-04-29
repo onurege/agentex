@@ -1,85 +1,477 @@
 "use client";
 
-import { useState } from "react";
-import { StageLayout } from "@/components/stage/StageLayout";
-import { AgentCard } from "@/components/agents/AgentCard";
-import { AgentDetailDrawer } from "@/components/agents/AgentDetailDrawer";
-import { SelectedBoardBar } from "@/components/agents/SelectedBoardBar";
-import { MAX_BOARD_SIZE } from "@/lib/boardroom-agents";
-import { useBoardroomFlowStore } from "@/lib/boardroom-flow-store";
-import { useStageAgents, type StageAgent } from "@/lib/stage-agents";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Bolt,
+  Bell,
+  Download,
+  FileDiff,
+  FilePenLine,
+  FileSignature,
+  Gavel,
+  Grid2X2,
+  LineChart,
+  MoreVertical,
+  PlusCircle,
+  Search,
+  Settings,
+  Sparkles,
+  WalletCards,
+  type LucideIcon,
+} from "lucide-react";
 import { MigrationBanner } from "@/components/app/MigrationBanner";
-import { StaggerChildren, StaggerItem } from "@/lib/motion/primitives";
+import { ThemeToggle } from "@/components/app/ThemeToggle";
+import { UserMenu } from "@/components/app/UserMenu";
+import { SITE } from "@/lib/config/site";
+import { getPermissions } from "@/lib/config/roles";
+import { getBoardroomRuns } from "@/lib/run-history";
 
-export default function AgentGalleryPage() {
-  const selectedAgentIds = useBoardroomFlowStore((s) => s.selectedAgentIds);
-  const selectAgent = useBoardroomFlowStore((s) => s.selectAgent);
-  const deselectAgent = useBoardroomFlowStore((s) => s.deselectAgent);
+const advisorStatuses = [
+  { label: "Online", className: "bg-green-100 text-green-700" },
+  { label: "İncelemede", className: "bg-amber-100 text-amber-700" },
+  { label: "Aktif Görev", className: "bg-[#9defff] text-[#004f59]" },
+  { label: "Hazır", className: "bg-slate-100 text-slate-500" },
+] as const;
 
-  const stageAgents = useStageAgents();
-  const selectedAgents = stageAgents.filter((a) => selectedAgentIds.includes(a.id));
+const moduleCards = [
+  {
+    href: SITE.paths.boardroomAgents,
+    icon: Gavel,
+    title: "Uzman Değerlendirme",
+    subtitle: "Hukuk, finans, vergi ve ticari uzmanlardan oluşan AI kurulunu başlatın.",
+    action: "Ajanları Seç",
+  },
+  {
+    href: "/app/draft",
+    icon: FilePenLine,
+    title: "Sözleşme Taslağı",
+    subtitle: "Notlar ve taraf bilgileriyle yeni sözleşme taslağı oluşturun.",
+    action: "Taslak Başlat",
+  },
+  {
+    href: "/app/compare",
+    icon: FileDiff,
+    title: "Doküman Karşılaştır",
+    subtitle: "Versiyonlar arasındaki farkları ve riskli değişiklikleri inceleyin.",
+    action: "Karşılaştır",
+  },
+  {
+    href: "/app/signatures",
+    icon: FileSignature,
+    title: "İmza Kontrolü",
+    subtitle: "Dokümandaki imzayı imza sirküleri ile karşılaştırın.",
+    action: "İmza İncele",
+  },
+] as const;
 
-  const [previewAgent, setPreviewAgent] = useState<StageAgent | null>(null);
+const processItems = [
+  {
+    number: "01",
+    title: "Agent Team",
+    subtitle: "Belge yükle · Ajanları seç · Karar desteğini al",
+    href: SITE.paths.boardroomAgents,
+    state: "review",
+  },
+  {
+    number: "02",
+    title: "Sözleşme Taslağı",
+    subtitle: "Şablon seç · Soruları yanıtla · DOCX indir",
+    href: "/app/draft",
+    state: "progress",
+  },
+  {
+    number: "03",
+    title: "Doküman ve İmza Kontrolü",
+    subtitle: "Karşılaştırma · Redline · İmza sinyali",
+    href: "/app/compare",
+    state: "complete",
+  },
+] as const;
 
-  const selectedSet = new Set(selectedAgentIds);
+export default function AppDashboardPage() {
+  const { data: session } = useSession();
+  const permissions = getPermissions(session?.user?.role ?? "user");
+  const [mounted, setMounted] = useState(false);
+  const [recentRuns, setRecentRuns] = useState<Array<{ id: string; name: string; date: string; risk: string }>>([]);
+
+  useEffect(() => {
+    setRecentRuns(
+      getBoardroomRuns()
+        .slice(0, 3)
+        .map((run) => ({
+          id: run.id,
+          name: run.documentName,
+          date: run.createdAt,
+          risk: run.verdictSeed.riskLevel,
+        })),
+    );
+    setMounted(true);
+  }, []);
 
   return (
-    <StageLayout currentStep="agent-gallery">
-      {/* Scrollable content with bottom padding for the fixed bar */}
-      <div className="flex flex-col items-center px-6 py-10 pb-32">
-        {/* Migration banner — only renders when db mode + unmigrated local data */}
-        <div className="w-full max-w-[1080px]">
-          <MigrationBanner />
-        </div>
+    <div className="min-h-screen overflow-x-hidden bg-[#fef7ff] text-[#1d1a21]">
+      <aside className="group/sidebar fixed bottom-6 left-6 top-6 z-50 flex w-20 flex-col items-start gap-8 overflow-hidden rounded-[32px] border border-white/20 bg-white/60 py-8 shadow-[0_8px_32px_0_rgba(64,22,137,0.08)] backdrop-blur-xl transition-all duration-300 ease-out hover:w-64 hover:bg-white/80">
+        <Link href={SITE.paths.app} className="flex w-full items-center gap-3 px-5">
+          <span className="text-2xl font-black tracking-tighter text-[#401689]">C</span>
+          <span className="whitespace-nowrap text-sm font-extrabold uppercase tracking-[0.22em] text-[#401689] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
+            Consulera
+          </span>
+        </Link>
 
-        {/* Header */}
-        <div className="text-center mb-10 max-w-2xl">
-          <h1 className="font-display text-4xl font-bold text-text-primary mb-3">
-            Uzman Ajanlar
-          </h1>
-          <p className="text-xl text-text-secondary leading-relaxed">
-            Kurulunuzu oluşturmak için uzman ajanları seçin.
-            <br />
-            <span className="text-text-muted text-lg">
-              En az 2, en fazla {MAX_BOARD_SIZE} ajan seçebilirsiniz.
-            </span>
-          </p>
-        </div>
+        <nav className="flex flex-1 flex-col items-start gap-4 px-5">
+          <SideNavItem href={SITE.paths.app} active icon={Grid2X2} label="Ana Sayfa" />
+          <SideNavItem href={SITE.paths.boardroomAgents} icon={Gavel} label="Agents" />
+          <SideNavItem href="/app/draft" icon={FilePenLine} label="Sözleşme Taslağı" />
+          <SideNavItem href="/app/compare" icon={LineChart} label="Döküman Karşılaştır" />
+          <SideNavItem href="/app/signatures" icon={WalletCards} label="İmza Kontrolü" />
+          {permissions.canAccessPanel && (
+            <SideNavItem href={SITE.paths.panel} icon={Settings} label="Panel" />
+          )}
+        </nav>
 
-        {/* Agent Grid — uses published effective data */}
-        <StaggerChildren
-          stagger={0.06}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-[1080px]"
-        >
-          {stageAgents.map((agent) => (
-            <StaggerItem key={agent.id} className="h-full">
-              <AgentCard
-                agent={agent}
-                isSelected={selectedSet.has(agent.id)}
-                onSelect={() => selectAgent(agent.id)}
-                onDeselect={() => deselectAgent(agent.id)}
-                onViewDetail={() => setPreviewAgent(agent)}
+        <div className="mt-auto flex items-center gap-3 px-5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[#401689]/20 bg-white text-lg">
+          {session?.user?.image ? (
+            <img src={session.user.image} alt="" className="h-full w-full rounded-full object-cover p-0.5" />
+          ) : (
+            <span>👤</span>
+          )}
+          </div>
+          <div className="min-w-0 opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
+            <p className="truncate text-sm font-bold text-[#1d1a21]">
+              {session?.user?.name ?? "Kullanıcı"}
+            </p>
+            <p className="truncate text-xs text-[#494552]">
+              {session?.user?.email ?? "Aktif oturum"}
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      <main className="ml-32 min-h-screen pb-20">
+        <header className="sticky top-0 z-40 flex h-20 items-center justify-between bg-white/40 px-12 backdrop-blur-md">
+          <div className="flex items-center gap-8">
+            <div className="group relative">
+              <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">
+                <Search size={20} />
+              </span>
+              <input
+                className="w-80 rounded-full border-none bg-white/50 py-2.5 pl-12 pr-6 text-sm font-semibold text-slate-700 outline-none transition-all placeholder:text-slate-500 focus:ring-2 focus:ring-[#006875]/50"
+                placeholder="Consulera içinde ara..."
+                type="text"
               />
-            </StaggerItem>
-          ))}
-        </StaggerChildren>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+              <button className="p-2 transition-colors hover:text-[#280064]" aria-label="Bildirimler">
+                <Bell size={22} />
+              </button>
+              <button className="p-2 transition-colors hover:text-[#280064]" aria-label="Uygulamalar">
+                <Grid2X2 size={22} />
+              </button>
+              <span className="mx-2 h-4 w-px bg-slate-300" />
+              <Link href={SITE.paths.panel} className="transition-colors hover:text-[#280064]">
+                Destek
+              </Link>
+            </div>
+
+            <ThemeToggle />
+            <UserMenu />
+          </div>
+        </header>
+
+        <div className="mx-auto mt-2 w-full max-w-[1280px] px-12">
+          <MigrationBanner />
+
+          <section className="relative mb-12 overflow-hidden rounded-[40px] bg-gradient-to-br from-[#280064] to-[#401689] p-12 shadow-2xl shadow-[#280064]/20">
+            <div className="absolute inset-y-0 right-0 hidden w-1/2 overflow-hidden md:block">
+              <img
+                className="h-full w-full object-cover mix-blend-screen opacity-50"
+                alt="Abstract 3D glowing neural network data visualization with purple and turquoise light particles on dark background"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCd2VaRvDSUXQTUbrTUWrzsfG3YZT7BlinEddYoa9_fPeZs_nloXMFQKTarOg324-ruPKpAuaRk5_YQoatomFIWQV-v4CZPejdDM_8p1KoiLPECBdhKUdPknNHtU6ZtnVHc1SUS_nEUE87JU_0E3ZXy2CCLiKHOZOFWs7XGJYH6qspycpy2e9HjdS1v9xFnL8aO5GE9QgoXTSLznZp3TRw1KqlSgtTVwntUNCBsnLtD8nkllgyM7aSIQuU9XoF2ZKvuqqh77x_EbyNC"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(64,22,137,0.95),rgba(64,22,137,0.15))]" />
+            </div>
+
+            <div className="relative z-10 max-w-2xl">
+              <span className="mb-6 inline-flex rounded-full border border-[#51e7ff]/30 bg-[#006875]/25 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.28em] text-[#9defff]">
+                {SITE.marketing.badge}
+              </span>
+              <h1 className="mb-6 font-display text-5xl font-extrabold leading-[1.1] tracking-[-0.02em] text-white">
+                İş süreçleriniz için <span className="text-[#51e7ff]">AI karar destek</span> platformu
+              </h1>
+              <p className="mb-8 max-w-2xl text-lg leading-relaxed text-[#eaddff]/90">
+                Sözleşme inceleme, belge karşılaştırma, imza kontrolü, redline ve uzman ajan değerlendirmelerini tek izlenebilir süreçte birleştirin.
+              </p>
+              <div className="flex gap-4">
+                <Link
+                  href={SITE.paths.boardroomAgents}
+                  className="inline-flex items-center justify-center gap-2 rounded-[24px] bg-[#51e7ff] px-8 py-4 text-base font-bold text-[#001f24] transition-transform hover:scale-[1.02]"
+                >
+                  Agent Team ile Toplantı Başlat
+                  <Bolt size={18} />
+                </Link>
+                <Link
+                  href="/app/draft"
+                  className="inline-flex items-center justify-center rounded-[24px] border border-white/20 bg-white/10 px-8 py-4 text-base font-bold text-white backdrop-blur-md transition-colors hover:bg-white/20"
+                >
+                  Yeni Sözleşme
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          <section className="mb-12">
+            <div className="mb-8 flex items-end justify-between gap-4">
+              <div>
+                <h2 className="font-display text-[32px] font-bold leading-[1.2] text-[#280064]">
+                  Çalışma Merkezi
+                </h2>
+                <p className="text-base leading-relaxed text-[#494552]">
+                  Hukuki süreçlerinizi başlatın, son çalışmaları takip edin ve karar destek akışlarına erişin.
+                </p>
+              </div>
+              <Link
+                href={SITE.paths.boardroomAgents}
+                className="hidden items-center gap-1 text-base font-bold text-[#006875] hover:underline sm:flex"
+              >
+                Ajanları Gör
+                <ArrowRight size={18} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+              {moduleCards.map((card, index) => (
+                <ModuleCard key={card.href} {...card} status={advisorStatuses[index]} />
+              ))}
+            </div>
+          </section>
+
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <section className="rounded-[40px] border border-white/30 bg-white/70 p-6 shadow-[0_8px_32px_0_rgba(64,22,137,0.04)] backdrop-blur-xl lg:col-span-2">
+              <div className="mb-8 flex items-center justify-between">
+                <h3 className="font-display text-2xl font-bold text-[#280064]">
+                  Süreç Yönetimi
+                </h3>
+                <div className="flex gap-2">
+                  <span className="h-2 w-2 rounded-full bg-[#006875]" />
+                  <span className="h-2 w-2 rounded-full bg-slate-200" />
+                  <span className="h-2 w-2 rounded-full bg-slate-200" />
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {processItems.map((item) => (
+                  <ProcessRow key={item.number} {...item} />
+                ))}
+              </div>
+            </section>
+
+            <section className="flex flex-col rounded-[40px] border border-white/30 bg-white/70 p-6 shadow-[0_8px_32px_0_rgba(64,22,137,0.04)] backdrop-blur-xl">
+              <h3 className="mb-8 font-display text-2xl font-bold text-[#280064]">
+                Son Çalışmalar
+              </h3>
+
+              {!mounted || recentRuns.length === 0 ? (
+                <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
+                  <div className="relative mb-6 h-24 w-24">
+                    <div className="absolute inset-0 scale-150 animate-pulse rounded-full bg-[#280064]/5" />
+                    <img
+                      className="relative z-10 h-full w-full object-contain"
+                      alt="Minimalist 3D rendered safe box icon with soft shadows and metallic purple textures"
+                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIzl_Xn1jF2ieGZe8kIpp-kflRU_vyClNZvAwFxG9LgzjEz1QhyxwCi6E5yZtyI1mysZK52OonUIxra5dDqKL2egfVOBqHJKEDDlOiDVVrwJLLRXgUqfIYRKH5mwzoqX__b0F3JEkTV8W1mSZQ5Xiq5T_lbNiTfirZiJuXE_pf-NOB7DvjhuyaIFXPUDnlyciM5Ur0e-UgZ-AEFYG7XpNdXzUz2AqEB4Y8gTCLi18nQ8MhfKCUOj8SRfLGXeHX3wRsViN1M0F8yGnO"
+                    />
+                  </div>
+                  <p className="mb-2 text-sm font-bold text-[#1d1a21]">Henüz kayıtlı çalışma yok</p>
+                  <p className="mb-8 max-w-xs text-sm leading-relaxed text-[#494552]">
+                    Tamamlanan uzman değerlendirmeleri ve karar destek çıktıları burada görünecek.
+                  </p>
+                  <Link
+                    href={SITE.paths.boardroomAgents}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-[#280064]/20 px-7 py-4 text-sm font-bold text-[#280064] transition-colors hover:bg-[#280064]/5"
+                  >
+                    <PlusCircle size={19} />
+                    İlk Değerlendirmeyi Başlat
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recentRuns.map((run) => (
+                    <Link key={run.id} href={`/app/runs/${run.id}`}>
+                      <div className="rounded-[24px] border border-[#e7e0ea] bg-white/80 p-4 transition-all hover:border-[#51e7ff] hover:shadow-[0_12px_36px_rgba(64,22,137,0.08)]">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-base font-bold text-[#1d1a21]">{run.name}</p>
+                            <p className="mt-1 text-sm text-[#494552]">
+                              {new Date(run.date).toLocaleDateString("tr-TR")}
+                            </p>
+                          </div>
+                          <RiskBadge risk={run.risk} />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+
+          {permissions.canAccessPanel && (
+            <div className="mt-8 rounded-[32px] border border-[#e7e0ea] bg-white/70 p-6 shadow-[0_16px_50px_rgba(64,22,137,0.05)] backdrop-blur-xl">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h3 className="font-display text-xl font-bold text-[#280064]">Control Room</h3>
+                  <p className="mt-1 text-base text-[#494552]">
+                    Ajan CV&apos;leri, prompt sürümleri, şablonlar ve audit kayıtlarını yönetin.
+                  </p>
+                </div>
+                <Link
+                  href={SITE.paths.panel}
+                  className="inline-flex items-center justify-center rounded-[24px] bg-[#280064] px-7 py-3 text-base font-bold text-white transition-colors hover:bg-[#401689]"
+                >
+                  Panele Git
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function ModuleCard({
+  href,
+  icon: Icon,
+  title,
+  subtitle,
+  action,
+  status,
+}: {
+  href: string;
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+  action: string;
+  status: (typeof advisorStatuses)[number];
+}) {
+  return (
+    <Link href={href} className="group block">
+      <div className="flex h-full min-h-[224px] flex-col rounded-[32px] border border-white/40 bg-white/70 p-6 shadow-[0_16px_48px_rgba(64,22,137,0.05)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#51e7ff]/60">
+        <div className="mb-8 flex items-start justify-between">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#280064]/5 text-[#280064] transition-colors group-hover:bg-[#280064] group-hover:text-white">
+            <Icon size={27} />
+          </div>
+          <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase ${status.className}`}>
+            {status.label}
+          </span>
+        </div>
+        <div className="flex-1">
+          <h3 className="min-h-[62px] font-display text-2xl font-bold leading-[1.3] text-[#1d1a21]">{title}</h3>
+          <p className="mt-1 min-h-[40px] text-sm leading-relaxed text-[#494552]">{subtitle}</p>
+        </div>
+        <div className="mt-6 flex items-center gap-2 text-xs font-bold text-[#280064]">
+          <Sparkles size={15} />
+          {action}
+        </div>
       </div>
+    </Link>
+  );
+}
 
-      {/* Bottom board bar — always visible */}
-      <SelectedBoardBar selectedAgents={selectedAgents} />
+function SideNavItem({
+  href,
+  icon: Icon,
+  label,
+  active = false,
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  active?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className={
+        active
+          ? "flex h-12 w-12 items-center gap-3 rounded-2xl bg-[#401689] p-3 text-white shadow-lg shadow-purple-500/20 transition-all duration-200 ease-out group-hover/sidebar:w-52"
+          : "flex h-12 w-12 items-center gap-3 rounded-2xl p-3 text-slate-500 transition-all duration-300 hover:bg-slate-100/50 hover:text-[#401689] group-hover/sidebar:w-52"
+      }
+    >
+      <Icon size={24} className="shrink-0" />
+      <span className="whitespace-nowrap text-sm font-bold opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
+        {label}
+      </span>
+    </Link>
+  );
+}
 
-      {/* Agent detail drawer */}
-      <AgentDetailDrawer
-        agent={previewAgent}
-        isSelected={previewAgent ? selectedSet.has(previewAgent.id) : false}
-        onSelect={() => {
-          if (previewAgent) selectAgent(previewAgent.id);
-        }}
-        onDeselect={() => {
-          if (previewAgent) deselectAgent(previewAgent.id);
-        }}
-        onClose={() => setPreviewAgent(null)}
-      />
-    </StageLayout>
+function ProcessRow({
+  number,
+  title,
+  subtitle,
+  href,
+  state,
+}: {
+  number: string;
+  title: string;
+  subtitle: string;
+  href: string;
+  state: "review" | "progress" | "complete";
+}) {
+  return (
+    <Link href={href} className="group flex items-center gap-6 rounded-3xl border border-transparent p-4 transition-colors hover:border-white hover:bg-white/50">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#f2ebf6] font-display text-lg font-medium text-[#280064]/30">
+        {number}
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-bold leading-[1.4] text-[#1d1a21]">{title}</p>
+        <p className="text-xs text-[#494552]">{subtitle}</p>
+      </div>
+      <div className="flex items-center gap-4">
+        {state === "review" && (
+          <span className="rounded-xl bg-[#401689] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[#280064]">
+            İncele
+          </span>
+        )}
+        {state === "progress" && (
+          <>
+            <span className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
+              <span className="block h-full w-3/4 rounded-full bg-[#006875]" />
+            </span>
+            <MoreVertical size={20} className="text-[#280064]" />
+          </>
+        )}
+        {state === "complete" && (
+          <>
+            <BadgeCheck size={24} className="text-green-500" />
+            <Download size={22} className="text-[#280064]" />
+          </>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function RiskBadge({ risk }: { risk: string }) {
+  const config =
+    risk === "high"
+      ? "bg-red-100 text-red-700"
+      : risk === "low"
+        ? "bg-green-100 text-green-700"
+        : "bg-amber-100 text-amber-700";
+
+  return (
+    <span className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-bold uppercase ${config}`}>
+      {risk === "high" ? "Yüksek" : risk === "low" ? "Düşük" : "Orta"}
+    </span>
   );
 }

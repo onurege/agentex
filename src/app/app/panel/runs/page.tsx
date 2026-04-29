@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { getBoardroomRuns, deleteBoardroomRun, type BoardroomRunSnapshot } from "@/lib/run-history";
 import { saveAuditEvent } from "@/lib/audit-log";
+import { getPersistenceAdapter } from "@/lib/persistence/factory";
+import type { BoardroomRunSnapshot } from "@/lib/run-history";
 
 const RISK_LABELS: Record<string, { label: string; style: string }> = {
   high: { label: "Yüksek", style: "text-accent-danger bg-accent-danger/10" },
@@ -25,22 +26,33 @@ export default function PanelRunsPage() {
   const [riskFilter, setRiskFilter] = useState("all");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  useEffect(() => {
-    setAllRuns(getBoardroomRuns());
-    setMounted(true);
+  const loadRuns = useCallback(async () => {
+    const adapter = await getPersistenceAdapter();
+    const result = await adapter.runs.listRuns("", { limit: 100 });
+    setAllRuns(result.runs);
   }, []);
 
-  const handleDelete = useCallback((runId: string, docName: string) => {
-    deleteBoardroomRun(runId);
+  useEffect(() => {
+    loadRuns()
+      .catch((err) => {
+        console.error("[runs] load failed:", err);
+        setAllRuns([]);
+      })
+      .finally(() => setMounted(true));
+  }, [loadRuns]);
+
+  const handleDelete = useCallback(async (runId: string, docName: string) => {
+    const adapter = await getPersistenceAdapter();
+    await adapter.runs.deleteRun(runId);
     saveAuditEvent({
       action: "run_deleted",
       targetType: "run",
       targetId: runId,
       summary: `"${docName}" çalıştırması silindi`,
     });
-    setAllRuns(getBoardroomRuns());
+    await loadRuns();
     setDeleteConfirm(null);
-  }, []);
+  }, [loadRuns]);
 
   // Filter runs
   let filtered = allRuns;

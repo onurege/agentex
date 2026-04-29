@@ -145,9 +145,9 @@ export default function BoardroomReplayPage() {
 
           {/* Table Area */}
           <div className="flex-1 flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at center, rgba(59,130,246,0.03) 0%, transparent 70%)" }} />
+            <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at center, rgb(var(--color-accent-info) / 0.08) 0%, transparent 70%)" }} />
             <div className="relative">
-              <div className="w-[420px] h-[240px] rounded-[50%] flex items-center justify-center" style={{ background: "linear-gradient(180deg, rgba(28,32,41,0.9) 0%, rgba(22,26,34,0.95) 100%)", border: "1px solid rgba(42,47,58,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)" }}>
+              <div className="w-[420px] h-[240px] rounded-[50%] flex items-center justify-center" style={{ background: "linear-gradient(180deg, rgb(var(--color-workspace-elevated) / 0.92) 0%, rgb(var(--color-workspace-surface) / 0.96) 100%)", border: "1px solid rgb(var(--color-workspace-border) / 0.8)", boxShadow: "0 8px 32px rgb(40 0 100 / 0.22), inset 0 1px 0 rgb(255 255 255 / 0.08)" }}>
                 <DocumentFocusCard fileName={run.documentName} currentTopic={currentEvent?.topic ?? null} />
               </div>
               {boardAgents.map((agent, i) => {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser, unauthorized, badRequest } from "@/lib/api-auth";
 import type { BoardroomRunSnapshot } from "@/lib/run-history";
+import { persistRunAgentVersions } from "@/lib/run-history-server";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUser();
@@ -80,6 +81,28 @@ export async function POST(req: NextRequest) {
             message: e.message,
             timestamp: e.timestamp,
           })),
+        });
+      }
+
+      if (snapshot.agentSnapshots?.length) {
+        const versionByKey = await persistRunAgentVersions(
+          tx,
+          user.id,
+          snapshot.agentSnapshots,
+        );
+        await tx.runAgentSnapshot.createMany({
+          data: snapshot.agentSnapshots
+            .map((s) => {
+              const agentVersionId = versionByKey.get(s.id);
+              if (!agentVersionId) return null;
+              return {
+                runId: snapshot.id,
+                agentVersionId,
+                agentKey: s.id,
+                isChief: s.isChief,
+              };
+            })
+            .filter((row): row is NonNullable<typeof row> => row !== null),
         });
       }
     });

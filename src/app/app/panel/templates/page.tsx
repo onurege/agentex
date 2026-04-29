@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useBoardroomFlowStore } from "@/lib/boardroom-flow-store";
 import { BOARD_TEMPLATES } from "@/lib/stage-agents";
 import { useSelectedStageAgents } from "@/lib/stage-agents";
-import { saveAuditEvent } from "@/lib/audit-log";
+import { logClientActivity } from "@/lib/client-activity";
+import { SITE } from "@/lib/config/site";
 
 export default function BoardTemplatesPage() {
   const router = useRouter();
@@ -14,8 +15,15 @@ export default function BoardTemplatesPage() {
   const applyTemplate = useCallback(
     (templateId: string, templateName: string, agentIds: string[]) => {
       setSelectedAgentIds(agentIds);
-      saveAuditEvent({ action: "template_applied", targetType: "template", targetId: templateId, summary: `"${templateName}" şablonu uygulandı` });
-      router.push("/app");
+      void logClientActivity({
+        action: "template_applied",
+        targetType: "template",
+        targetId: templateId,
+        summary: `"${templateName}" şablonu uygulandı`,
+        module: "control_room",
+        metadata: { agentIds },
+      });
+      router.push(SITE.paths.boardroomAgents);
     },
     [setSelectedAgentIds, router],
   );

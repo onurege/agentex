@@ -27,7 +27,7 @@ export default function SavedRunVerdictPage() {
           <p className="text-2xl font-semibold text-text-primary">Oturum Bulunamadı</p>
           <p className="text-lg text-text-secondary">Bu kayıtlı oturum artık mevcut değil.</p>
           <Link
-            href={SITE.paths.app}
+            href={SITE.paths.boardroomAgents}
             className="px-6 py-3 rounded-xl text-base font-semibold bg-accent-primary text-workspace-surface hover:bg-accent-secondary transition-colors"
           >
             Yeni Tartışma Başlat
@@ -165,7 +165,7 @@ export default function SavedRunVerdictPage() {
           <button
             onClick={() => {
               resetFlow();
-              router.push(SITE.paths.app);
+              router.push(SITE.paths.boardroomAgents);
             }}
             className="flex items-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold
                        bg-accent-primary text-workspace-surface border border-accent-primary

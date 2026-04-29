@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthUser, unauthorized, badRequest } from "@/lib/api-auth";
 import { applyRedline } from "@/lib/redline/docx-renderer";
 import type { ArbitratedEdit, EditProposal } from "@/lib/redline/types";
+import { persistRunAgentVersions } from "@/lib/run-history-server";
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUser();
@@ -161,12 +162,43 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    if (snapshot.agentSnapshots?.length) {
+      const versionByKey = await persistRunAgentVersions(
+        tx,
+        user.id,
+        snapshot.agentSnapshots,
+      );
+      await tx.runAgentSnapshot.createMany({
+        data: snapshot.agentSnapshots
+          .map((s) => {
+            const agentVersionId = versionByKey.get(s.id);
+            if (!agentVersionId) return null;
+            return {
+              runId: run.id,
+              agentVersionId,
+              agentKey: s.id,
+              isChief: s.isChief,
+            };
+          })
+          .filter((row): row is NonNullable<typeof row> => row !== null),
+      });
+    }
+
     await tx.auditLog.create({
       data: {
         action: "run_created",
         targetType: "run",
         targetId: run.id,
         summary: `"${snapshot.documentName}" kurul tartışması kaydedildi`,
+        module: "boardroom",
+        severity: "info",
+        metadata: {
+          analysisMode: snapshot.analysisMode ?? "ai",
+          modelInfo: snapshot.modelInfo ?? null,
+          agentCount: snapshot.agentSnapshots.length,
+          debateMomentCount: snapshot.debateTimeline.length,
+          riskLevel: snapshot.verdictSeed.riskLevel,
+        },
         actorId: user.id,
       },
     });
@@ -225,15 +257,17 @@ function runToSnapshot(run: RunWithRelations): import("@/lib/run-history").Board
     documentName: run.documentName,
     documentType: run.documentType,
     documentSize: run.documentSize,
-    selectedAgentIds: run.agentSnapshots.map((s) => s.agentKey),
+    selectedAgentIds: run.agentSnapshots
+      .filter((s) => !s.isChief)
+      .map((s) => s.agentKey),
     agentSnapshots: run.agentSnapshots.map((s) => {
       const cv = s.agentVersion.cvSnapshot as Record<string, string> | null;
       return {
         id: s.agentKey,
         name: cv?.name ?? s.agentKey,
-        shortName: cv?.name?.split(" ")[0] ?? s.agentKey,
+        shortName: cv?.shortName ?? cv?.name?.split(" ")[0] ?? s.agentKey,
         title: cv?.title ?? "",
-        avatar: "",
+        avatar: cv?.avatar ?? "",
         expertise: cv?.expertise ? cv.expertise.split(",").map((e: string) => e.trim()) : [],
         characterLine: cv?.riskFocus ?? "",
         thinkingStyle: cv?.principles ?? "",
