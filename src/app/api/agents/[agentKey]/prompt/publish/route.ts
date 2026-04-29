@@ -52,6 +52,9 @@ export async function POST(
         targetType: "agent",
         targetId: params.agentKey,
         summary: `${params.agentKey} prompt v${nextVersion} yayınlandı`,
+        module: "control_room",
+        severity: "info",
+        metadata: { agentKey: params.agentKey, version: nextVersion },
         actorId: user.id,
       },
     });

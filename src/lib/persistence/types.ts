@@ -1,4 +1,4 @@
-import type { AuditAction, AuditTargetType } from "../audit-log";
+import type { AuditAction, AuditModule, AuditSeverity, AuditTargetType } from "../audit-log";
 import type { AgentCVData, AgentPromptData } from "../control-room-store";
 import type { BoardroomRunSnapshot } from "../run-history";
 
@@ -52,6 +52,10 @@ export interface AuditEventDTO {
   targetType: AuditTargetType;
   targetId: string;
   summary: string;
+  module?: AuditModule;
+  severity?: AuditSeverity;
+  metadata?: Record<string, unknown>;
+  requestId?: string;
   actor: string;
   timestamp: string;
 }

@@ -34,6 +34,12 @@ export async function POST(req: NextRequest) {
         targetType: event.targetType,
         targetId: event.targetId || null,
         summary: event.summary,
+        module: event.module ?? "system",
+        severity: event.severity ?? "info",
+        metadata: event.metadata
+          ? JSON.parse(JSON.stringify(event.metadata))
+          : undefined,
+        requestId: event.requestId ?? null,
         actorId: user.id,
         timestamp: new Date(event.timestamp),
       },

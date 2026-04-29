@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser, unauthorized, badRequest } from "@/lib/api-auth";
+import { logAuditEvent } from "@/lib/server-audit";
 
 export async function GET() {
   const user = await getAuthUser();
@@ -46,6 +47,16 @@ export async function POST(req: NextRequest) {
       agentKeys: body.agentKeys,
       ownerId: user.id,
     },
+  });
+
+  await logAuditEvent({
+    action: "template_created",
+    targetType: "template",
+    targetId: template.id,
+    summary: `"${template.name}" şablonu oluşturuldu`,
+    module: "control_room",
+    actorId: user.id,
+    metadata: { agentKeys: template.agentKeys, ownerId: template.ownerId },
   });
 
   return NextResponse.json({

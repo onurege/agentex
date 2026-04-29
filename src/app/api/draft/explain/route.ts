@@ -16,6 +16,7 @@ import {
   explainQuestion,
 } from "@/lib/draft/ai/explain";
 import type { TemplateId } from "@/lib/draft/types";
+import { createRequestId, logAuditEvent } from "@/lib/server-audit";
 
 export const runtime = "nodejs";
 
@@ -25,6 +26,7 @@ interface ExplainPayload {
 }
 
 export async function POST(req: NextRequest) {
+  const requestId = createRequestId("draft");
   const user = await getAuthUser();
   if (!user) return unauthorized();
 
@@ -49,6 +51,16 @@ export async function POST(req: NextRequest) {
       template,
       questionId: payload.questionId,
     });
+    await logAuditEvent({
+      action: "draft_ai_explained",
+      targetType: "draft",
+      targetId: `${payload.templateId}:${payload.questionId}`,
+      summary: `"${payload.templateId}" şablonunda soru açıklaması üretildi`,
+      module: "draft",
+      requestId,
+      actorId: user.id,
+      metadata: { templateId: payload.templateId, questionId: payload.questionId },
+    });
     return NextResponse.json(result, {
       status: 200,
       headers: { "Cache-Control": "private, no-store" },
@@ -59,6 +71,17 @@ export async function POST(req: NextRequest) {
     }
     const message =
       err instanceof Error ? err.message : "Açıklama üretilemedi.";
+    await logAuditEvent({
+      action: "api_error",
+      targetType: "draft",
+      targetId: `${payload.templateId}:${payload.questionId}`,
+      summary: `Taslak açıklaması üretilemedi: ${message}`,
+      module: "draft",
+      severity: "error",
+      requestId,
+      actorId: user.id,
+      metadata: { templateId: payload.templateId, questionId: payload.questionId, error: message },
+    });
     return NextResponse.json(
       { error: `Gemini hatası: ${message}` },
       { status: 502 },

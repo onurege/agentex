@@ -21,10 +21,12 @@ import { applyRedline } from "@/lib/redline/docx-renderer";
 import { findingsToEdits } from "@/lib/compare/findings-to-edits";
 import type { CompareFinding } from "@/lib/compare/types";
 import { MAX_DOCX_BYTES } from "@/lib/ingestion/docx-guard";
+import { createRequestId, logAuditEvent } from "@/lib/server-audit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const requestId = createRequestId("compare");
   const user = await getAuthUser();
   if (!user) return unauthorized();
 
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
   const nodeBuffer = Buffer.from(arrayBuffer);
 
   const result = await applyRedline(nodeBuffer, edits, {
-    author: "AI Boardroom · Compare",
+    author: "Consulera · Compare",
   });
 
   const rawName =
@@ -75,6 +77,25 @@ export async function POST(req: NextRequest) {
     rawName.replace(/\.docx$/i, "").replace(/[^\w.\-]/g, "_") || "compare";
   const outName = `${baseName}-redline.docx`;
   const asciiName = outName.replace(/[^\x20-\x7E]/g, "_");
+
+  await logAuditEvent({
+    action: "compare_redline_exported",
+    targetType: "compare",
+    targetId: baseName,
+    summary: `"${rawName}" karşılaştırma redline çıktısı indirildi`,
+    module: "compare",
+    requestId,
+    actorId: user.id,
+    metadata: {
+      inputFileName: rawName,
+      findingCount: findings.length,
+      editCount: edits.length,
+      appliedCount: result.appliedCount,
+      orphanCount: result.orphanCount,
+      skippedCount,
+      outputFileName: outName,
+    },
+  });
 
   return new NextResponse(new Uint8Array(result.buffer), {
     status: 200,

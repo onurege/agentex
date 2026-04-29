@@ -114,6 +114,9 @@ export async function POST(req: Request) {
       targetType: "agent",
       targetId: agentKey,
       summary: `Özel ajan "${displayName}" oluşturuldu`,
+      module: "control_room",
+      severity: "info",
+      metadata: { title, expertise, tone },
       actorId: user.id,
     },
   });

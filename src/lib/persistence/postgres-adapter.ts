@@ -153,11 +153,13 @@ class HttpAgentStore implements AgentStore {
 // ─── Audit Store (HTTP → /api/audit) ──────────────────
 
 class HttpAuditStore implements AuditStore {
-  async log(): Promise<void> {
-    throw new Error(
-      "Client-side audit logging is not allowed in db mode. " +
-      "Audit events are written server-side by API handlers.",
-    );
+  async log(
+    event: Omit<AuditEventDTO, "id" | "timestamp">,
+  ): Promise<void> {
+    await api("/api/audit", {
+      method: "POST",
+      body: JSON.stringify(event),
+    });
   }
 
   async list(filters?: {

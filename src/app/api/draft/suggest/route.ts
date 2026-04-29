@@ -20,6 +20,7 @@ import {
   suggestClause,
 } from "@/lib/draft/ai/suggest";
 import type { TemplateId } from "@/lib/draft/types";
+import { createRequestId, logAuditEvent } from "@/lib/server-audit";
 
 export const runtime = "nodejs";
 
@@ -32,6 +33,7 @@ interface SuggestPayload {
 }
 
 export async function POST(req: NextRequest) {
+  const requestId = createRequestId("draft");
   const user = await getAuthUser();
   if (!user) return unauthorized();
 
@@ -60,6 +62,21 @@ export async function POST(req: NextRequest) {
       disabledClauses: payload.disabledClauses ?? [],
     });
 
+    await logAuditEvent({
+      action: "draft_ai_suggested",
+      targetType: "draft",
+      targetId: `${payload.templateId}:${payload.clauseId}`,
+      summary: `"${payload.templateId}" şablonunda AI madde önerisi üretildi`,
+      module: "draft",
+      requestId,
+      actorId: user.id,
+      metadata: {
+        templateId: payload.templateId,
+        clauseId: payload.clauseId,
+        disabledClauseCount: payload.disabledClauses?.length ?? 0,
+      },
+    });
+
     return NextResponse.json(result, {
       status: 200,
       headers: { "Cache-Control": "private, no-store" },
@@ -70,6 +87,17 @@ export async function POST(req: NextRequest) {
     }
     const message =
       err instanceof Error ? err.message : "AI önerisi üretilemedi.";
+    await logAuditEvent({
+      action: "api_error",
+      targetType: "draft",
+      targetId: `${payload.templateId}:${payload.clauseId}`,
+      summary: `Taslak AI önerisi üretilemedi: ${message}`,
+      module: "draft",
+      severity: "error",
+      requestId,
+      actorId: user.id,
+      metadata: { templateId: payload.templateId, clauseId: payload.clauseId, error: message },
+    });
     return NextResponse.json(
       { error: `Gemini hatası: ${message}` },
       { status: 502 },

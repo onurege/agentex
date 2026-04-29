@@ -15,6 +15,7 @@ import { buildDraftDocx } from "@/lib/draft/docx-export";
 import { renderDraft } from "@/lib/draft/renderer";
 import { getTemplate } from "@/lib/draft/templates/registry";
 import type { DraftSession, TemplateId } from "@/lib/draft/types";
+import { createRequestId, logAuditEvent } from "@/lib/server-audit";
 
 export const runtime = "nodejs";
 
@@ -27,6 +28,7 @@ interface ExportPayload {
 }
 
 export async function POST(req: NextRequest) {
+  const requestId = createRequestId("draft");
   const user = await getAuthUser();
   if (!user) return unauthorized();
 
@@ -73,6 +75,23 @@ export async function POST(req: NextRequest) {
   const baseName = sanitizeFileName(template.label);
   const outName = `${baseName}-${today}.docx`;
   const asciiName = outName.replace(/[^\x20-\x7E]/g, "_");
+
+  await logAuditEvent({
+    action: "draft_exported",
+    targetType: "draft",
+    targetId: session.id,
+    summary: `"${template.label}" sözleşme taslağı DOCX olarak indirildi`,
+    module: "draft",
+    requestId,
+    actorId: user.id,
+    metadata: {
+      templateId: payload.templateId,
+      clauseCount: clauses.length,
+      answeredQuestionCount: Object.keys(session.answers).length,
+      disabledClauseCount: session.disabledClauses.length,
+      fileName: outName,
+    },
+  });
 
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,

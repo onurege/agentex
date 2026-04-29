@@ -38,6 +38,9 @@ export async function POST(
       targetType: "agent",
       targetId: params.agentKey,
       summary: `${params.agentKey} prompt v${published.version}'e geri alındı`,
+      module: "control_room",
+      severity: "warning",
+      metadata: { agentKey: params.agentKey, version: published.version },
       actorId: user.id,
     },
   });

@@ -20,6 +20,10 @@ export function setCurrentActor(id: string | null): void {
   currentActorId = id;
 }
 
+export function getCurrentActor(): string | null {
+  return currentActorId;
+}
+
 export type AuditAction =
   | "cv_draft_saved"
   | "cv_published"
@@ -29,12 +33,62 @@ export type AuditAction =
   | "run_created"
   | "run_deleted"
   | "template_applied"
+  | "template_created"
+  | "template_deleted"
   | "role_changed"
+  | "user_created"
+  | "user_updated"
+  | "user_deleted"
   | "agent_created"
   | "agent_archived"
-  | "agent_restored";
+  | "agent_restored"
+  | "boardroom_started"
+  | "boardroom_completed"
+  | "boardroom_failed"
+  | "pipeline_stage_completed"
+  | "legal_research_started"
+  | "legal_research_completed"
+  | "legal_research_failed"
+  | "document_uploaded"
+  | "document_parsed"
+  | "document_parse_failed"
+  | "draft_started"
+  | "draft_ai_suggested"
+  | "draft_ai_explained"
+  | "draft_exported"
+  | "compare_started"
+  | "compare_completed"
+  | "compare_redline_exported"
+  | "signature_started"
+  | "signature_source_uploaded"
+  | "signature_crop_selected"
+  | "signature_compared"
+  | "signature_failed"
+  | "api_error";
 
-export type AuditTargetType = "agent" | "run" | "template" | "user";
+export type AuditTargetType =
+  | "agent"
+  | "run"
+  | "template"
+  | "user"
+  | "document"
+  | "draft"
+  | "compare"
+  | "signature"
+  | "pipeline"
+  | "mcp"
+  | "system";
+
+export type AuditModule =
+  | "control_room"
+  | "boardroom"
+  | "draft"
+  | "compare"
+  | "signatures"
+  | "admin"
+  | "system";
+
+export type AuditSeverity = "debug" | "info" | "warning" | "error" | "critical";
 
 export interface AuditEvent {
   id: string;
@@ -42,7 +96,14 @@ export interface AuditEvent {
   targetType: AuditTargetType;
   targetId: string;
   summary: string;
+  module?: AuditModule;
+  severity?: AuditSeverity;
+  metadata?: Record<string, unknown>;
+  requestId?: string;
   actor: string;
+  actorId?: string | null;
+  actorEmail?: string | null;
+  actorName?: string | null;
   timestamp: string;
 }
 
@@ -77,10 +138,15 @@ export function saveAuditEvent(params: {
   targetType: AuditTargetType;
   targetId: string;
   summary: string;
+  module?: AuditModule;
+  severity?: AuditSeverity;
+  metadata?: Record<string, unknown>;
+  requestId?: string;
   actor?: string;
+  forceLocal?: boolean;
 }): void {
   // Server writes audit in db mode; client call is a no-op to avoid duplicates.
-  if (getPersistenceMode() === "db") return;
+  if (getPersistenceMode() === "db" && !params.forceLocal) return;
 
   const event: AuditEvent = {
     id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -88,6 +154,10 @@ export function saveAuditEvent(params: {
     targetType: params.targetType,
     targetId: params.targetId,
     summary: params.summary,
+    module: params.module,
+    severity: params.severity ?? "info",
+    metadata: params.metadata,
+    requestId: params.requestId,
     actor: params.actor ?? currentActorId ?? "system",
     timestamp: new Date().toISOString(),
   };
@@ -124,10 +194,38 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   run_created: "Çalıştırma Oluşturuldu",
   run_deleted: "Çalıştırma Silindi",
   template_applied: "Şablon Uygulandı",
+  template_created: "Şablon Oluşturuldu",
+  template_deleted: "Şablon Silindi",
   role_changed: "Rol Değiştirildi",
+  user_created: "Kullanıcı Oluşturuldu",
+  user_updated: "Kullanıcı Güncellendi",
+  user_deleted: "Kullanıcı Silindi",
   agent_created: "Ajan Oluşturuldu",
   agent_archived: "Ajan Arşivlendi",
   agent_restored: "Ajan Geri Getirildi",
+  boardroom_started: "Kurul Başlatıldı",
+  boardroom_completed: "Kurul Tamamlandı",
+  boardroom_failed: "Kurul Hatası",
+  pipeline_stage_completed: "Pipeline Aşaması Kaydedildi",
+  legal_research_started: "Yargı Araştırması Başladı",
+  legal_research_completed: "Yargı Araştırması Tamamlandı",
+  legal_research_failed: "Yargı Araştırması Hatası",
+  document_uploaded: "Belge Yüklendi",
+  document_parsed: "Belge Ayrıştırıldı",
+  document_parse_failed: "Belge Ayrıştırma Hatası",
+  draft_started: "Taslak Başlatıldı",
+  draft_ai_suggested: "Taslak AI Önerisi",
+  draft_ai_explained: "Taslak AI Açıklaması",
+  draft_exported: "Taslak Dışa Aktarıldı",
+  compare_started: "Karşılaştırma Başlatıldı",
+  compare_completed: "Karşılaştırma Tamamlandı",
+  compare_redline_exported: "Karşılaştırma Redline Dışa Aktarıldı",
+  signature_started: "İmza Kontrolü Başlatıldı",
+  signature_source_uploaded: "İmza Kaynağı Yüklendi",
+  signature_crop_selected: "İmza Alanı Seçildi",
+  signature_compared: "İmza Karşılaştırıldı",
+  signature_failed: "İmza Kontrolü Hatası",
+  api_error: "API Hatası",
 };
 
 export const TARGET_TYPE_LABELS: Record<AuditTargetType, string> = {
@@ -135,4 +233,21 @@ export const TARGET_TYPE_LABELS: Record<AuditTargetType, string> = {
   run: "Çalıştırma",
   template: "Şablon",
   user: "Kullanıcı",
+  document: "Belge",
+  draft: "Taslak",
+  compare: "Karşılaştırma",
+  signature: "İmza",
+  pipeline: "Pipeline",
+  mcp: "MCP",
+  system: "Sistem",
+};
+
+export const MODULE_LABELS: Record<AuditModule, string> = {
+  control_room: "Control Room",
+  boardroom: "Agent Kurulu",
+  draft: "Sözleşme Taslağı",
+  compare: "Döküman Karşılaştırma",
+  signatures: "İmza Kontrolü",
+  admin: "Admin",
+  system: "Sistem",
 };

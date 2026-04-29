@@ -70,6 +70,9 @@ export async function PUT(
       targetType: "agent",
       targetId: params.agentKey,
       summary: `${params.agentKey} CV taslağı kaydedildi`,
+      module: "control_room",
+      severity: "info",
+      metadata: { agentKey: params.agentKey },
       actorId: user.id,
     },
   });

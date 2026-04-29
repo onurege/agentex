@@ -46,6 +46,9 @@ export async function POST(
       targetType: "agent",
       targetId: params.agentKey,
       summary: `Özel ajan "${profile.displayName ?? params.agentKey}" arşivlendi`,
+      module: "control_room",
+      severity: "warning",
+      metadata: { agentKey: params.agentKey },
       actorId: user.id,
     },
   });
