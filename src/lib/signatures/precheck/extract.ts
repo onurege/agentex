@@ -56,6 +56,72 @@ function isCompanyNameLine(line: string): boolean {
   return upperLetters.length / allLetters.length > 0.7;
 }
 
+// pdf.js extraction often returns each token on its own line, so a
+// reliable label-anchored extractor is needed for fields where the
+// value spans multiple "lines" in the extracted text. This helper
+// returns the slice between a starting label and the next field label
+// or end-of-document, leaving the slice content for callers to mine.
+function extractFieldBlock(
+  text: string,
+  startRe: RegExp,
+  endRe: RegExp,
+): string | null {
+  const start = text.match(startRe);
+  if (!start || start.index === undefined) return null;
+  const remainder = text.slice(start.index + start[0].length);
+  const end = remainder.match(endRe);
+  const endIdx = end && end.index !== undefined ? end.index : remainder.length;
+  return remainder.slice(0, endIdx);
+}
+
+// Field labels and surrounding noise that mark the END of a value block.
+// The set covers both the structured field labels at the top of an
+// imza sirküsü and the noter / form-specific anchors that interleave
+// with the address column in pdf.js' extraction order.
+const SIRKU_BLOCK_TERMINATORS =
+  /(YETKİNİN|TEMSİL\s+ŞEKLİ|TİCARET\s+SİCİL|VERGİ\s+DAİRESİ|ADRES|ÜNVANI|YEV\.?NO|TARİH\s*:|TARIH\s*:|ÜSKÜDAR\s+\d+|FATİH|SİTKİ|SITKI|İŞLEM|MEHMET|МЕНМЕТ|KARTI|İMZA\s+SİRKÜLERİ|NOTERLİĞİ|NOTERİ|RELUX|BAKANLIĞI|DAYANAK)/i;
+
+function extractSirkuCompanyName(text: string): string | null {
+  // Strategy 1: anchor on the ÜNVANI label, mine uppercase tokens until
+  // the next field label. This is the most reliable path when pdf.js
+  // splits each token onto its own line.
+  const block = extractFieldBlock(text, /ÜNVANI/i, SIRKU_BLOCK_TERMINATORS);
+  if (block !== null) {
+    const tokens = block.match(/[A-ZÇŞĞÜÖİ]{2,}/g);
+    if (tokens && tokens.length >= 2) {
+      return tokens.join(" ");
+    }
+  }
+  // Strategy 2: full-form regex on the whole text, requiring at least
+  // one prefix token before ANONİM / LİMİTED ŞİRKETİ. This catches
+  // documents that put the name on one line.
+  const re =
+    /([A-ZÇŞĞÜÖİ]{3,}(?:\s+[A-ZÇŞĞÜÖİ]{2,}){1,5})\s+(ANON[Iİ]M\s+[ŞS][Iİ]RKET[Iİ]|L[Iİ]M[Iİ]TED\s+[ŞS][Iİ]RKET[Iİ])/;
+  const m = text.match(re);
+  if (m) {
+    const prefix = m[1].replace(/\s+/g, " ").trim();
+    const suffix = m[2].replace(/\s+/g, " ").trim();
+    return `${prefix} ${suffix}`;
+  }
+  // Strategy 3 (last resort): line-based, may capture only the suffix.
+  const lines = text.split(/\n/).map((l) => l.trim());
+  return lines.find(isCompanyNameLine) ?? null;
+}
+
+function extractSirkuAddress(text: string): string | null {
+  // Anchor on ADRES, take everything until next field label or noise marker.
+  // The ADRES block in pdf.js extraction often interleaves with noter
+  // info ("ÜSKÜDAR 37. NOTERİ", "FATİH SULTAN MEHMET MAH") so the
+  // terminator regex stops the slice early at those markers too.
+  const block = extractFieldBlock(text, /ADRES\s*:?/i, SIRKU_BLOCK_TERMINATORS);
+  if (!block) return null;
+  const cleaned = block
+    .replace(/^[:\s]+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned || null;
+}
+
 function extractRepresentative(text: string): {
   name: string | null;
   id: string | null;
@@ -79,7 +145,7 @@ function extractRepresentative(text: string): {
 export function extractSirku(rawText: string): SirkuExtraction {
   const lines = rawText.split(/\n/).map((l) => l.trim());
 
-  const companyName = lines.find(isCompanyNameLine) ?? null;
+  const companyName = extractSirkuCompanyName(rawText);
 
   // Tax number — \b boundaries naturally exclude TC kimlik (11 digits),
   // phone numbers (12+ in dial-code form), and date subsequences (≤4).
@@ -95,14 +161,18 @@ export function extractSirku(rawText: string): SirkuExtraction {
 
   const mersisNumber = findFirst(/\b(\d{16})\b/, rawText);
 
-  // Address line — must reference both a Mahalle/Cadde anchor AND a "No:"
+  // Address — anchor on ADRES label, mine the slice between it and the
+  // next field label. Single-line check kept as a safety net for the
+  // (rare) case where the field block extractor returns nothing.
   const address =
+    extractSirkuAddress(rawText) ??
     lines.find(
       (l) =>
         /(Mahallesi|Mah\.)/i.test(l) &&
         /(Caddesi|Cadde|Cad\.)/i.test(l) &&
         /No\s*:/i.test(l),
-    ) ?? null;
+    ) ??
+    null;
 
   const authorityRaw = findFirst(/(Münferiden|Müştereken)/i, rawText);
   const authorityType: AuthorityType = authorityRaw
@@ -172,10 +242,20 @@ export function extractPetition(rawText: string): PetitionExtraction {
 
   const companyName = extractStampCompanyName(lines);
 
-  const petitionDateRaw = findFirst(
-    /(?:TARİH|TARIH)\s*:?\s*(\d{2}[./]\d{2}[./]\d{4})/i,
-    rawText,
-  );
+  // pdf.js sometimes emits the date glyphs *before* the TARIH label
+  // (the value column is rendered ahead of its label header on petitions
+  // with a top-right TARIH stamp). Try both orderings; fall back to the
+  // first plausible date in the document head if both fail.
+  const petitionDateRaw =
+    findFirst(
+      /(?:TARİH|TARIH)\s*:?\s*(\d{2}[./]\d{2}[./]\d{4})/i,
+      rawText,
+    ) ??
+    findFirst(
+      /(\d{2}[./]\d{2}[./]\d{4})\s*\n?\s*(?:TARİH|TARIH)\b/i,
+      rawText,
+    ) ??
+    findFirst(/^[\s\S]{0,200}?(\d{2}[./]\d{2}[./]\d{4})/, rawText);
   const petitionDate = petitionDateRaw ? trDateToIso(petitionDateRaw) : null;
 
   // Tax number — V.D / V D / VD with or without colon, allowing spaced
