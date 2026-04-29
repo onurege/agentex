@@ -25,3 +25,10 @@ declare module "next-auth" {
     active: boolean;
   }
 }
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    role?: UserRole;
+    active?: boolean;
+  }
+}

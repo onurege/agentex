@@ -14,8 +14,10 @@ model User {
   emailVerified DateTime?
   name          String?
   image         String?
+  passwordHash  String?
   role          String    @default("user") // user | authorized_user | super_admin
   active        Boolean   @default(true)
+  deletedAt     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -30,6 +32,7 @@ model User {
   auditLogs     AuditLog[]      @relation("AuditActor")
 
   @@index([email])
+  @@index([deletedAt])
 }
 
 // ─── NextAuth: Account (OAuth provider link) ──────────
@@ -372,11 +375,18 @@ model AuditLog {
   targetType String // "agent" | "run" | "template"
   targetId   String?
   summary    String
+  module     String? // boardroom | draft | compare | signatures | control_room | system
+  severity   String  @default("info") // debug | info | warning | error | critical
+  metadata   Json?
+  requestId  String?
   actorId    String?
   actor      User?    @relation("AuditActor", fields: [actorId], references: [id])
   timestamp  DateTime @default(now())
 
   @@index([actorId])
+  @@index([module])
+  @@index([severity])
+  @@index([requestId])
   @@index([targetType, targetId])
   @@index([action])
   @@index([timestamp])
