@@ -64,6 +64,9 @@ export type AuditAction =
   | "signature_crop_selected"
   | "signature_compared"
   | "signature_failed"
+  | "signature_precheck_passed"
+  | "signature_precheck_warned"
+  | "signature_precheck_failed"
   | "api_error";
 
 export type AuditTargetType =
@@ -225,6 +228,9 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   signature_crop_selected: "İmza Alanı Seçildi",
   signature_compared: "İmza Karşılaştırıldı",
   signature_failed: "İmza Kontrolü Hatası",
+  signature_precheck_passed: "İmza Ön Kontrolü Tutarlı",
+  signature_precheck_warned: "İmza Ön Kontrolünde Uyarı",
+  signature_precheck_failed: "İmza Ön Kontrolünde Kritik Uyumsuzluk",
   api_error: "API Hatası",
 };
 
