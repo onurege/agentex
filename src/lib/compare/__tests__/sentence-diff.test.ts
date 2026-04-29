@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sentenceDiff, splitSentences } from "../sentence-diff";
+import { sentenceDiff, splitSentences, wordLevelDiff } from "../sentence-diff";
 
 describe("splitSentences", () => {
   it("splits on standard sentence terminators", () => {
@@ -127,5 +127,81 @@ describe("sentenceDiff", () => {
     const r = sentenceDiff("", "");
     expect(r.v1).toEqual([]);
     expect(r.v2).toEqual([]);
+  });
+});
+
+describe("wordLevelDiff", () => {
+  it("flags only the differing word when sentences differ by punctuation", () => {
+    const ops = wordLevelDiff(
+      "Sözleşme aynı şartlarla uzar.",
+      "Sözleşme, aynı şartlarla uzar.",
+    );
+    const removed = ops.filter((w) => w.status === "removed").map((w) => w.text);
+    const added = ops.filter((w) => w.status === "added").map((w) => w.text);
+    expect(removed).toEqual(["Sözleşme"]);
+    expect(added).toEqual(["Sözleşme,"]);
+  });
+
+  it("preserves common words and reconstructs each side's original order under filtering", () => {
+    const ops = wordLevelDiff("a b c d", "a x c y");
+    // The merged op order is an LCS-internal interleave, but each side's
+    // visible content (common + own changes) must match its original.
+    const v1 = ops.filter((o) => o.status !== "added").map((o) => o.text);
+    const v2 = ops.filter((o) => o.status !== "removed").map((o) => o.text);
+    expect(v1).toEqual(["a", "b", "c", "d"]);
+    expect(v2).toEqual(["a", "x", "c", "y"]);
+  });
+
+  it("handles empty inputs symmetrically", () => {
+    expect(wordLevelDiff("", "")).toEqual([]);
+    expect(wordLevelDiff("", "a b")).toEqual([
+      { text: "a", status: "added" },
+      { text: "b", status: "added" },
+    ]);
+    expect(wordLevelDiff("a b", "")).toEqual([
+      { text: "a", status: "removed" },
+      { text: "b", status: "removed" },
+    ]);
+  });
+});
+
+describe("sentenceDiff — modified pair fusion", () => {
+  it("fuses near-identical sentences into a wordDiff pair instead of whole-sentence red+green", () => {
+    const r = sentenceDiff(
+      "Sözleşme aynı şartlarla 1 (bir) yıl süreyle kendiliğinden uzar.",
+      "Sözleşme, aynı şartlarla 1 (bir) yıl süreyle kendiliğinden uzar.",
+    );
+    expect(r.v1).toHaveLength(1);
+    expect(r.v2).toHaveLength(1);
+    expect(r.v1[0].status).toBe("removed");
+    expect(r.v2[0].status).toBe("added");
+    expect(r.v1[0].wordDiff).toBeDefined();
+    expect(r.v2[0].wordDiff).toBeDefined();
+    // Both sides should share the same wordDiff content
+    expect(r.v1[0].wordDiff).toEqual(r.v2[0].wordDiff);
+  });
+
+  it("keeps unrelated re-words as separate whole-sentence parts", () => {
+    const r = sentenceDiff(
+      "Eski formülasyon kullanılır.",
+      "Yeni formülasyon uygulanır.",
+    );
+    expect(r.v1[0].wordDiff).toBeUndefined();
+    expect(r.v2[0].wordDiff).toBeUndefined();
+  });
+
+  it("fuses one similar pair while leaving an unpaired removed sentence whole", () => {
+    const r = sentenceDiff(
+      "Şirket malları teslim eder. Tamamen kaldırılan bir cümle.",
+      "Şirket, malları teslim eder.",
+    );
+    // First sentence pair is similar enough to fuse
+    expect(r.v1[0].wordDiff).toBeDefined();
+    expect(r.v2[0].wordDiff).toBeDefined();
+    // Second v1 sentence has no v2 pair → whole-sentence removed
+    expect(r.v1).toHaveLength(2);
+    expect(r.v1[1].status).toBe("removed");
+    expect(r.v1[1].wordDiff).toBeUndefined();
+    expect(r.v2).toHaveLength(1);
   });
 });
