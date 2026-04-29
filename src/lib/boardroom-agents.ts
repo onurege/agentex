@@ -155,6 +155,33 @@ export const BOARDROOM_AGENTS: BoardroomAgent[] = [
     thinkingStyle:
       "Gerçekçi ve operasyon odaklı. Her taahhüdü 'bunu gerçekten yapabilir miyiz?' sorusuyla test eder ve sürdürülemez yükümlülükleri işaretler.",
   },
+  {
+    id: "case-law-researcher",
+    name: "Yargı Araştırma Uzmanı",
+    shortName: "Yargı",
+    title: "İçtihat ve Mevzuat Araştırmacısı",
+    avatar: "📚",
+    color: "agent-research",
+    characterLine:
+      "Yorum yapmaz; ilgili emsal karar ve madde referanslarını masaya getirir.",
+    description:
+      "Yargıtay, Danıştay, Anayasa Mahkemesi, KVKK, Rekabet Kurumu, KİK, BDDK, GİB özelgeleri ve benzeri hukuki kaynaklarda belgeyle ilişkili emsal karar, kurul kararı ve madde referansı bulur. Hukuki yorum veya risk değerlendirmesi yapmaz.",
+    expertise: [
+      "İçtihat araştırması",
+      "Mevzuat ve kurul kararları",
+      "Madde referansı çıkarımı",
+    ],
+    bio: "Kurulun araştırma memuru gibi çalışır. Belgedeki konu başlıklarından canlı kaynak sorguları üretir, dönen emsal kararları ve olası madde referanslarını listeler. Sonuç çıkarmaz, taraf tutmaz ve hukuki kanaat belirtmez.",
+    documentTypes: [
+      "Sözleşmeler",
+      "Uyuşmazlık dosyaları",
+      "Uyum raporları",
+      "Regülasyon analizleri",
+      "Dilekçe ve savunma taslakları",
+    ],
+    thinkingStyle:
+      "Kaynak odaklı ve nötr çalışır. Her önemli başlık için 'hangi emsal karar veya madde bulunabildi?' sorusunu yanıtlar; yorum yerine kaynak listesi üretir.",
+  },
 ];
 
 export const MIN_BOARD_SIZE = 2;

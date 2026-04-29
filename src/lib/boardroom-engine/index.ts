@@ -26,6 +26,7 @@ export type {
   RebuttalStance,
   ChiefPassResult,
 } from "./types";
+export type { LegalResearchResult, LegalResearchSource } from "../legal-research/types";
 
 export type { AgentPassObservation } from "./agent-pass";
 export type { DisagreementPassEntry } from "./disagreement-pass";

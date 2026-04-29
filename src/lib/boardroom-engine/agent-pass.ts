@@ -40,6 +40,7 @@ export function buildAgentPassPrompt(
   agent: BoardroomAnalysisInput["agents"][number],
   document: BoardroomAnalysisInput["document"],
   contextNotes: string,
+  legalResearchContext?: string,
 ): string {
   const docContent = document.sections.length > 0
     ? document.sections.map((s) => {
@@ -61,6 +62,52 @@ export function buildAgentPassPrompt(
   if (agent.outputRules) agentConfig.push(`Çıktı Kuralları: ${agent.outputRules}`);
   if (agent.guardrails) agentConfig.push(`Sınırlamalar: ${agent.guardrails}`);
 
+  if (agent.id === "case-law-researcher") {
+    return `Sen ${agent.name} rolünde bir araştırma ajanısın. Görevin değerlendirme yapmak değil, canlı Yargı MCP araştırmasından gelen emsal karar ve madde referanslarını düzenli biçimde listelemektir.
+
+## SENİN PROFİLİN
+
+${agentConfig.join("\n")}
+
+## BELGE
+
+Dosya: ${document.fileName}
+
+${docContent}
+
+${contextNotes ? `## BAĞLAM NOTU\n${contextNotes}` : ""}
+
+${legalResearchContext ? `${legalResearchContext}\n` : "## CANLI YARGI MCP KAYNAK LİSTESİ\nCanlı araştırma sonucu yok veya araştırma başarısız.\n"}
+
+## GÖREV
+
+Sadece kaynak bulgularını döndür. Hukuki yorum, risk analizi, tavsiye, kanaat, aksiyon önerisi veya redline/edit önerisi üretme.
+
+Aşağıdaki JSON yapısında yanıt ver:
+
+{
+  "observations": [
+    {
+      "message": "Bulunan emsal/madde kaydı. Örn: 'Yargıtay 11. HD, E. ..., K. ..., tarih ... — konu: cezai şart.' veya 'Madde referansı: TBK m. ...'. Kaynakta yoksa 'bulunamadı' de.",
+      "topic": "İlgili belge konusu veya arama sorgusu",
+      "sectionRef": "Varsa belge bölümü",
+      "severity": "info"
+    }
+  ],
+  "editProposals": [],
+  "keyConcern": "Yorum yok. Sadece bulunan kaynak sayısını veya kaynak bulunamadığını belirt.",
+  "suggestedAction": "Yorum yok. Gerekirse 'Bulunan kaynaklar diğer uzmanlarca değerlendirilmeli.' yaz.",
+  "overallPosition": "Yorum yok. Sadece araştırma kapsamını özetle."
+}
+
+KURALLAR:
+- En fazla 5 kaynak bulgusu yaz.
+- Kaynakta açıkça dönmeyen karar no, tarih, esas/karar no veya madde numarası yazma.
+- 'Benzer risk', 'geçersiz olabilir', 'uygun değildir', 'öneririm' gibi yorum cümleleri kurma.
+- editProposals her zaman boş array olmalı.
+- Sadece JSON döndür`;
+  }
+
   return `Sen ${agent.name} rolünde bir uzman AI ajanısın. Aşağıdaki belgeyi kendi uzmanlık alanından değerlendir.
 
 ## SENİN PROFİLİN
@@ -74,6 +121,8 @@ Dosya: ${document.fileName}
 ${docContent}
 
 ${contextNotes ? `## BAĞLAM NOTU\n${contextNotes}` : ""}
+
+${legalResearchContext ? `${legalResearchContext}\n` : ""}
 
 ## GÖREV
 
@@ -247,6 +296,8 @@ export function normalizeAgentPassResult(
     keyConcern: isString(raw.keyConcern) ? String(raw.keyConcern).slice(0, 200) : "Belirgin bir endişe tespit edilmedi.",
     suggestedAction: isString(raw.suggestedAction) ? String(raw.suggestedAction).slice(0, 200) : "Detaylı inceleme önerilir.",
     overallPosition: isString(raw.overallPosition) ? String(raw.overallPosition).slice(0, 300) : `${agent.shortName} değerlendirmesini tamamladı.`,
-    editProposals: normalizeEditProposals(raw.editProposals, agent.id),
+    editProposals: agent.id === "case-law-researcher"
+      ? []
+      : normalizeEditProposals(raw.editProposals, agent.id),
   };
 }

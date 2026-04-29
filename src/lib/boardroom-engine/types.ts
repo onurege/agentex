@@ -11,6 +11,7 @@ import type { DisagreementPassResult } from "./disagreement-pass";
 import type { RebuttalPassResult } from "./rebuttal-pass";
 import type { ChiefPassResult } from "./chief-pass";
 import type { ArbitratedEdit } from "../redline/types";
+import type { LegalResearchResult } from "../legal-research/types";
 
 // --- Re-export pass types for convenience ---
 export type { AgentPassResult } from "./agent-pass";
@@ -57,7 +58,7 @@ export interface AgentPerspective {
 // --- Pipeline stage metadata ---
 
 export interface PipelineStageInfo {
-  stage: "agent-pass" | "disagreement-pass" | "rebuttal-pass" | "chief-pass";
+  stage: "legal-research-pass" | "agent-pass" | "disagreement-pass" | "rebuttal-pass" | "chief-pass";
   status: "success" | "failed" | "skipped";
   durationMs: number;
   agentId?: string;
@@ -92,6 +93,7 @@ export interface BoardroomAnalysisResult {
 
   // Pipeline raw outputs (for richer saved runs)
   pipeline: {
+    legalResearchResult: LegalResearchResult | null;
     agentResults: AgentPassResult[];
     disagreementResult: DisagreementPassResult | null;
     rebuttalResult: RebuttalPassResult | null;
@@ -102,6 +104,7 @@ export interface BoardroomAnalysisResult {
   // Metadata
   analysisMode: "ai" | "ai-partial" | "fallback";
   modelInfo?: string;
+  legalResearch?: LegalResearchResult | null;
 
   // Faz 4: canonical redline-ready edits after chief arbitration +
   // hallucination guard. Empty when pipeline produces no edits or all

@@ -22,11 +22,18 @@ import type { DisagreementPassEntry } from "@/lib/boardroom-engine/disagreement-
 import { buildChiefPassPrompt, normalizeChiefPassResult, type ChiefPassResult } from "@/lib/boardroom-engine/chief-pass";
 import { matchClause, type MatchableParagraph } from "@/lib/redline/clause-matcher";
 import type { ArbitratedEdit } from "@/lib/redline/types";
+import { formatLegalResearchForPrompt, runLegalResearchPass, shouldRunLegalResearch } from "@/lib/legal-research/research-pass";
+import type { LegalResearchResult } from "@/lib/legal-research/types";
+import { getAuthUser, unauthorized } from "@/lib/api-auth";
+import { createRequestId, logAuditEvent } from "@/lib/server-audit";
 
 export async function POST(request: NextRequest) {
   const pipelineStart = Date.now();
+  const requestId = createRequestId("boardroom");
   const stages: PipelineStageInfo[] = [];
   const model = process.env.NEXT_PUBLIC_GEMINI_MODEL ?? "gemini-2.0-flash";
+  const user = await getAuthUser();
+  if (!user) return unauthorized();
 
   try {
     const body = await request.json();
@@ -39,6 +46,102 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await logAuditEvent({
+      action: "boardroom_started",
+      targetType: "pipeline",
+      targetId: input.document.fileName,
+      summary: `"${input.document.fileName}" için agent kurulu başlatıldı`,
+      module: "boardroom",
+      requestId,
+      actorId: user.id,
+      metadata: {
+        agentIds: input.agents.map((agent) => agent.id),
+        sectionCount: input.document.sections.length,
+        hasFullText: Boolean(input.document.fullText),
+      },
+    });
+
+    // ── Stage 0: Legal Research Pass (Yargı MCP, gated) ──
+
+    let legalResearchResult: LegalResearchResult | null = null;
+    let legalResearchContext = "";
+
+    if (shouldRunLegalResearch(input)) {
+      const researchStart = Date.now();
+      try {
+        await logAuditEvent({
+          action: "legal_research_started",
+          targetType: "mcp",
+          targetId: "yargi-mcp",
+          summary: "Yargı MCP canlı araştırması başlatıldı",
+          module: "boardroom",
+          requestId,
+          actorId: user.id,
+          metadata: { documentName: input.document.fileName },
+        });
+        legalResearchResult = await runLegalResearchPass(input);
+        legalResearchContext = formatLegalResearchForPrompt(legalResearchResult);
+        stages.push({
+          stage: "legal-research-pass",
+          status: legalResearchResult.sources.length > 0 ? "success" : "failed",
+          durationMs: Date.now() - researchStart,
+          agentId: "case-law-researcher",
+          error: legalResearchResult.sources.length > 0
+            ? undefined
+            : legalResearchResult.warnings.join(" | ") || "Yargı MCP kaynak sonucu üretmedi.",
+        });
+        await logAuditEvent({
+          action: legalResearchResult.sources.length > 0
+            ? "legal_research_completed"
+            : "legal_research_failed",
+          targetType: "mcp",
+          targetId: "yargi-mcp",
+          summary: `Yargı MCP araştırması ${legalResearchResult.sources.length} kaynak ile tamamlandı`,
+          module: "boardroom",
+          severity: legalResearchResult.sources.length > 0 ? "info" : "warning",
+          requestId,
+          actorId: user.id,
+          metadata: {
+            queries: legalResearchResult.queries,
+            sourceCount: legalResearchResult.sources.length,
+            warnings: legalResearchResult.warnings,
+          },
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        console.error("Legal research pass failed:", message);
+        legalResearchResult = {
+          enabled: true,
+          provider: "yargi-mcp",
+          endpoint: process.env.YARGI_MCP_URL?.trim() || "https://yargimcp.fastmcp.app/mcp",
+          queries: [],
+          sources: [],
+          warnings: [message],
+        };
+        legalResearchContext = formatLegalResearchForPrompt(legalResearchResult);
+        stages.push({
+          stage: "legal-research-pass",
+          status: "failed",
+          durationMs: Date.now() - researchStart,
+          agentId: "case-law-researcher",
+          error: message,
+        });
+        await logAuditEvent({
+          action: "legal_research_failed",
+          targetType: "mcp",
+          targetId: "yargi-mcp",
+          summary: `Yargı MCP araştırması başarısız: ${message}`,
+          module: "boardroom",
+          severity: "warning",
+          requestId,
+          actorId: user.id,
+          metadata: { error: message },
+        });
+      }
+    } else {
+      stages.push({ stage: "legal-research-pass", status: "skipped", durationMs: 0 });
+    }
+
     // ── Stage 1: Agent Pass (parallel per-agent calls) ──
 
     const agentResults: AgentPassResult[] = [];
@@ -46,7 +149,12 @@ export async function POST(request: NextRequest) {
     const agentPromises = input.agents.map(async (agent) => {
       const stageStart = Date.now();
       try {
-        const prompt = buildAgentPassPrompt(agent, input.document, input.contextNotes);
+        const prompt = buildAgentPassPrompt(
+          agent,
+          input.document,
+          input.contextNotes,
+          agent.id === "case-law-researcher" ? legalResearchContext : undefined,
+        );
         const raw = await generateJSON(prompt);
         const result = normalizeAgentPassResult(raw as Record<string, unknown>, agent);
         stages.push({ stage: "agent-pass", status: "success", durationMs: Date.now() - stageStart, agentId: agent.id });
@@ -275,6 +383,7 @@ export async function POST(request: NextRequest) {
       verdict,
       arbitratedEdits: guardedEdits,
       pipeline: {
+        legalResearchResult,
         agentResults,
         disagreementResult,
         rebuttalResult,
@@ -283,7 +392,27 @@ export async function POST(request: NextRequest) {
       },
       analysisMode,
       modelInfo: model,
+      legalResearch: legalResearchResult,
     };
+
+    await logAuditEvent({
+      action: "boardroom_completed",
+      targetType: "pipeline",
+      targetId: input.document.fileName,
+      summary: `"${input.document.fileName}" agent kurul analizi tamamlandı`,
+      module: "boardroom",
+      severity: analysisMode === "fallback" ? "warning" : "info",
+      requestId,
+      actorId: user.id,
+      metadata: {
+        analysisMode,
+        modelInfo: model,
+        durationMs: Date.now() - pipelineStart,
+        stageCount: stages.length,
+        failedStages: stages.filter((stage) => stage.status === "failed").length,
+        legalResearchSources: legalResearchResult?.sources.length ?? 0,
+      },
+    });
 
     return NextResponse.json({
       result,
@@ -292,6 +421,17 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal server error";
     console.error("Boardroom pipeline error:", message);
+    await logAuditEvent({
+      action: "boardroom_failed",
+      targetType: "pipeline",
+      targetId: "boardroom",
+      summary: `Agent kurul pipeline hatası: ${message}`,
+      module: "boardroom",
+      severity: "error",
+      requestId,
+      actorId: user.id,
+      metadata: { error: message, durationMs: Date.now() - pipelineStart },
+    });
     return NextResponse.json(
       { error: message, diagnostics: { durationMs: Date.now() - pipelineStart, stages } },
       { status: 500 },

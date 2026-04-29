@@ -204,8 +204,8 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
   {
     id: "legal-board",
     name: "Hukuk Kurulu",
-    description: "Sözleşme ve hukuki belgelerin sorumluluk, uyumluluk ve risk perspektifinden değerlendirilmesi.",
-    agentIds: ["legal-counsel", "finance-director", "tax-advisor"],
+    description: "Sözleşme ve hukuki belgelerin sorumluluk, uyumluluk, vergi ve içtihat dayanaklarıyla değerlendirilmesi.",
+    agentIds: ["legal-counsel", "case-law-researcher", "tax-advisor"],
     emoji: "⚖️",
   },
   {
@@ -219,8 +219,15 @@ export const BOARD_TEMPLATES: BoardTemplate[] = [
     id: "executive-board",
     name: "Yönetim Kurulu",
     description: "Kapsamlı değerlendirme — hukuki, mali, ticari ve operasyonel tüm açılardan analiz.",
-    agentIds: ["legal-counsel", "finance-director", "tax-advisor", "sales-director", "product-director"],
+    agentIds: ["legal-counsel", "case-law-researcher", "finance-director", "tax-advisor", "product-director"],
     emoji: "🏛️",
+  },
+  {
+    id: "research-backed-board",
+    name: "Dayanaklı Hukuk Kurulu",
+    description: "Hukuki değerlendirmeyi içtihat, kurum kararları ve resmi kaynak araştırmasıyla güçlendiren kurul.",
+    agentIds: ["legal-counsel", "case-law-researcher", "tax-advisor", "finance-director"],
+    emoji: "📚",
   },
   {
     id: "commercial-board",

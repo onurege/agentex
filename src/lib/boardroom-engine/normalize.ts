@@ -112,6 +112,7 @@ export function normalizeBoardroomAnalysis(
     rebuttals: [],
     arbitratedEdits: [],
     pipeline: {
+      legalResearchResult: null,
       agentResults: [],
       disagreementResult: null,
       rebuttalResult: null,
@@ -119,6 +120,7 @@ export function normalizeBoardroomAnalysis(
       stages: [],
     },
     analysisMode: "ai",
+    legalResearch: null,
   };
 }
 
