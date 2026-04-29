@@ -19,6 +19,7 @@ import type {
   SignatureSession,
   SignatureSource,
 } from "./types";
+import type { PrecheckResult } from "./precheck/types";
 import { EMPTY_SOURCE } from "./types";
 
 type Side = "contract" | "reference";
@@ -44,6 +45,10 @@ interface SignaturesState {
     },
   ): void;
   setResult(sessionId: string, result: ComparisonResult | null): void;
+  setPrecheckResult(
+    sessionId: string,
+    precheckResult: PrecheckResult | null,
+  ): void;
 
   /** İmza sirküsünden ek imza örneği ekle — id döner. */
   addReferenceSpecimen(
@@ -74,6 +79,7 @@ function emptySession(id: string): SignatureSession {
     reference: { ...EMPTY_SOURCE },
     referenceSpecimens: [],
     result: null,
+    precheckResult: null,
   };
 }
 
@@ -115,6 +121,7 @@ export const useSignaturesStore = create<SignaturesState>()(
                 [side]: source,
                 ...extra,
                 result: null,
+                precheckResult: null,
                 updatedAt: new Date().toISOString(),
               },
             },
@@ -177,6 +184,22 @@ export const useSignaturesStore = create<SignaturesState>()(
           };
         }),
 
+      setPrecheckResult: (sessionId, precheckResult) =>
+        set((s) => {
+          const session = s.sessions[sessionId];
+          if (!session) return s;
+          return {
+            sessions: {
+              ...s.sessions,
+              [sessionId]: {
+                ...session,
+                precheckResult,
+                updatedAt: new Date().toISOString(),
+              },
+            },
+          };
+        }),
+
       clearSource: (sessionId, side) =>
         set((s) => {
           const session = s.sessions[sessionId];
@@ -191,6 +214,7 @@ export const useSignaturesStore = create<SignaturesState>()(
                 [side]: { ...EMPTY_SOURCE },
                 ...extra,
                 result: null,
+                precheckResult: null,
                 updatedAt: new Date().toISOString(),
               },
             },

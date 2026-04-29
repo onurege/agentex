@@ -55,6 +55,7 @@ async function loadImage(file: File): Promise<SignatureSource> {
     signatureDataUrl: null,
     processedAspectRatio: null,
     inkDensity: null,
+    rawText: null,
   };
 }
 
@@ -116,6 +117,12 @@ async function loadPdf(file: File): Promise<SignatureSource> {
 
   const dataUrl = canvas.toDataURL("image/png");
 
+  // Text layer extraction across ALL pages — sirkü gazete eklerinde
+  // kritik alanlar (Mersis, ticaret sicili, yetki süresi) ilk sayfa
+  // dışına da düşebiliyor. Hata durumunda null döner; pre-check de
+  // sessizce atlar.
+  const rawText = await extractPdfText(pdf).catch(() => null);
+
   return {
     fileName: file.name,
     fileType: "pdf",
@@ -128,7 +135,39 @@ async function loadPdf(file: File): Promise<SignatureSource> {
     signatureDataUrl: null,
     processedAspectRatio: null,
     inkDensity: null,
+    rawText,
   };
+}
+
+async function extractPdfText(
+  pdf: Awaited<ReturnType<Awaited<ReturnType<typeof getPdfjs>>["getDocument"]>["promise"]>,
+): Promise<string> {
+  const pageTexts: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const lineMap = new Map<number, string[]>();
+    for (const item of content.items) {
+      if (typeof (item as { str?: unknown }).str !== "string") continue;
+      const str = (item as { str: string }).str;
+      // Group items by their y position so the visual line order survives;
+      // pdf.js returns items in scan order which is usually left-to-right
+      // but column-broken sirkü filings interleave label and value blocks.
+      const transform = (item as { transform?: number[] }).transform;
+      const y = transform ? Math.round(transform[5]) : 0;
+      const key = -y; // higher y = top of page; sort ascending → top first
+      const arr = lineMap.get(key) ?? [];
+      arr.push(str);
+      lineMap.set(key, arr);
+    }
+    const orderedKeys = Array.from(lineMap.keys()).sort((a, b) => a - b);
+    const pageText = orderedKeys
+      .map((k) => (lineMap.get(k) ?? []).join(" ").trim())
+      .filter(Boolean)
+      .join("\n");
+    pageTexts.push(pageText);
+  }
+  return pageTexts.join("\n\n");
 }
 
 // --- Helpers ---------------------------------------------------------------

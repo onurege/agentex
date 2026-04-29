@@ -28,6 +28,9 @@ export interface SignatureSource {
   processedAspectRatio: number | null;
   /** Maskedeki mürekkep yoğunluğu (0-1); kaşe/yazı gürültüsünü azaltan sinyal. */
   inkDensity: number | null;
+  /** PDF metin katmanından çıkarılan ham metin (tüm sayfalar). Görüntü
+   *  yüklemelerinde null. Pre-check (extract.ts) bunu kullanır. */
+  rawText: string | null;
 }
 
 export interface CropRegion {
@@ -98,6 +101,8 @@ export interface SignatureSession {
   referenceSpecimens: ReferenceSpecimen[];
   /** Tüm kırpımlar hazırsa hesaplanır. */
   result: ComparisonResult | null;
+  /** İki PDF de yüklendiğinde otomatik tetiklenen ön kontrol sonucu. */
+  precheckResult: import("./precheck/types").PrecheckResult | null;
 }
 
 export const EMPTY_SOURCE: SignatureSource = {
@@ -112,4 +117,5 @@ export const EMPTY_SOURCE: SignatureSource = {
   signatureDataUrl: null,
   processedAspectRatio: null,
   inkDensity: null,
+  rawText: null,
 };

@@ -17,6 +17,7 @@ import { SignatureSourceCard } from "@/components/signatures/SignatureSourceCard
 import { SignatureCropper } from "@/components/signatures/SignatureCropper";
 import { ReferenceSpecimensPanel } from "@/components/signatures/ReferenceSpecimensPanel";
 import { ComparisonResultCard } from "@/components/signatures/ComparisonResultCard";
+import { PrecheckResultCard } from "@/components/signatures/PrecheckResultCard";
 import { useSignaturesStore } from "@/lib/signatures/store";
 import { useHydrated } from "@/lib/draft/use-hydrated";
 import {
@@ -28,6 +29,7 @@ import type {
   SignatureMaskAnalysis,
 } from "@/lib/signatures/preprocess";
 import type { CropRegion } from "@/lib/signatures/types";
+import type { PrecheckResult } from "@/lib/signatures/precheck/types";
 import { logClientActivity } from "@/lib/client-activity";
 
 export default function SignaturesPage() {
@@ -42,6 +44,7 @@ export default function SignaturesPage() {
   const setCrop = useSignaturesStore((s) => s.setCrop);
   const setSignatureImage = useSignaturesStore((s) => s.setSignatureImage);
   const setResult = useSignaturesStore((s) => s.setResult);
+  const setPrecheckResult = useSignaturesStore((s) => s.setPrecheckResult);
   const addReferenceSpecimen = useSignaturesStore(
     (s) => s.addReferenceSpecimen,
   );
@@ -52,6 +55,86 @@ export default function SignaturesPage() {
   const [computing, setComputing] = useState(false);
   const [computeError, setComputeError] = useState<string | null>(null);
   const [computeNotice, setComputeNotice] = useState<string | null>(null);
+  const [precheckRunning, setPrecheckRunning] = useState(false);
+  const [precheckError, setPrecheckError] = useState<string | null>(null);
+
+  const sessionId = session?.id;
+  const contractText = session?.contract.rawText ?? null;
+  const referenceText = session?.reference.rawText ?? null;
+  const contractFileName = session?.contract.fileName ?? "";
+  const referenceFileName = session?.reference.fileName ?? "";
+  const precheckResult = session?.precheckResult ?? null;
+
+  // Reset transient precheck error whenever a new source is uploaded so
+  // the auto-trigger can attempt again on fresh inputs without looping
+  // on the previous failure.
+  useEffect(() => {
+    setPrecheckError(null);
+  }, [contractText, referenceText]);
+
+  // Precheck auto-trigger: when both PDFs have produced a text layer and
+  // we don't yet have a result, POST to /api/signatures/precheck. Image
+  // uploads (PNG/JPG) carry no text; precheck silently stays absent in
+  // that case. Source change clears precheckResult in the store and
+  // resets precheckError above, so a new upload re-runs this effect
+  // exactly once per source pair.
+  useEffect(() => {
+    if (!sessionId) return;
+    if (!contractText || !referenceText) return;
+    if (precheckResult) return;
+    if (precheckRunning) return;
+    if (precheckError) return;
+
+    let cancelled = false;
+    setPrecheckRunning(true);
+    setPrecheckError(null);
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/signatures/precheck", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sirkuText: referenceText,
+            petitionText: contractText,
+            sirkuFileName: referenceFileName,
+            petitionFileName: contractFileName,
+          }),
+        });
+        if (!response.ok) {
+          const text = await response.text().catch(() => response.statusText);
+          throw new Error(text || `HTTP ${response.status}`);
+        }
+        const data = (await response.json()) as { result: PrecheckResult };
+        if (!cancelled) {
+          setPrecheckResult(sessionId, data.result);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setPrecheckError(
+            err instanceof Error ? err.message : "Ön kontrol başarısız.",
+          );
+        }
+      } finally {
+        if (!cancelled) setPrecheckRunning(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    sessionId,
+    contractText,
+    referenceText,
+    contractFileName,
+    referenceFileName,
+    precheckResult,
+    precheckRunning,
+    precheckError,
+    setPrecheckResult,
+  ]);
 
   const runComparison = useCallback(async () => {
     if (!session) return;
@@ -314,6 +397,31 @@ export default function SignaturesPage() {
 
         {bothLoaded ? (
           <>
+            {precheckResult ? (
+              <PrecheckResultCard result={precheckResult} />
+            ) : precheckRunning ? (
+              <div className="rounded-xl border border-workspace-border bg-workspace-elevated p-4 mb-6 flex items-center gap-3 text-sm text-text-secondary">
+                <Loader2
+                  size={16}
+                  className="animate-spin text-accent-primary"
+                />
+                Şirket bilgileri kontrol ediliyor…
+              </div>
+            ) : precheckError ? (
+              <div className="rounded-xl border border-accent-warning/30 bg-accent-warning/[0.06] p-4 mb-6 text-sm text-text-secondary">
+                <span className="font-semibold text-accent-warning">
+                  Ön kontrol yapılamadı:
+                </span>{" "}
+                {precheckError}. İmza karşılaştırmasına devam edebilirsiniz.
+              </div>
+            ) : !contractText || !referenceText ? (
+              <div className="rounded-xl border border-dashed border-workspace-border bg-workspace-elevated p-4 mb-6 text-xs text-text-tertiary">
+                Görüntü dosyalarında metin katmanı bulunmadığı için şirket
+                bilgileri ön kontrolü atlandı. PDF yüklerseniz otomatik
+                tetiklenir.
+              </div>
+            ) : null}
+
             <section className="mb-6">
               <header className="mb-3">
                 <h2 className="font-display text-lg font-semibold text-text-primary">
