@@ -87,6 +87,55 @@ export class PdfParser implements DocumentParser {
 
       // If extraction quality is too poor, return stub-like result with warning
       if (quality === "none" || quality === "poor") {
+        const fallbackText = await extractTextFromPdfContentStreams(arrayBuffer);
+
+        if (fallbackText.length > 80) {
+          extractionNotes.push(
+            "pdf.js text layer was empty/poor; recovered text from PDF content streams",
+          );
+
+          const { text: fallbackNormalized, notes: fallbackNormNotes } =
+            normalizeExtractedText(fallbackText);
+          extractionNotes.push(...fallbackNormNotes);
+
+          const {
+            quality: fallbackQuality,
+            notes: fallbackQualityNotes,
+          } = assessExtractionQuality(fallbackNormalized, pageCount);
+          extractionNotes.push(...fallbackQualityNotes);
+
+          let sections: DocumentSection[] = segmentText(fallbackNormalized);
+          if (sections.length === 0) {
+            sections = splitIntoSections(fallbackNormalized);
+          }
+
+          extractionNotes.push(`${sections.length} sections detected`);
+
+          return {
+            id: generateDocumentId(),
+            source: {
+              type: "upload",
+              fileName: file.name,
+              fileType: file.type || "application/pdf",
+              fileSize: file.size,
+            },
+            fileName: file.name,
+            fileType: "pdf",
+            fileSize: file.size,
+            pageCount,
+            sections,
+            fullText: fallbackNormalized,
+            metadata: {
+              documentTypeGuess: null,
+              language: guessLanguage(fallbackNormalized),
+              parserUsed: "pdf",
+              extractionQuality: fallbackQuality,
+              extractionNotes,
+            },
+            parsedAt: new Date().toISOString(),
+          };
+        }
+
         extractionNotes.push(
           "Text extraction quality too low — possibly a scanned PDF",
         );
@@ -356,6 +405,139 @@ function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
     reader.onerror = () => reject(new Error("Failed to read file"));
     reader.readAsArrayBuffer(file);
   });
+}
+
+async function inflatePdfStream(data: Uint8Array): Promise<string | null> {
+  if (typeof DecompressionStream === "undefined") return null;
+
+  try {
+    const streamBytes = data.buffer.slice(
+      data.byteOffset,
+      data.byteOffset + data.byteLength,
+    ) as ArrayBuffer;
+    const stream = new Blob([streamBytes]).stream().pipeThrough(
+      new DecompressionStream("deflate"),
+    );
+    const inflated = await new Response(stream).arrayBuffer();
+    return decodePdfBytes(new Uint8Array(inflated));
+  } catch {
+    return null;
+  }
+}
+
+async function extractTextFromPdfContentStreams(
+  arrayBuffer: ArrayBuffer,
+): Promise<string> {
+  const bytes = new Uint8Array(arrayBuffer);
+  const raw = decodePdfBytes(bytes);
+  const streamTexts: string[] = [];
+  let searchFrom = 0;
+
+  while (true) {
+    const streamMarker = raw.indexOf("stream", searchFrom);
+    if (streamMarker === -1) break;
+
+    let streamStart = streamMarker + "stream".length;
+    if (raw[streamStart] === "\r" && raw[streamStart + 1] === "\n") {
+      streamStart += 2;
+    } else if (raw[streamStart] === "\n") {
+      streamStart += 1;
+    }
+
+    const endMarker = raw.indexOf("endstream", streamStart);
+    if (endMarker === -1) break;
+
+    let streamEnd = endMarker;
+    while (
+      streamEnd > streamStart &&
+      (bytes[streamEnd - 1] === 10 || bytes[streamEnd - 1] === 13)
+    ) {
+      streamEnd -= 1;
+    }
+
+    const inflated = await inflatePdfStream(bytes.slice(streamStart, streamEnd));
+    if (inflated && looksLikePdfTextContent(inflated)) {
+      const extracted = extractPdfTextOperators(inflated);
+      if (extracted.length > 0) streamTexts.push(extracted);
+    }
+
+    searchFrom = endMarker + "endstream".length;
+  }
+
+  return cleanRecoveredPdfText(streamTexts.join("\n\n"));
+}
+
+function looksLikePdfTextContent(stream: string): boolean {
+  return /\bBT\b/.test(stream) && /\bET\b/.test(stream) && /\bT[Jj]\b/.test(stream);
+}
+
+function extractPdfTextOperators(stream: string): string {
+  const chunks: string[] = [];
+  const literalBeforeTj = /\((?:\\.|[^\\()])*\)\s*Tj/g;
+  const tjArrays = /\[([\s\S]*?)\]\s*TJ/g;
+
+  let match: RegExpExecArray | null;
+  while ((match = literalBeforeTj.exec(stream)) !== null) {
+    chunks.push(decodePdfLiteral(match[0].replace(/\s*Tj$/, "")));
+  }
+
+  while ((match = tjArrays.exec(stream)) !== null) {
+    const arrayText = match[1] ?? "";
+    for (const literal of arrayText.match(/\((?:\\.|[^\\()])*\)/g) ?? []) {
+      chunks.push(decodePdfLiteral(literal));
+    }
+  }
+
+  return chunks.join(" ");
+}
+
+function decodePdfLiteral(literal: string): string {
+  let s = literal.trim();
+  if (s.startsWith("(") && s.endsWith(")")) {
+    s = s.slice(1, -1);
+  }
+
+  return s
+    .replace(/\\([nrtbf()\\])/g, (_m, ch: string) => {
+      const map: Record<string, string> = {
+        n: "\n",
+        r: "\r",
+        t: "\t",
+        b: "\b",
+        f: "\f",
+        "(": "(",
+        ")": ")",
+        "\\": "\\",
+      };
+      return map[ch] ?? ch;
+    })
+    .replace(/\\([0-7]{1,3})/g, (_m, oct: string) =>
+      String.fromCharCode(parseInt(oct, 8)),
+    );
+}
+
+function decodePdfBytes(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+}
+
+function fixTurkishPdfMojibake(text: string): string {
+  return text
+    .replace(/þ/g, "ş")
+    .replace(/Þ/g, "Ş")
+    .replace(/ý/g, "ı")
+    .replace(/Ý/g, "İ")
+    .replace(/ð/g, "ğ")
+    .replace(/Ð/g, "Ğ");
+}
+
+function cleanRecoveredPdfText(text: string): string {
+  return fixTurkishPdfMojibake(text)
+    .replace(/\u0000/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([,.;:])/g, "$1")
+    .replace(/([.!?])\s+/g, "$1\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function extractFileType(fileName: string): string {
