@@ -21,55 +21,31 @@ export function turkishUpper(input: string): string {
 // Token-based expansion sidesteps the JS regex \b mis-handling Turkish
 // letters: splitting on whitespace gives us natural word boundaries that
 // work with Ş, İ, Ç, Ğ, Ü, Ö without needing Unicode flags or lookarounds.
+//
+// Lookup keys are ASCII-folded so a stamp printing "ITH.IMR.A.S." (Latin I,
+// no diacritics — typical for low-resolution stamp prints in petitions)
+// resolves to the same expansion as a registry filing's typed "İTH.İHR.A.Ş.".
 
 const TWO_TOKEN_EXPANSIONS: Record<string, [string, string]> = {
-  "LTD ŞTİ": ["LİMİTED", "ŞİRKETİ"],
-  "LİMİTED ŞİRKETİ": ["LİMİTED", "ŞİRKETİ"],
-  "A Ş": ["ANONİM", "ŞİRKETİ"],
-  "ANONİM ŞİRKETİ": ["ANONİM", "ŞİRKETİ"],
+  "LTD STI": ["LİMİTED", "ŞİRKETİ"],
+  "LIMITED SIRKETI": ["LİMİTED", "ŞİRKETİ"],
+  "A S": ["ANONİM", "ŞİRKETİ"],
+  "ANONIM SIRKETI": ["ANONİM", "ŞİRKETİ"],
 };
 
 const SINGLE_TOKEN_EXPANSIONS: Record<string, string[]> = {
-  AŞ: ["ANONİM", "ŞİRKETİ"],
-  İTH: ["İTHALAT"],
-  İHR: ["İHRACAT"],
+  AS: ["ANONİM", "ŞİRKETİ"],
+  ITH: ["İTHALAT"],
+  IHR: ["İHRACAT"],
   SAN: ["SANAYİ"],
-  TİC: ["TİCARET"],
-  İNŞ: ["İNŞAAT"],
+  TIC: ["TİCARET"],
+  INS: ["İNŞAAT"],
   GID: ["GIDA"],
   TUR: ["TURİZM"],
-  MÜH: ["MÜHENDİSLİK"],
+  MUH: ["MÜHENDİSLİK"],
   OTO: ["OTOMOTİV"],
   TEKS: ["TEKSTİL"],
 };
-
-export function expandCompanyName(raw: string): string {
-  const cleaned = turkishUpper(raw)
-    .replace(/[.,]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const tokens = cleaned.split(" ").filter(Boolean);
-  const expanded: string[] = [];
-
-  for (let i = 0; i < tokens.length; i++) {
-    const two =
-      i + 1 < tokens.length ? `${tokens[i]} ${tokens[i + 1]}` : null;
-    if (two && TWO_TOKEN_EXPANSIONS[two]) {
-      expanded.push(...TWO_TOKEN_EXPANSIONS[two]);
-      i++;
-      continue;
-    }
-    const single = SINGLE_TOKEN_EXPANSIONS[tokens[i]];
-    if (single) {
-      expanded.push(...single);
-      continue;
-    }
-    expanded.push(tokens[i]);
-  }
-
-  return expanded.join(" ");
-}
 
 // Strips Turkish diacritics for case-insensitive token comparison. The
 // dot-i pair (İ vs I) and Latin-vs-Turkish letter shapes show up across
@@ -88,6 +64,37 @@ function asciiFold(input: string): string {
 
 function tokenize(s: string): string[] {
   return s.split(/\s+/).filter(Boolean);
+}
+
+export function expandCompanyName(raw: string): string {
+  const cleaned = turkishUpper(raw)
+    .replace(/[.,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const tokens = cleaned.split(" ").filter(Boolean);
+  const expanded: string[] = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    const twoKey =
+      i + 1 < tokens.length
+        ? asciiFold(`${tokens[i]} ${tokens[i + 1]}`)
+        : null;
+    if (twoKey && TWO_TOKEN_EXPANSIONS[twoKey]) {
+      expanded.push(...TWO_TOKEN_EXPANSIONS[twoKey]);
+      i++;
+      continue;
+    }
+    const singleKey = asciiFold(tokens[i]);
+    const single = SINGLE_TOKEN_EXPANSIONS[singleKey];
+    if (single) {
+      expanded.push(...single);
+      continue;
+    }
+    expanded.push(tokens[i]);
+  }
+
+  return expanded.join(" ");
 }
 
 // Token-overlap ratio scaled by the larger token set. Uses asciiFold so

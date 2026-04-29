@@ -49,6 +49,15 @@ describe("expandCompanyName", () => {
       "ACME LİMİTED ŞİRKETİ",
     );
   });
+
+  it("matches Latin-I stamp prints (ITH/IHR/AS) to Turkish forms", () => {
+    // Real-world artifact: low-resolution stamp prints render diacritics
+    // as plain ASCII, so the petition text says ITH where the registry
+    // says İTH. Both should resolve to the same canonical expansion.
+    expect(expandCompanyName("TURKISHCARE ITH IHR A S")).toBe(
+      "TURKISHCARE İTHALAT İHRACAT ANONİM ŞİRKETİ",
+    );
+  });
 });
 
 describe("companyNameSimilarity", () => {
