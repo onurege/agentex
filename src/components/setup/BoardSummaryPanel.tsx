@@ -17,7 +17,7 @@ export function BoardSummaryPanel() {
           Seçili Kurul
         </h2>
         <Link
-          href={SITE.paths.app}
+          href={SITE.paths.boardroomAgents}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[14px] font-medium
                      text-accent-primary hover:bg-accent-primary/10
                      transition-colors duration-150"
@@ -34,7 +34,7 @@ export function BoardSummaryPanel() {
         {count === 0 ? (
           <p className="text-base text-text-muted">
             Henüz ajan seçilmedi.{" "}
-            <Link href={SITE.paths.app} className="text-accent-primary hover:underline">
+            <Link href={SITE.paths.boardroomAgents} className="text-accent-primary hover:underline">
               Ajan seçimi yapın
             </Link>
           </p>

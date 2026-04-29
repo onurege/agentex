@@ -104,7 +104,7 @@ export function FindingCard({ finding }: { finding: CompareFinding }) {
               </p>
             ) : (
               <p className="text-sm italic text-text-muted">
-                — (bu maddede v1'de içerik yok)
+                — (bu maddede v1&apos;de içerik yok)
               </p>
             )}
           </aside>
@@ -118,7 +118,7 @@ export function FindingCard({ finding }: { finding: CompareFinding }) {
               </p>
             ) : (
               <p className="text-sm italic text-text-muted">
-                — (bu madde v2'de kaldırılmış)
+                — (bu madde v2&apos;de kaldırılmış)
               </p>
             )}
           </aside>

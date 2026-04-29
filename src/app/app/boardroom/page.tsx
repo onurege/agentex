@@ -72,7 +72,7 @@ export default function BoardroomPage() {
   // Route guards
   useEffect(() => {
     if (selectedAgentIds.length === 0) {
-      router.replace(SITE.paths.app);
+      router.replace(SITE.paths.boardroomAgents);
     } else if (!parsedDocument && !uploadedFile) {
       router.replace(SITE.paths.setup);
     }
@@ -275,7 +275,7 @@ export default function BoardroomPage() {
               className="absolute inset-0 pointer-events-none"
               style={{
                 background:
-                  "radial-gradient(ellipse at center, rgba(59,130,246,0.04) 0%, transparent 70%)",
+                  "radial-gradient(ellipse at center, rgb(var(--color-accent-info) / 0.08) 0%, transparent 70%)",
               }}
             />
 
@@ -327,10 +327,10 @@ export default function BoardroomPage() {
                   transformStyle: "preserve-3d",
                   borderRadius: "50% / 40%",
                   background:
-                    "radial-gradient(ellipse at 50% 30%, rgba(26,39,64,0.95) 0%, rgba(13,22,40,0.98) 70%)",
-                  border: "1px solid rgba(42,47,58,0.9)",
+                    "radial-gradient(ellipse at 50% 30%, rgb(var(--color-workspace-elevated) / 0.95) 0%, rgb(var(--color-workspace-surface) / 0.98) 70%)",
+                  border: "1px solid rgb(var(--color-workspace-border) / 0.9)",
                   boxShadow:
-                    "0 40px 80px -20px rgba(0,0,0,0.6), inset 0 0 60px rgba(59,130,246,0.08)",
+                    "0 40px 80px -20px rgb(40 0 100 / 0.24), inset 0 0 60px rgb(var(--color-accent-info) / 0.12)",
                 }}
               >
                 <DocumentFocusCard fileName={fileName} currentTopic={highlightedTopic} />

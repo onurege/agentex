@@ -61,7 +61,7 @@ export default function DraftTemplatePickerPage() {
 
         <header className="mb-8">
           <h1 className="font-display text-3xl font-bold text-text-primary mb-2 tracking-tight">
-            Şablon Seç
+            Sözleşme tipini seçin
           </h1>
           <p className="text-base text-text-secondary max-w-2xl">
             Hangi tür sözleşmeyi hazırlayacaksınız? Şablonu seçip soruları

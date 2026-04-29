@@ -16,6 +16,7 @@ import { ArrowLeft, ArrowRight, Zap } from "lucide-react";
 import { CompareLayout } from "@/components/compare/CompareLayout";
 import { CompareUploadBox } from "@/components/compare/CompareUploadBox";
 import { useCompareStore } from "@/lib/compare/store";
+import { logClientActivity } from "@/lib/client-activity";
 
 export default function NewCompareRunPage() {
   const router = useRouter();
@@ -32,8 +33,25 @@ export default function NewCompareRunPage() {
 
   const handleStart = useCallback(() => {
     const id = startCompareRun();
-    if (id) router.push(`/app/compare/${id}`);
-  }, [startCompareRun, router]);
+    if (id) {
+      void logClientActivity({
+        action: "compare_completed",
+        targetType: "compare",
+        targetId: id,
+        summary: "Döküman karşılaştırma çalışması oluşturuldu",
+        module: "compare",
+        metadata: {
+          v1FileName: pendingV1?.meta.fileName,
+          v2FileName: pendingV2?.meta.fileName,
+          v1SizeBytes: pendingV1?.meta.sizeBytes,
+          v2SizeBytes: pendingV2?.meta.sizeBytes,
+          v1SectionCount: pendingV1?.sections.length,
+          v2SectionCount: pendingV2?.sections.length,
+        },
+      });
+      router.push(`/app/compare/${id}`);
+    }
+  }, [startCompareRun, router, pendingV1, pendingV2]);
 
   return (
     <CompareLayout pageTitle="Yeni Karşılaştırma">

@@ -43,6 +43,7 @@ export function WizardShell({
 
   const steps = useMemo(() => deriveSteps(template), [template]);
   const [currentStep, setCurrentStep] = useState(1);
+  const answers = session?.answers ?? {};
 
   // Soru tanımındaki defaultValue'ları store'a seed et — kullanıcı
   // alana dokunmasa bile required check pass olsun. Sadece mount'ta
@@ -57,22 +58,20 @@ export function WizardShell({
     }
   }, [template, sessionId]);
 
-  if (!session) return null;
-
   const visibleQuestions = template.questions
     .filter((q) => q.step === currentStep)
-    .filter((q) => isQuestionVisible(q, session.answers));
+    .filter((q) => isQuestionVisible(q, answers));
 
   const groupName = visibleQuestions[0]?.group ?? "Sorular";
   const isLastStep = currentStep === steps.length;
 
   const canAdvance = visibleQuestions.every((q) => {
     if (!q.required) return true;
-    const v = session.answers[q.id];
+    const v = answers[q.id];
     return !isEmpty(v);
   });
 
-  const activeWarnings = evaluateWarnings(template, session.answers);
+  const activeWarnings = evaluateWarnings(template, answers);
 
   const sendToBoard = useCallback(
     async (agentIds: string[]) => {
@@ -137,6 +136,8 @@ export function WizardShell({
     },
     [session, template, router, setDraftStatus],
   );
+
+  if (!session) return null;
 
   return (
     <div className="space-y-6">

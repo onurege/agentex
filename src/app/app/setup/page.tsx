@@ -20,7 +20,7 @@ export default function BoardSetupPage() {
   // Redirect to Agent Gallery if no agents selected
   useEffect(() => {
     if (selectedAgentIds.length === 0) {
-      router.replace(SITE.paths.app);
+      router.replace(SITE.paths.boardroomAgents);
     }
   }, [selectedAgentIds.length, router]);
 
@@ -68,7 +68,7 @@ export default function BoardSetupPage() {
         <div className="flex items-center justify-between mt-8 pt-6 border-t border-workspace-border/30 max-w-5xl mx-auto w-full">
           {/* Back link */}
           <Link
-            href={SITE.paths.app}
+            href={SITE.paths.boardroomAgents}
             className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium
                        text-text-secondary hover:text-text-primary hover:bg-workspace-elevated
                        transition-colors duration-150 min-h-[48px]"

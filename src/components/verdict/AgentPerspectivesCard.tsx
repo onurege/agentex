@@ -26,7 +26,7 @@ export function AgentPerspectivesCard({ perspectives }: AgentPerspectivesCardPro
                 <p className="text-[16px] font-semibold text-text-primary">
                   {p.agentName}
                 </p>
-                <p className="text-[15px] text-text-secondary leading-relaxed mt-0.5">
+                <p className="text-[16px] text-text-secondary leading-8 mt-0.5">
                   {p.position}
                 </p>
               </div>

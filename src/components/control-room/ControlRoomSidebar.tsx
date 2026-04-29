@@ -137,7 +137,7 @@ export function ControlRoomSidebar() {
         })}
       </nav>
 
-      {/* Back to Stage + theme toggle */}
+      {/* Back to home + theme toggle */}
       <div className="px-3 py-4 border-t border-workspace-border/50 space-y-1">
         <Link
           href="/app"
@@ -148,7 +148,7 @@ export function ControlRoomSidebar() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          <span>Sahneye Dön</span>
+          <span>Ana Sayfaya Dön</span>
         </Link>
         <div className="flex items-center justify-between px-3 py-2">
           <span className="text-xs text-text-muted">Tema</span>

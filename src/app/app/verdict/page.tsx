@@ -28,7 +28,7 @@ export default function VerdictPage() {
   // Route guards
   useEffect(() => {
     if (selectedAgentIds.length === 0) {
-      router.replace(SITE.paths.app);
+      router.replace(SITE.paths.boardroomAgents);
     } else if (boardroomStatus !== "complete" || !verdictSeed) {
       router.replace(SITE.paths.boardroom);
     }

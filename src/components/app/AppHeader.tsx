@@ -11,7 +11,21 @@ import { ThemeToggle } from "./ThemeToggle";
 export function AppHeader() {
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const signingOutRef = useRef(false);
+
+  async function handleSignOut() {
+    if (signingOutRef.current) return;
+    signingOutRef.current = true;
+    setSigningOut(true);
+    setMenuOpen(false);
+    try {
+      await signOut({ redirect: false, callbackUrl: "/" });
+    } finally {
+      window.location.replace("/");
+    }
+  }
 
   // Close menu on outside click
   useEffect(() => {
@@ -62,7 +76,7 @@ export function AppHeader() {
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-56 bg-workspace-elevated border border-workspace-border rounded-lg shadow-medium overflow-hidden z-50">
+              <div className="absolute right-0 top-full mt-1 w-56 bg-workspace-elevated border border-workspace-border rounded-lg shadow-medium overflow-hidden z-[1000] pointer-events-auto">
                 {/* User info */}
                 <div className="px-3 py-2.5 border-b border-workspace-border">
                   <p className="text-xs font-medium text-text-primary truncate">
@@ -76,11 +90,17 @@ export function AppHeader() {
                 {/* Menu items */}
                 <div className="py-1">
                   <button
-                    onClick={() => signOut({ callbackUrl: "/" })}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-accent-danger hover:bg-workspace-surface transition-colors"
+                    disabled={signingOut}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      void handleSignOut();
+                    }}
+                    onClick={() => void handleSignOut()}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-accent-danger hover:bg-workspace-surface transition-colors disabled:opacity-60 disabled:cursor-wait"
                   >
                     <LogOut size={13} />
-                    Çıkış Yap
+                    {signingOut ? "Çıkış yapılıyor..." : "Çıkış Yap"}
                   </button>
                 </div>
               </div>

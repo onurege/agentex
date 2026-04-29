@@ -8,7 +8,7 @@
 // navı var. Boardroom'un step göstergesini barındırmaz.
 //
 // Header: BrandMark (left) + "Sıfırdan Sözleşme" + pageTitle
-//         sağda "Sahneye Dön" + theme toggle + user menu.
+//         sağda "Ana Sayfaya Dön" + theme toggle + user menu.
 // ============================================================
 
 import Link from "next/link";
@@ -57,7 +57,7 @@ export function DraftLayout({ pageTitle, children }: DraftLayoutProps) {
                        hover:bg-workspace-elevated transition-colors min-h-[40px]"
           >
             <ArrowLeft size={16} />
-            <span className="hidden sm:inline">Sahneye Dön</span>
+            <span className="hidden sm:inline">Ana Sayfaya Dön</span>
           </Link>
           <ThemeToggle />
           <UserMenu />

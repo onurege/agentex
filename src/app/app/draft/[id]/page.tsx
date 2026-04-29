@@ -48,7 +48,7 @@ export default function DraftWizardPage() {
 
   return (
     <DraftLayout pageTitle={meta.label}>
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="w-full px-5 py-8">
         <Link
           href="/app/draft"
           className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary mb-5 transition-colors"
@@ -72,12 +72,12 @@ export default function DraftWizardPage() {
               Bu şablon henüz hazır değil
             </p>
             <p className="text-sm text-text-secondary max-w-md mx-auto">
-              {meta.label} şablonu Faz 2'de eklenecek. Şu an yalnızca NDA
+              {meta.label} şablonu Faz 2&apos;de eklenecek. Şu an yalnızca NDA
               şablonu soru-cevap akışıyla kullanılabilir.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[440px_minmax(0,1fr)] gap-6">
             {/* Left — wizard */}
             <section className="rounded-xl border border-workspace-border bg-workspace-surface p-6 md:p-8 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
               <WizardShell template={template} sessionId={session.id} />

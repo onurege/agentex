@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { SITE } from "@/lib/config/site";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
-const fraunces = Fraunces({
+const interDisplay = Inter({
   subsets: ["latin", "latin-ext"],
   display: "swap",
   variable: "--font-display",
 });
 
-const inter = Inter({
+const interBody = Inter({
   subsets: ["latin", "latin-ext"],
   display: "swap",
   variable: "--font-body",
@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html
       lang="tr"
-      className={`${fraunces.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+      className={`${interDisplay.variable} ${interBody.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen font-sans">

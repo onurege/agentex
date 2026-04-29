@@ -13,14 +13,15 @@
 
 export const SITE = {
   // --- Brand Identity ---
-  name: "Consilera",
-  tagline: "Uzman AI kurulu ile belge değerlendirme",
+  name: "Consulera",
+  tagline: "İş süreç otomasyonu ve AI karar desteği",
   logo: "⬡", // hexagon — boardroom table symbol
 
   // --- Paths ---
   paths: {
     landing: "/",
     app: "/app",
+    boardroomAgents: "/app/boardroom/agents",
     setup: "/app/setup",
     boardroom: "/app/boardroom",
     verdict: "/app/verdict",
@@ -29,42 +30,42 @@ export const SITE = {
 
   // --- Metadata ---
   meta: {
-    title: "AI Boardroom — Uzman Yapay Zeka Kurulu",
+    title: "Consulera — İş Süreçleri İçin AI Karar Desteği",
     description:
-      "Belgelerinizi uzman AI kuruluna sunun. Ajanlar tartışsın, siz net karar ve aksiyonları alın.",
+      "Hukuki süreçlerinizi otomatikleştirin; sözleşme inceleme, belge karşılaştırma, imza kontrolü ve karar destek akışlarını tek platformda yönetin.",
   },
 
   // --- Landing Page Marketing Copy ---
   marketing: {
-    badge: "AI Boardroom",
-    headline: "Belgenizi Uzman AI Kuruluna Sunun",
+    badge: "İş Süreç Otomasyonu",
+    headline: "İş süreçleriniz için AI karar destek platformu",
     subheadline:
-      "Ajanlar belgeyi tartışsın, siz net karar ve aksiyonları alın.",
-    ctaPrimary: "Google ile Giriş Yap",
-    ctaSecondary: "Nasıl Çalışır?",
-    howItWorks: "Nasıl Çalışır?",
-    howItWorksSubtitle: "Dört adımda uzman kurul değerlendirmesi",
+      "Sözleşme inceleme, belge karşılaştırma, imza kontrolü, redline ve uzman ajan değerlendirmelerini tek izlenebilir süreçte birleştirin.",
+    ctaPrimary: "Giriş Yap",
+    ctaSecondary: "Akışı Gör",
+    howItWorks: "Hukuki karar süreci nasıl işler?",
+    howItWorksSubtitle: "Süreci başlatın, belgeyi analiz edin, karar desteğini kayıt altına alın",
     automationsTitle: "Uzman Ajanlar",
     automationsSubtitle:
-      "Her biri farklı uzmanlık alanına sahip AI kurul üyeleri",
+      "Her biri farklı hukuki ve ticari perspektife sahip AI uzmanları",
     whyTitle: "Neden {name}?",
-    whySubtitle: "Genel amaçlı chatbot değil, uzman kurul deneyimi",
-    finalCtaTitle: "Hemen Başlayın",
+    whySubtitle: "Tek seferlik chatbot yanıtı değil, hukuki süreçler için izlenebilir karar destek altyapısı",
+    finalCtaTitle: "Hukuki operasyonlarınızı karar destek akışına dönüştürün",
     finalCtaSubtitle:
-      "Google hesabınızla giriş yapın ve belgelerinizi uzman AI kuruluna sunun.",
+      "Kurumsal hesabınızla giriş yapın; sözleşme, imza ve belge versiyon süreçlerini AI destekli olarak yönetin.",
   },
 
   // --- Stage Flow Steps ---
   stageSteps: [
     { key: "agent-gallery", label: "Ajan Seçimi", index: 1 },
-    { key: "board-setup", label: "Kurul Hazırlığı", index: 2 },
+    { key: "board-setup", label: "Analiz Hazırlığı", index: 2 },
     { key: "boardroom", label: "Tartışma", index: 3 },
     { key: "verdict", label: "Karar", index: 4 },
   ] as const,
 
   // --- Export Branding ---
   export: {
-    footer: "{name} Kurul Değerlendirme Sistemi",
+    footer: "{name} Hukuki Süreç Karar Destek Sistemi",
   },
 } as const;
 

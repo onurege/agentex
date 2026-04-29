@@ -122,7 +122,7 @@ export function VerdictActionBar({ verdict, documentName }: VerdictActionBarProp
 
   const handleNewRun = useCallback(() => {
     resetFlow();
-    router.push(SITE.paths.app);
+    router.push(SITE.paths.boardroomAgents);
   }, [resetFlow, router]);
 
   return (

@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 // ============================================================
-// AGENTEX — Tailwind Tokens (Editorial B palette)
+// AGENTEX — Tailwind Tokens (Param Brand Concept palette)
 // ------------------------------------------------------------
 // All color tokens are CSS-variable-backed so every class
 // (bg-workspace-surface, text-text-primary, …) automatically
@@ -51,6 +51,7 @@ const config: Config = {
           tax: rgbVar("--color-agent-tax"),
           sales: rgbVar("--color-agent-sales"),
           product: rgbVar("--color-agent-product"),
+          research: rgbVar("--color-agent-research"),
         },
         pixel: {
           amber: rgbVar("--color-pixel-amber"),
@@ -63,7 +64,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-body)", "Inter", "system-ui", "sans-serif"],
-        display: ["var(--font-display)", "Georgia", "serif"],
+        display: ["var(--font-display)", "Inter", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "JetBrains Mono", "monospace"],
       },
       fontSize: {

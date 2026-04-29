@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useBoardroomFlowStore, type UploadStatus } from "@/lib/boardroom-flow-store";
+import { logClientActivity } from "@/lib/client-activity";
 
 const ACCEPTED_TYPES = [
   "application/pdf",
@@ -70,12 +71,20 @@ export function DocumentUploadPanel() {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleFile = useCallback(
-    (file: File) => {
+    async (file: File) => {
       const ext = "." + (file.name.split(".").pop()?.toLowerCase() ?? "");
       if (!ACCEPTED_EXTENSIONS.includes(ext)) {
         return; // silently ignore unsupported
       }
-      ingestFile(file);
+      void logClientActivity({
+        action: "document_uploaded",
+        targetType: "document",
+        targetId: file.name,
+        summary: `"${file.name}" kurul değerlendirmesi için yüklendi`,
+        module: "boardroom",
+        metadata: { fileName: file.name, fileSize: file.size, fileType: file.type },
+      });
+      await ingestFile(file);
     },
     [ingestFile],
   );

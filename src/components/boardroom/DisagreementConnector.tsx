@@ -117,11 +117,14 @@ export function DisagreementConnector({ stageRef, fromId, toId }: Props) {
         y1={endpoints.y1}
         x2={endpoints.x2}
         y2={endpoints.y2}
-        stroke="#F59E0B"
+        stroke="rgb(var(--color-accent-warning))"
         strokeWidth={2}
         strokeDasharray="8 6"
         strokeLinecap="round"
-        style={{ filter: "drop-shadow(0 0 6px rgba(245,158,11,0.5))" }}
+        style={{
+          filter:
+            "drop-shadow(0 0 6px rgb(var(--color-accent-warning) / 0.45))",
+        }}
       >
         <animate
           attributeName="stroke-dashoffset"

@@ -135,7 +135,7 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
         </button>
         {hasMissing && exportState !== "error" && (
           <p className="text-xs text-text-tertiary text-center">
-            Eksik alanlar DOCX'te{" "}
+            Eksik alanlar DOCX&apos;te{" "}
             <span className="text-accent-danger font-mono">[ … ]</span> olarak
             kalır; yine de indirebilirsiniz.
           </p>
@@ -148,7 +148,7 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
       </div>
 
       {hasMissing && (
-        <div className="rounded-lg border border-accent-warning/30 bg-accent-warning/[0.06] px-4 py-3 text-sm text-text-secondary">
+        <div className="rounded-lg border border-accent-warning/30 bg-accent-warning/[0.06] px-4 py-3 text-[15px] leading-relaxed text-text-secondary">
           <span className="font-semibold text-accent-warning">Eksik alan:</span>{" "}
           Bazı maddelerde doldurulmamış cevaplar var. Sözleşme metninde{" "}
           <span className="text-accent-danger font-mono">[ … ]</span> işaretleri
@@ -157,24 +157,24 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
       )}
 
       <article className="rounded-xl border border-workspace-border bg-workspace-surface shadow-sm">
-        <header className="px-6 py-5 border-b border-workspace-border text-center">
-          <h2 className="font-display text-xl font-bold tracking-wide text-text-primary uppercase">
+        <header className="px-7 py-6 border-b border-workspace-border text-center">
+          <h2 className="font-display text-2xl font-bold tracking-wide text-text-primary uppercase">
             {template.documentTitle}
           </h2>
         </header>
 
-        <div className="px-6 py-6 space-y-5">
+        <div className="px-7 py-7 space-y-7">
           {clauses.length === 0 ? (
-            <p className="text-sm text-text-tertiary text-center py-4">
+            <p className="text-base text-text-tertiary text-center py-4">
               Soruları doldurdukça madde metinleri burada şekillenecek.
             </p>
           ) : (
             clauses.map((c) => (
               <section key={c.clauseId}>
-                <h3 className="font-display text-sm font-semibold text-text-primary mb-1.5">
+                <h3 className="font-display text-[17px] font-semibold text-text-primary mb-2">
                   {c.number} — {c.title}
                 </h3>
-                <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
+                <p className="text-[16px] text-text-secondary leading-8 whitespace-pre-wrap">
                   {renderBodyWithHighlights(c.body)}
                 </p>
                 {aiEditableSet.has(c.clauseId) && (
@@ -195,10 +195,10 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
 
       {togglableClauses.length > 0 && (
         <section className="rounded-xl border border-workspace-border bg-workspace-elevated p-4">
-          <h3 className="font-display text-sm font-semibold text-text-primary mb-2">
+          <h3 className="font-display text-base font-semibold text-text-primary mb-2">
             Opsiyonel Maddeler
           </h3>
-          <p className="text-xs text-text-tertiary mb-3">
+          <p className="text-[14px] text-text-tertiary leading-relaxed mb-3">
             Bu maddeleri sözleşmeden çıkarabilirsiniz. Kritik koşullarda
             hukuki risk doğurabilir — kararsızsanız avukatınıza danışın.
           </p>
@@ -243,22 +243,27 @@ function triggerDownload(blob: Blob, fileName: string) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-const MISSING_RE = /(\[ [^\]]+ \])/g;
+const INLINE_MARKUP_RE = /(\[ [^\]]+ \]|\*\*[^*]+\*\*)/g;
 
 function renderBodyWithHighlights(body: string) {
-  const parts = body.split(MISSING_RE);
+  const parts = body.split(INLINE_MARKUP_RE);
   return parts.map((part, i) => {
     const key = `${i}-${part.slice(0, 12)}`;
-    if (MISSING_RE.test(part)) {
-      // Reset lastIndex for the shared /g regex — .test advances it.
-      MISSING_RE.lastIndex = 0;
+    if (/^\[ [^\]]+ \]$/.test(part)) {
       return (
         <span
           key={key}
-          className="inline-flex items-center px-1.5 py-0.5 rounded bg-accent-danger/10 text-accent-danger text-xs font-mono mx-0.5 align-middle"
+          className="inline-flex items-center px-1.5 py-0.5 rounded bg-accent-danger/10 text-accent-danger text-[13px] font-mono mx-0.5 align-middle"
         >
           {part}
         </span>
+      );
+    }
+    if (/^\*\*[^*]+\*\*$/.test(part)) {
+      return (
+        <strong key={key} className="font-semibold text-text-primary">
+          {part.slice(2, -2)}
+        </strong>
       );
     }
     return <Fragment key={key}>{part}</Fragment>;

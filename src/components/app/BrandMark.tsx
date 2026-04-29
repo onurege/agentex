@@ -1,11 +1,11 @@
 "use client";
 
 // ============================================================
-// Brand Mark — Univera logo + AI Boardroom product lockup
+// Brand Mark — Univera logo + Consulera product lockup
 // ============================================================
 //
 // Used in nav/header contexts across landing, stage, and panel.
-// Renders the Univera wordmark beside the product name "AI Boardroom"
+// Renders the Univera wordmark beside the product name from SITE config
 // separated by a subtle vertical rule. Two sizes: "sm" (navs, sidebars)
 // and "md" (landing hero/footer).
 // ============================================================
@@ -16,7 +16,7 @@ import { SITE } from "@/lib/config/site";
 interface BrandMarkProps {
   /** sm → nav chrome; md → hero/footer */
   size?: "sm" | "md";
-  /** Hide the "AI Boardroom" product text (logo only). */
+  /** Hide the product text (logo only). */
   hideProductName?: boolean;
   className?: string;
 }
