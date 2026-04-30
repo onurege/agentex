@@ -67,6 +67,10 @@ export type AuditAction =
   | "signature_precheck_passed"
   | "signature_precheck_warned"
   | "signature_precheck_failed"
+  | "regulations_scan_started"
+  | "regulations_scan_completed"
+  | "regulations_scan_failed"
+  | "regulation_pinned"
   | "api_error";
 
 export type AuditTargetType =
@@ -78,6 +82,7 @@ export type AuditTargetType =
   | "draft"
   | "compare"
   | "signature"
+  | "regulation"
   | "pipeline"
   | "mcp"
   | "system";
@@ -88,6 +93,7 @@ export type AuditModule =
   | "draft"
   | "compare"
   | "signatures"
+  | "regulations"
   | "admin"
   | "system";
 
@@ -231,6 +237,10 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   signature_precheck_passed: "İmza Ön Kontrolü Tutarlı",
   signature_precheck_warned: "İmza Ön Kontrolünde Uyarı",
   signature_precheck_failed: "İmza Ön Kontrolünde Kritik Uyumsuzluk",
+  regulations_scan_started: "Mevzuat Taraması Başladı",
+  regulations_scan_completed: "Mevzuat Taraması Tamamlandı",
+  regulations_scan_failed: "Mevzuat Taraması Hatası",
+  regulation_pinned: "Mevzuat İşaretlendi",
   api_error: "API Hatası",
 };
 
@@ -243,6 +253,7 @@ export const TARGET_TYPE_LABELS: Record<AuditTargetType, string> = {
   draft: "Taslak",
   compare: "Karşılaştırma",
   signature: "İmza",
+  regulation: "Mevzuat",
   pipeline: "Pipeline",
   mcp: "MCP",
   system: "Sistem",
@@ -254,6 +265,7 @@ export const MODULE_LABELS: Record<AuditModule, string> = {
   draft: "Sözleşme Taslağı",
   compare: "Döküman Karşılaştırma",
   signatures: "İmza Kontrolü",
+  regulations: "Mevzuat Takibi",
   admin: "Admin",
   system: "Sistem",
 };
