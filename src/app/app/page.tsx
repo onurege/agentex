@@ -17,7 +17,7 @@ import {
   LineChart,
   MoreVertical,
   PlusCircle,
-  Search,
+  ScrollText,
   Settings,
   Sparkles,
   WalletCards,
@@ -30,13 +30,6 @@ import { SITE } from "@/lib/config/site";
 import { getPermissions } from "@/lib/config/roles";
 import { getBoardroomRuns } from "@/lib/run-history";
 
-const advisorStatuses = [
-  { label: "Online", className: "bg-green-100 text-green-700" },
-  { label: "İncelemede", className: "bg-amber-100 text-amber-700" },
-  { label: "Aktif Görev", className: "bg-[#9defff] text-[#004f59]" },
-  { label: "Hazır", className: "bg-slate-100 text-slate-500" },
-] as const;
-
 const moduleCards = [
   {
     href: SITE.paths.boardroomAgents,
@@ -44,6 +37,7 @@ const moduleCards = [
     title: "Uzman Değerlendirme",
     subtitle: "Hukuk, finans, vergi ve ticari uzmanlardan oluşan AI kurulunu başlatın.",
     action: "Ajanları Seç",
+    status: { label: "Online", className: "bg-green-100 text-green-700" },
   },
   {
     href: "/app/draft",
@@ -51,6 +45,7 @@ const moduleCards = [
     title: "Sözleşme Taslağı",
     subtitle: "Notlar ve taraf bilgileriyle yeni sözleşme taslağı oluşturun.",
     action: "Taslak Başlat",
+    status: { label: "Hazır", className: "bg-slate-100 text-slate-500" },
   },
   {
     href: "/app/compare",
@@ -58,6 +53,7 @@ const moduleCards = [
     title: "Doküman Karşılaştır",
     subtitle: "Versiyonlar arasındaki farkları ve riskli değişiklikleri inceleyin.",
     action: "Karşılaştır",
+    status: { label: "Hazır", className: "bg-slate-100 text-slate-500" },
   },
   {
     href: "/app/signatures",
@@ -65,6 +61,16 @@ const moduleCards = [
     title: "İmza Kontrolü",
     subtitle: "Dokümandaki imzayı imza sirküleri ile karşılaştırın.",
     action: "İmza İncele",
+    status: { label: "Hazır", className: "bg-slate-100 text-slate-500" },
+  },
+  {
+    href: "/app/regulations",
+    icon: ScrollText,
+    title: "Mevzuat Takibi",
+    subtitle:
+      "Param Grubu'nu ilgilendiren güncel düzenlemeleri Yargı MCP ve Resmî Gazete'den izleyin.",
+    action: "Mevzuat Takibi",
+    status: { label: "Yeni", className: "bg-[#fef3c7] text-[#854d0e]" },
   },
 ] as const;
 
@@ -114,59 +120,45 @@ export default function AppDashboardPage() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#fef7ff] text-[#1d1a21]">
-      <aside className="group/sidebar fixed bottom-6 left-6 top-6 z-50 flex w-20 flex-col items-start gap-8 overflow-hidden rounded-[32px] border border-white/20 bg-white/60 py-8 shadow-[0_8px_32px_0_rgba(64,22,137,0.08)] backdrop-blur-xl transition-all duration-300 ease-out hover:w-64 hover:bg-white/80">
-        <Link href={SITE.paths.app} className="flex w-full items-center gap-3 px-5">
-          <span className="text-2xl font-black tracking-tighter text-[#401689]">C</span>
-          <span className="whitespace-nowrap text-sm font-extrabold uppercase tracking-[0.22em] text-[#401689] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
-            Consulera
-          </span>
+      <aside className="fixed inset-y-0 left-0 z-50 flex w-16 flex-col items-center border-r border-slate-200/70 bg-white/95 py-4">
+        <Link
+          href={SITE.paths.app}
+          className="mb-6 flex h-10 w-10 items-center justify-center rounded-xl bg-[#401689] text-white shadow-md shadow-[#401689]/20"
+          aria-label="Ana Sayfa"
+        >
+          <span className="font-black text-lg tracking-tight">C</span>
         </Link>
 
-        <nav className="flex flex-1 flex-col items-start gap-4 px-5">
-          <SideNavItem href={SITE.paths.app} active icon={Grid2X2} label="Ana Sayfa" />
-          <SideNavItem href={SITE.paths.boardroomAgents} icon={Gavel} label="Agents" />
-          <SideNavItem href="/app/draft" icon={FilePenLine} label="Sözleşme Taslağı" />
-          <SideNavItem href="/app/compare" icon={LineChart} label="Döküman Karşılaştır" />
-          <SideNavItem href="/app/signatures" icon={WalletCards} label="İmza Kontrolü" />
+        <nav className="flex flex-1 flex-col items-center gap-1.5">
+          <RailItem href={SITE.paths.app} active icon={Grid2X2} label="Ana Sayfa" />
+          <RailItem href={SITE.paths.boardroomAgents} icon={Gavel} label="Agents" />
+          <RailItem href="/app/draft" icon={FilePenLine} label="Sözleşme Taslağı" />
+          <RailItem href="/app/compare" icon={LineChart} label="Döküman Karşılaştır" />
+          <RailItem href="/app/signatures" icon={WalletCards} label="İmza Kontrolü" />
+          <RailItem href="/app/regulations" icon={ScrollText} label="Mevzuat Takibi" />
           {permissions.canAccessPanel && (
-            <SideNavItem href={SITE.paths.panel} icon={Settings} label="Panel" />
+            <>
+              <span className="my-2 h-px w-8 bg-slate-200" />
+              <RailItem href={SITE.paths.panel} icon={Settings} label="Panel" />
+            </>
           )}
         </nav>
 
-        <div className="mt-auto flex items-center gap-3 px-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[#401689]/20 bg-white text-lg">
+        <div className="mt-auto flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white">
           {session?.user?.image ? (
-            <img src={session.user.image} alt="" className="h-full w-full rounded-full object-cover p-0.5" />
+            <img
+              src={session.user.image}
+              alt=""
+              className="h-full w-full rounded-full object-cover"
+            />
           ) : (
-            <span>👤</span>
+            <span className="text-base">👤</span>
           )}
-          </div>
-          <div className="min-w-0 opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
-            <p className="truncate text-sm font-bold text-[#1d1a21]">
-              {session?.user?.name ?? "Kullanıcı"}
-            </p>
-            <p className="truncate text-xs text-[#494552]">
-              {session?.user?.email ?? "Aktif oturum"}
-            </p>
-          </div>
         </div>
       </aside>
 
-      <main className="ml-32 min-h-screen pb-20">
-        <header className="sticky top-0 z-40 flex h-20 items-center justify-between bg-white/40 px-12 backdrop-blur-md">
-          <div className="flex items-center gap-8">
-            <div className="group relative">
-              <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">
-                <Search size={20} />
-              </span>
-              <input
-                className="w-80 rounded-full border-none bg-white/50 py-2.5 pl-12 pr-6 text-sm font-semibold text-slate-700 outline-none transition-all placeholder:text-slate-500 focus:ring-2 focus:ring-[#006875]/50"
-                placeholder="Consulera içinde ara..."
-                type="text"
-              />
-            </div>
-          </div>
-
+      <main className="ml-16 min-h-screen pb-20">
+        <header className="sticky top-0 z-40 flex h-20 items-center justify-end bg-white/40 px-12 backdrop-blur-md">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
               <button className="p-2 transition-colors hover:text-[#280064]" aria-label="Bildirimler">
@@ -176,7 +168,7 @@ export default function AppDashboardPage() {
                 <Grid2X2 size={22} />
               </button>
               <span className="mx-2 h-4 w-px bg-slate-300" />
-              <Link href={SITE.paths.panel} className="transition-colors hover:text-[#280064]">
+              <Link href="/app/support" className="transition-colors hover:text-[#280064]">
                 Destek
               </Link>
             </div>
@@ -246,9 +238,9 @@ export default function AppDashboardPage() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-              {moduleCards.map((card, index) => (
-                <ModuleCard key={card.href} {...card} status={advisorStatuses[index]} />
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {moduleCards.map((card) => (
+                <ModuleCard key={card.href} {...card} />
               ))}
             </div>
           </section>
@@ -359,7 +351,7 @@ function ModuleCard({
   title: string;
   subtitle: string;
   action: string;
-  status: (typeof advisorStatuses)[number];
+  status: { label: string; className: string };
 }) {
   return (
     <Link href={href} className="group block">
@@ -385,7 +377,7 @@ function ModuleCard({
   );
 }
 
-function SideNavItem({
+function RailItem({
   href,
   icon: Icon,
   label,
@@ -400,14 +392,17 @@ function SideNavItem({
     <Link
       href={href}
       aria-label={label}
-      className={
+      className={`group/rail relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
         active
-          ? "flex h-12 w-12 items-center gap-3 rounded-2xl bg-[#401689] p-3 text-white shadow-lg shadow-purple-500/20 transition-all duration-200 ease-out group-hover/sidebar:w-52"
-          : "flex h-12 w-12 items-center gap-3 rounded-2xl p-3 text-slate-500 transition-all duration-300 hover:bg-slate-100/50 hover:text-[#401689] group-hover/sidebar:w-52"
-      }
+          ? "bg-[#401689] text-white shadow-md shadow-[#401689]/20"
+          : "text-slate-500 hover:bg-slate-100 hover:text-[#401689]"
+      }`}
     >
-      <Icon size={24} className="shrink-0" />
-      <span className="whitespace-nowrap text-sm font-bold opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
+      <Icon size={20} className="shrink-0" />
+      <span
+        className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/rail:opacity-100"
+        role="tooltip"
+      >
         {label}
       </span>
     </Link>

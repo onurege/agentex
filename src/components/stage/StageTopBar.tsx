@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { ArrowLeft } from "lucide-react";
 import { SITE } from "@/lib/config/site";
 import { getPermissions } from "@/lib/config/roles";
 import { UserMenu } from "@/components/app/UserMenu";
@@ -186,6 +187,14 @@ export function StageTopBar() {
             <span>Panel</span>
           </Link>
         )}
+
+        <Link
+          href={SITE.paths.app}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-workspace-elevated transition-colors min-h-[40px]"
+        >
+          <ArrowLeft size={16} />
+          <span className="hidden sm:inline">Ana Sayfaya Dön</span>
+        </Link>
 
         <ThemeToggle />
 
