@@ -31,9 +31,30 @@ model User {
   templates        BoardTemplate[]
   auditLogs        AuditLog[]       @relation("AuditActor")
   regulationReads  RegulationRead[]
+  supportTickets   SupportTicket[]
 
   @@index([email])
   @@index([deletedAt])
+}
+
+// Destek talepleri — kullanıcı self-serve gönderir, super_admin
+// /app/panel/support inbox'ında okur ve resolved işaretler.
+model SupportTicket {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  content     String    @db.Text
+  // "open" | "resolved"
+  status      String    @default("open")
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+  // resolved işleyen super_admin user.id'si
+  resolvedBy  String?
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // ─── NextAuth: Account (OAuth provider link) ──────────
@@ -421,6 +442,14 @@ model RegulationItem {
   // sayısı az (≤7) olduğu için index'siz kalır.
   topics       String[]
   priority     String   // "critical" | "high" | "medium" | "low"
+  // Yargı MCP karar durumu — KESİNLEŞTİ / KESİNLEŞMEDİ. Diğer
+  // kaynaklarda null kalır.
+  status       String?
+  // Alt-kaynak: bedesten, anayasa-norm, anayasa-bireysel, kvkk, bddk,
+  // gib, rekabet (yargi-mcp fan-out içinden) ya da resmi-gazete gibi
+  // birinci sınıf kaynaklar. Tüm itemlar için doldurulur, UI'da kaynak
+  // chip filtresi bunun üzerinden çalışır.
+  sourceTool   String?
   // Ham kaynak yanıtı (debug + future reclassify); 50KB cap
   // server tarafında uygulanır.
   rawPayload   Json?
@@ -431,6 +460,8 @@ model RegulationItem {
   @@index([publishedAt])
   @@index([priority])
   @@index([source])
+  @@index([status])
+  @@index([sourceTool])
 }
 
 model RegulationRead {
