@@ -82,7 +82,25 @@ async function fetchDay(d: Date): Promise<{
     if (!res.ok) {
       return { candidates: [], error: `${url} → HTTP ${res.status}` };
     }
-    html = await res.text();
+    // Resmî Gazete sayfaları Windows-1254 / ISO-8859-9 servis ediyor.
+    // res.text() default UTF-8 sayar ve Türkçe karakterleri bozar; biz
+    // önce header/meta charset'i tespit edip arrayBuffer'ı doğru decode
+    // ediyoruz.
+    const buffer = await res.arrayBuffer();
+    const ctype = res.headers.get("content-type") ?? "";
+    let charset = /charset=([^;\s]+)/i.exec(ctype)?.[1]?.toLowerCase();
+    if (!charset) {
+      const head = new TextDecoder("ascii").decode(buffer.slice(0, 2048));
+      charset = /charset=["']?([^"'>\s/]+)/i
+        .exec(head)?.[1]
+        ?.toLowerCase();
+    }
+    if (!charset || charset === "iso-8859-1") charset = "windows-1254";
+    try {
+      html = new TextDecoder(charset).decode(buffer);
+    } catch {
+      html = new TextDecoder("windows-1254").decode(buffer);
+    }
   } catch (err) {
     return {
       candidates: [],
@@ -109,6 +127,7 @@ async function fetchDay(d: Date): Promise<{
       summary: text,
       url: fullUrl,
       publishedAt: d,
+      sourceTool: "resmi-gazete",
       rawPayload: { dayUrl: url },
     });
   }

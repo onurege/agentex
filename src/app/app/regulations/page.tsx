@@ -10,6 +10,7 @@
 // link için param sync düşünülebilir.
 // ============================================================
 
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, RefreshCw, Search, ShieldAlert } from "lucide-react";
 import { RegulationsLayout } from "@/components/regulations/RegulationsLayout";
@@ -20,7 +21,20 @@ import type {
   RegulationFeedResponse,
   RegulationItemDTO,
   RegulationPriority,
+  RegulationSourceTool,
 } from "@/lib/regulations/types";
+import { SOURCE_TOOL_LABEL } from "@/lib/regulations/types";
+
+const SOURCE_TOOL_ORDER: RegulationSourceTool[] = [
+  "bedesten",
+  "anayasa-norm",
+  "anayasa-bireysel",
+  "kvkk",
+  "bddk",
+  "gib",
+  "rekabet",
+  "resmi-gazete",
+];
 
 const PRIORITY_LABEL: Record<RegulationPriority | "all", string> = {
   all: "Tüm öncelikler",
@@ -45,7 +59,11 @@ export default function RegulationsPage() {
   const [priorityFloor, setPriorityFloor] = useState<
     RegulationPriority | "all"
   >("all");
+  const [sourceTools, setSourceTools] = useState<Set<RegulationSourceTool>>(
+    () => new Set(),
+  );
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"all" | "pinned">("all");
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -55,12 +73,18 @@ export default function RegulationsPage() {
     if (priorityFloor !== "all") {
       params.set("priority", priorityFloor);
     }
+    if (sourceTools.size > 0) {
+      params.set("sourceTool", Array.from(sourceTools).join(","));
+    }
     if (search.trim()) {
       params.set("search", search.trim());
     }
+    if (viewMode === "pinned") {
+      params.set("pinned", "1");
+    }
     params.set("limit", "100");
     return params.toString();
-  }, [topicFilter, priorityFloor, search]);
+  }, [topicFilter, priorityFloor, sourceTools, search, viewMode]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -104,8 +128,11 @@ export default function RegulationsPage() {
       const r = data?.result;
       const added = r?.added ?? 0;
       const updated = r?.updated ?? 0;
+      const pruned = r?.pruned ?? 0;
+      const prunedLine =
+        pruned > 0 ? ` · ${pruned} eski kayıt temizlendi` : "";
       setScanNotice(
-        `Tarama tamam: ${added} yeni, ${updated} güncellendi.`,
+        `Tarama tamam: ${added} yeni, ${updated} güncellendi${prunedLine}.`,
       );
       await load();
     } catch (err) {
@@ -148,6 +175,15 @@ export default function RegulationsPage() {
     });
   };
 
+  const toggleSourceTool = (id: RegulationSourceTool) => {
+    setSourceTools((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const lastScannedLabel = lastScannedAt
     ? new Date(lastScannedAt).toLocaleString("tr-TR", {
         dateStyle: "short",
@@ -155,50 +191,41 @@ export default function RegulationsPage() {
       })
     : "henüz tarama yapılmadı";
 
+  const activeFilterCount =
+    (priorityFloor !== "all" ? 1 : 0) +
+    sourceTools.size +
+    (search.trim() ? 1 : 0);
+
+  const resetFilters = () => {
+    setPriorityFloor("all");
+    setSourceTools(new Set());
+    setSearch("");
+    setTopicFilter(new Set(DEFAULT_TOPIC_FILTER));
+  };
+
   return (
     <RegulationsLayout>
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        <header className="mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 text-xs font-mono font-semibold tracking-wider uppercase text-accent-primary bg-accent-primary/10 border border-accent-primary/20 rounded-full">
-            <ShieldAlert size={12} />
-            Mevzuat Takibi
-          </div>
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-text-primary mb-3 tracking-tight">
-            Param Grubu&apos;nu ilgilendiren güncel düzenlemeler
-          </h1>
-          <p className="text-base text-text-secondary max-w-2xl leading-relaxed">
-            E-para, ödeme hizmetleri, MASAK, KVKK, vergi ve şirket
-            mevzuatından son düzenlemeler. Otomatik takip değildir; her
-            yayım hukuki tavsiye değil bilgilendirme amaçlıdır.
-          </p>
-        </header>
-
-        <section className="rounded-xl border border-workspace-border bg-workspace-surface p-5 mb-6">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="text-sm text-text-secondary">
-              <span className="font-mono uppercase tracking-wide text-text-tertiary text-xs mr-2">
-                Son tarama
-              </span>
-              {lastScannedLabel}
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8 py-8">
+        {/* 12-kolon grid: solda sticky filtre raylı (üstten başlar),
+            sağda başlık + banner'lar + kart akışı */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <aside className="lg:col-span-3 lg:sticky lg:top-6 self-start space-y-5">
+            {/* Arama */}
+            <div className="relative">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+              />
+              <input
+                type="search"
+                placeholder="Başlık veya özet…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2.5 rounded-lg text-sm bg-workspace-surface border border-workspace-border text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
+              />
             </div>
-            <button
-              type="button"
-              onClick={() => void triggerScan()}
-              disabled={scanning}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-            >
-              {scanning ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <RefreshCw size={16} />
-              )}
-              {scanning ? "Taranıyor…" : "Şimdi Tara"}
-            </button>
-          </div>
 
-          <div className="space-y-4">
-            <TopicChips selected={topicFilter} onToggle={toggleTopic} />
-            <div className="flex flex-wrap items-center gap-3">
+            <FilterSection title="Öncelik">
               <select
                 value={priorityFloor}
                 onChange={(e) =>
@@ -206,7 +233,7 @@ export default function RegulationsPage() {
                     e.target.value as RegulationPriority | "all",
                   )
                 }
-                className="px-3 py-2 rounded-lg text-sm bg-workspace-surface border border-workspace-border text-text-secondary"
+                className="w-full px-3 py-2 rounded-lg text-sm bg-workspace-surface border border-workspace-border text-text-secondary"
               >
                 {(
                   Object.keys(PRIORITY_LABEL) as Array<
@@ -218,62 +245,180 @@ export default function RegulationsPage() {
                   </option>
                 ))}
               </select>
-              <div className="relative flex-1 min-w-[200px]">
-                <Search
-                  size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
-                />
-                <input
-                  type="search"
-                  placeholder="Başlık veya özet içinde ara…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-lg text-sm bg-workspace-surface border border-workspace-border text-text-primary placeholder:text-text-tertiary"
-                />
+            </FilterSection>
+
+            <FilterSection title="Kaynak">
+              <div className="flex flex-wrap gap-1.5">
+                {SOURCE_TOOL_ORDER.map((id) => {
+                  const active = sourceTools.has(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => toggleSourceTool(id)}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                        active
+                          ? "bg-accent-primary/10 border-accent-primary/40 text-accent-primary"
+                          : "bg-workspace-surface border-workspace-border text-text-secondary hover:text-text-primary"
+                      }`}
+                    >
+                      {SOURCE_TOOL_LABEL[id]}
+                    </button>
+                  );
+                })}
+              </div>
+            </FilterSection>
+
+            <FilterSection title="Konu">
+              <TopicChips selected={topicFilter} onToggle={toggleTopic} />
+            </FilterSection>
+
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="w-full px-3 py-2 rounded-lg text-xs font-medium text-text-tertiary hover:text-text-secondary border border-dashed border-workspace-border hover:bg-workspace-elevated/50 transition-colors"
+              >
+                Filtreleri sıfırla ({activeFilterCount})
+              </button>
+            )}
+          </aside>
+
+          <main className="lg:col-span-9 min-w-0">
+            <header className="flex flex-wrap items-start justify-between gap-4 mb-6">
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-3 text-[11px] font-mono font-semibold tracking-wider uppercase text-accent-primary bg-accent-primary/10 border border-accent-primary/20 rounded-full">
+                  <ShieldAlert size={12} />
+                  Mevzuat Takibi
+                </div>
+                <h1 className="font-display text-2xl md:text-3xl font-bold text-text-primary tracking-tight">
+                  Param Grubu&apos;nu ilgilendiren düzenlemeler
+                </h1>
+                <p className="text-sm text-text-tertiary mt-1">
+                  <span className="font-mono uppercase tracking-wide text-[11px] mr-2">
+                    Son tarama
+                  </span>
+                  {lastScannedLabel}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 p-1 rounded-lg bg-workspace-elevated/60 border border-workspace-border">
+                  {(["all", "pinned"] as const).map((v) => {
+                    const active = viewMode === v;
+                    return (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setViewMode(v)}
+                        className={`px-3.5 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          active
+                            ? "bg-workspace-surface text-text-primary shadow-sm"
+                            : "text-text-tertiary hover:text-text-secondary"
+                        }`}
+                      >
+                        {v === "all" ? "Hepsi" : "Sabitlediklerim"}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void triggerScan()}
+                  disabled={scanning}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm"
+                >
+                  {scanning ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={16} />
+                  )}
+                  {scanning ? "Taranıyor…" : "Şimdi Tara"}
+                </button>
+              </div>
+            </header>
+
+            {(scanNotice || error) && (
+              <div className="space-y-2 mb-4">
+                {scanNotice && (
+                  <div className="rounded-lg border border-accent-success/30 bg-accent-success/[0.06] px-4 py-3 text-sm text-accent-success">
+                    {scanNotice}
+                  </div>
+                )}
+                {error && (
+                  <div className="rounded-lg border border-accent-danger/30 bg-accent-danger/[0.06] px-4 py-3 text-sm text-accent-danger">
+                    {error}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm text-text-tertiary">
+                {loading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin" /> Yükleniyor…
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-text-primary font-medium">
+                      {total}
+                    </span>{" "}
+                    kayıt
+                    {total !== items.length && (
+                      <span className="text-text-tertiary">
+                        {" "}
+                        · {items.length} gösteriliyor
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
             </div>
-          </div>
-        </section>
 
-        {scanNotice && (
-          <div className="rounded-lg border border-accent-success/30 bg-accent-success/[0.06] px-4 py-3 mb-4 text-sm text-accent-success">
-            {scanNotice}
-          </div>
-        )}
-        {error && (
-          <div className="rounded-lg border border-accent-danger/30 bg-accent-danger/[0.06] px-4 py-3 mb-4 text-sm text-accent-danger">
-            {error}
-          </div>
-        )}
-
-        <div className="text-sm text-text-tertiary mb-3">
-          {loading
-            ? "Yükleniyor…"
-            : `${total} kayıt — ${items.length} gösteriliyor`}
-        </div>
-
-        <div className="space-y-3">
-          {items.length === 0 && !loading ? (
-            <div className="rounded-xl border border-dashed border-workspace-border bg-workspace-elevated p-8 text-center">
-              <p className="font-display text-lg font-semibold text-text-primary mb-1">
-                Henüz mevzuat kaydı yok
-              </p>
-              <p className="text-sm text-text-secondary">
-                &quot;Şimdi Tara&quot; butonuyla canlı kaynaklardan
-                ilgili mevzuat kayıtlarını çekin.
-              </p>
-            </div>
-          ) : (
-            items.map((item) => (
-              <RegulationCard
-                key={item.id}
-                item={item}
-                onTogglePinned={handleTogglePin}
-              />
-            ))
-          )}
+            {items.length === 0 && !loading ? (
+              <div className="rounded-xl border border-dashed border-workspace-border bg-workspace-elevated/40 p-12 text-center">
+                <p className="font-display text-lg font-semibold text-text-primary mb-1">
+                  {viewMode === "pinned"
+                    ? "Henüz sabitlenmiş kayıt yok"
+                    : "Henüz mevzuat kaydı yok"}
+                </p>
+                <p className="text-sm text-text-secondary max-w-md mx-auto">
+                  {viewMode === "pinned"
+                    ? "Listede karşılaştığın önemli kayıtları kart üzerindeki pin ikonuyla işaretle; burada toplanır."
+                    : '"Şimdi Tara" butonuyla canlı kaynaklardan ilgili mevzuat kayıtlarını çek.'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 auto-rows-fr">
+                {items.map((item) => (
+                  <RegulationCard
+                    key={item.id}
+                    item={item}
+                    onTogglePinned={handleTogglePin}
+                  />
+                ))}
+              </div>
+            )}
+          </main>
         </div>
       </div>
     </RegulationsLayout>
+  );
+}
+
+function FilterSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <div className="text-[11px] font-mono uppercase tracking-wider text-text-tertiary mb-2">
+        {title}
+      </div>
+      {children}
+    </div>
   );
 }

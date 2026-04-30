@@ -34,6 +34,27 @@ const SOURCES: SourceRunner[] = [
 
 const RAW_PAYLOAD_BYTES_CAP = 50_000;
 
+// Bir kayıt RETENTION_DAYS gün boyunca hiçbir scan tarafından
+// "yenilenmediyse" (fetchedAt güncellenmediyse) ve hiç kimse
+// pin'lemediyse silinir. Bu sayede:
+//   1) DB sınırsız büyümez,
+//   2) Canlı kaynaklar bir kaydı artık döndürmediğinde feed'den
+//      otomatik düşer.
+// Pin'li kayıtlar her zaman korunur — kullanıcı bilinçli olarak
+// işaretlemiş demektir.
+const RETENTION_DAYS = 30;
+
+async function pruneStaleItems(): Promise<number> {
+  const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const result = await prisma.regulationItem.deleteMany({
+    where: {
+      fetchedAt: { lt: cutoff },
+      reads: { none: { pinned: true } },
+    },
+  });
+  return result.count;
+}
+
 function trimRawPayload(raw: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
   if (raw === undefined || raw === null) return Prisma.JsonNull;
   try {
@@ -96,6 +117,8 @@ export async function runRegulationsScan(): Promise<ScanResult> {
           publishedAt: candidate.publishedAt,
           topics,
           priority,
+          status: candidate.status ?? null,
+          sourceTool: candidate.sourceTool ?? null,
           rawPayload: trimRawPayload(candidate.rawPayload),
         };
 
@@ -116,6 +139,8 @@ export async function runRegulationsScan(): Promise<ScanResult> {
               fetchedAt: new Date(),
               topics,
               priority,
+              status: candidate.status ?? null,
+              sourceTool: candidate.sourceTool ?? null,
             },
           });
           updated++;
@@ -137,6 +162,20 @@ export async function runRegulationsScan(): Promise<ScanResult> {
     });
   }
 
+  // Sadece en az bir kaynak başarıyla candidate döndürdüyse prune et.
+  // Tam outage durumunda (tüm kaynaklar hata) DB'yi yanlışlıkla
+  // boşaltmamak için bilerek atılıyor.
+  let pruned = 0;
+  const anySuccess = perSource.some((s) => s.fetched > 0);
+  if (anySuccess) {
+    try {
+      pruned = await pruneStaleItems();
+    } catch {
+      // Prune başarısız olursa scan akışını kesme; sadece sıfır say.
+      pruned = 0;
+    }
+  }
+
   const completedAt = new Date();
   return {
     startedAt: startedAt.toISOString(),
@@ -146,5 +185,6 @@ export async function runRegulationsScan(): Promise<ScanResult> {
     added,
     updated,
     skipped,
+    pruned,
   };
 }

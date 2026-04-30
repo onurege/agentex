@@ -4,6 +4,32 @@
 
 export type RegulationPriority = "critical" | "high" | "medium" | "low";
 
+/** Yargı MCP karar finalizasyon durumu. Diğer kaynaklarda null. */
+export type RegulationStatus = "kesinlesti" | "kesinlesmedi";
+
+/** Kaynak kategorisi — Yargı MCP alt-tool'ları + birinci sınıf
+ *  kaynaklar (resmi-gazete vs). UI chip filtresinde kullanılır. */
+export type RegulationSourceTool =
+  | "bedesten"
+  | "anayasa-norm"
+  | "anayasa-bireysel"
+  | "kvkk"
+  | "bddk"
+  | "gib"
+  | "rekabet"
+  | "resmi-gazete";
+
+export const SOURCE_TOOL_LABEL: Record<RegulationSourceTool, string> = {
+  bedesten: "Bedesten (Yargıtay/Danıştay)",
+  "anayasa-norm": "AYM — Norm Denetimi",
+  "anayasa-bireysel": "AYM — Bireysel Başvuru",
+  kvkk: "KVKK",
+  bddk: "BDDK",
+  gib: "GİB Özelge",
+  rekabet: "Rekabet Kurumu",
+  "resmi-gazete": "Resmî Gazete",
+};
+
 export type RegulationSourceId =
   | "yargi-mcp"
   | "resmi-gazete"
@@ -40,6 +66,12 @@ export interface RegulationItemDTO {
   fetchedAt: string;
   topics: string[];
   priority: RegulationPriority;
+  /** Yargı MCP karar durumu — `kesinlesti` / `kesinlesmedi`. Diğer
+   *  kaynaklarda null. */
+  status: RegulationStatus | null;
+  /** Kaynak kategorisi (bedesten, anayasa-bireysel, kvkk, ...). UI
+   *  filtresinin grup anahtarı. */
+  sourceTool: RegulationSourceTool | null;
   /** Per-user state surfaced when the API joins RegulationRead — null
    *  on raw queries that don't include the join. */
   readAt?: string | null;
@@ -65,6 +97,8 @@ export interface ScannedRegulationCandidate {
   bodyExcerpt?: string;
   url?: string;
   publishedAt: Date;
+  status?: RegulationStatus | null;
+  sourceTool?: RegulationSourceTool | null;
   rawPayload?: unknown;
 }
 
@@ -84,4 +118,6 @@ export interface ScanResult {
   added: number;
   updated: number;
   skipped: number;
+  /** Bu scan'de retention sınırını geçtiği için silinen kayıt sayısı. */
+  pruned: number;
 }

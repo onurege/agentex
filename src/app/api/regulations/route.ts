@@ -12,7 +12,26 @@ import type {
   RegulationFeedResponse,
   RegulationItemDTO,
   RegulationPriority,
+  RegulationSourceTool,
+  RegulationStatus,
 } from "@/lib/regulations/types";
+
+const VALID_STATUSES: ReadonlySet<RegulationStatus> = new Set<RegulationStatus>([
+  "kesinlesti",
+  "kesinlesmedi",
+]);
+
+const VALID_SOURCE_TOOLS: ReadonlySet<RegulationSourceTool> =
+  new Set<RegulationSourceTool>([
+    "bedesten",
+    "anayasa-norm",
+    "anayasa-bireysel",
+    "kvkk",
+    "bddk",
+    "gib",
+    "rekabet",
+    "resmi-gazete",
+  ]);
 
 const VALID_PRIORITIES: ReadonlySet<RegulationPriority> = new Set<RegulationPriority>([
   "critical",
@@ -37,6 +56,9 @@ export async function GET(req: NextRequest) {
   const priorityParam = url.searchParams.get("priority");
   const sinceParam = url.searchParams.get("since");
   const searchParam = url.searchParams.get("search");
+  const statusParam = url.searchParams.get("status");
+  const sourceToolParam = url.searchParams.get("sourceTool");
+  const pinnedOnly = url.searchParams.get("pinned") === "1";
   const limit = Math.min(
     Math.max(Number(url.searchParams.get("limit") ?? 50), 1),
     100,
@@ -62,11 +84,40 @@ export async function GET(req: NextRequest) {
 
   const sinceDate = sinceParam ? new Date(sinceParam) : null;
 
+  // status: virgülle ayrılmış liste (örn. "kesinlesti,kesinlesmedi") veya
+  // tek değer. Boş/invalid → filtre uygulanmaz.
+  const statusFilter = statusParam
+    ? statusParam
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s): s is RegulationStatus =>
+          VALID_STATUSES.has(s as RegulationStatus),
+        )
+    : null;
+
+  const sourceToolFilter = sourceToolParam
+    ? sourceToolParam
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s): s is RegulationSourceTool =>
+          VALID_SOURCE_TOOLS.has(s as RegulationSourceTool),
+        )
+    : null;
+
   const where: import("@prisma/client").Prisma.RegulationItemWhereInput = {
     ...(topicFilter && topicFilter.length > 0
       ? { topics: { hasSome: topicFilter } }
       : {}),
     ...(allowedPriorities ? { priority: { in: allowedPriorities } } : {}),
+    ...(statusFilter && statusFilter.length > 0
+      ? { status: { in: statusFilter } }
+      : {}),
+    ...(sourceToolFilter && sourceToolFilter.length > 0
+      ? { sourceTool: { in: sourceToolFilter } }
+      : {}),
+    ...(pinnedOnly
+      ? { reads: { some: { userId: user.id, pinned: true } } }
+      : {}),
     ...(sinceDate && !Number.isNaN(sinceDate.getTime())
       ? { publishedAt: { gte: sinceDate } }
       : {}),
@@ -114,6 +165,9 @@ export async function GET(req: NextRequest) {
       fetchedAt: item.fetchedAt.toISOString(),
       topics: item.topics,
       priority: item.priority as RegulationPriority,
+      status: (item.status as RegulationStatus | null) ?? null,
+      sourceTool:
+        (item.sourceTool as RegulationSourceTool | null) ?? null,
       readAt: read?.readAt ? read.readAt.toISOString() : null,
       pinned: Boolean(read?.pinned),
     };

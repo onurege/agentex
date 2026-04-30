@@ -1,11 +1,29 @@
 "use client";
 
-import { ExternalLink, Pin, PinOff } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, ExternalLink, Pin, PinOff } from "lucide-react";
 import { TOPIC_BY_ID } from "@/lib/regulations/topics";
 import type {
   RegulationItemDTO,
   RegulationPriority,
+  RegulationStatus,
 } from "@/lib/regulations/types";
+import { SOURCE_TOOL_LABEL } from "@/lib/regulations/types";
+
+const STATUS_BADGE: Record<
+  RegulationStatus,
+  { label: string; className: string }
+> = {
+  kesinlesti: {
+    label: "Kesinleşti",
+    className:
+      "bg-accent-success/10 text-accent-success border-accent-success/30",
+  },
+  kesinlesmedi: {
+    label: "Kesinleşmedi",
+    className: "bg-accent-warning/10 text-accent-warning border-accent-warning/30",
+  },
+};
 
 interface Props {
   item: RegulationItemDTO;
@@ -62,11 +80,14 @@ function formatDate(iso: string): string {
 
 export function RegulationCard({ item, onTogglePinned }: Props) {
   const badge = PRIORITY_BADGE[item.priority];
-  const sourceLabel = SOURCE_LABEL[item.source] ?? item.source;
+  const sourceLabel = item.sourceTool
+    ? SOURCE_TOOL_LABEL[item.sourceTool]
+    : (SOURCE_LABEL[item.source] ?? item.source);
   const isPinned = Boolean(item.pinned);
+  const statusBadge = item.status ? STATUS_BADGE[item.status] : null;
 
   return (
-    <article className="rounded-xl border border-workspace-border bg-workspace-surface p-5 shadow-soft hover:shadow-medium transition-shadow">
+    <article className="h-full flex flex-col rounded-xl border border-workspace-border bg-workspace-surface p-5 shadow-soft hover:shadow-medium transition-shadow">
       <header className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -76,6 +97,13 @@ export function RegulationCard({ item, onTogglePinned }: Props) {
               <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
               {badge.label}
             </span>
+            {statusBadge && (
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-semibold ${statusBadge.className}`}
+              >
+                {statusBadge.label}
+              </span>
+            )}
             {item.topics.map((topicId) => {
               const topic = TOPIC_BY_ID[topicId];
               if (!topic) return null;
@@ -107,11 +135,13 @@ export function RegulationCard({ item, onTogglePinned }: Props) {
         </button>
       </header>
 
-      {item.summary && (
-        <p className="text-sm text-text-secondary leading-relaxed line-clamp-3 mb-3">
-          {item.summary}
-        </p>
-      )}
+      <div className="flex-1 mb-3">
+        {item.summary && (
+          <p className="text-sm text-text-secondary leading-relaxed line-clamp-3">
+            {item.summary}
+          </p>
+        )}
+      </div>
 
       <footer className="flex items-center justify-between gap-3 pt-3 border-t border-workspace-border/60 text-xs text-text-tertiary">
         <span className="inline-flex items-center gap-2">
@@ -119,15 +149,24 @@ export function RegulationCard({ item, onTogglePinned }: Props) {
           <span aria-hidden>·</span>
           <span>{sourceLabel}</span>
         </span>
-        {item.url && (
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary transition-colors"
+        {item.source === "yargi-mcp" ? (
+          <Link
+            href={`/app/regulations/${item.id}`}
+            className="inline-flex items-center gap-1 text-accent-primary hover:underline transition-colors"
           >
-            Kaynağa Git <ExternalLink size={12} />
-          </a>
+            Detayı Aç <ArrowUpRight size={12} />
+          </Link>
+        ) : (
+          item.url && (
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Kaynağa Git <ExternalLink size={12} />
+            </a>
+          )
         )}
       </footer>
     </article>
