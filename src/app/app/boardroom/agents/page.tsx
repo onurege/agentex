@@ -8,7 +8,6 @@ import { SelectedBoardBar } from "@/components/agents/SelectedBoardBar";
 import { MAX_BOARD_SIZE } from "@/lib/boardroom-agents";
 import { useBoardroomFlowStore } from "@/lib/boardroom-flow-store";
 import { useStageAgents, type StageAgent } from "@/lib/stage-agents";
-import { MigrationBanner } from "@/components/app/MigrationBanner";
 import { StaggerChildren, StaggerItem } from "@/lib/motion/primitives";
 
 export default function AgentGalleryPage() {
@@ -27,11 +26,6 @@ export default function AgentGalleryPage() {
     <StageLayout currentStep="agent-gallery">
       {/* Scrollable content with bottom padding for the fixed bar */}
       <div className="flex flex-col items-center px-6 py-10 pb-32">
-        {/* Migration banner — only renders when db mode + unmigrated local data */}
-        <div className="w-full max-w-[1080px]">
-          <MigrationBanner />
-        </div>
-
         {/* Header */}
         <div className="text-center mb-10 max-w-2xl">
           <h1 className="font-display text-4xl font-bold text-text-primary mb-3">

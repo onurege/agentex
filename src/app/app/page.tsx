@@ -23,7 +23,6 @@ import {
   WalletCards,
   type LucideIcon,
 } from "lucide-react";
-import { MigrationBanner } from "@/components/app/MigrationBanner";
 import { ThemeToggle } from "@/components/app/ThemeToggle";
 import { UserMenu } from "@/components/app/UserMenu";
 import { SITE } from "@/lib/config/site";
@@ -179,8 +178,6 @@ export default function AppDashboardPage() {
         </header>
 
         <div className="mx-auto mt-2 w-full max-w-[1280px] px-12">
-          <MigrationBanner />
-
           <section className="relative mb-12 overflow-hidden rounded-[40px] bg-gradient-to-br from-[#280064] to-[#401689] p-12 shadow-2xl shadow-[#280064]/20">
             <div className="absolute inset-y-0 right-0 hidden w-1/2 overflow-hidden md:block">
               <img
