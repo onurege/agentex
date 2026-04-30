@@ -26,10 +26,11 @@ model User {
   sessions Session[]
 
   // Domain relations
-  agentProfiles AgentProfile[]
-  boardRuns     BoardRun[]
-  templates     BoardTemplate[]
-  auditLogs     AuditLog[]      @relation("AuditActor")
+  agentProfiles    AgentProfile[]
+  boardRuns        BoardRun[]
+  templates        BoardTemplate[]
+  auditLogs        AuditLog[]       @relation("AuditActor")
+  regulationReads  RegulationRead[]
 
   @@index([email])
   @@index([deletedAt])
@@ -390,4 +391,57 @@ model AuditLog {
   @@index([targetType, targetId])
   @@index([action])
   @@index([timestamp])
+}
+
+// ─── Regulations Feed ─────────────────────────────────
+//
+// Param Grubu için ilgili mevzuat ve kurum kararlarının canlı
+// takibi. Boardroom pipeline'ından bağımsız ayrı katman; case-law-
+// researcher agent'ı boardroom akışında, RegulationItem ise
+// /app/regulations sayfasında yaşar. Topic taxonomy (e-para,
+// MASAK, KVKK, vergi, BDDK, ticari, kurumsal) src/lib/regulations/
+// topics.ts içinde hardcoded. Bir item birden fazla topic'e
+// bağlanabilir.
+
+model RegulationItem {
+  id           String   @id @default(cuid())
+  // Kaynağın ID'si (yargi-mcp, resmi-gazete, tcmb, bddk, kvkk,
+  // masak, gib, …) — UI'da kaynak rozeti için kullanılır.
+  source       String
+  // Kaynak tarafındaki ID veya URL hash — (source, externalId)
+  // UNIQUE üzerinden idempotent upsert.
+  externalId   String
+  title        String
+  summary      String   @db.Text
+  bodyExcerpt  String?  @db.Text
+  url          String?
+  publishedAt  DateTime
+  fetchedAt    DateTime @default(now())
+  // Topic id listesi — String[] (Postgres native array). Filter
+  // sayısı az (≤7) olduğu için index'siz kalır.
+  topics       String[]
+  priority     String   // "critical" | "high" | "medium" | "low"
+  // Ham kaynak yanıtı (debug + future reclassify); 50KB cap
+  // server tarafında uygulanır.
+  rawPayload   Json?
+
+  reads RegulationRead[]
+
+  @@unique([source, externalId])
+  @@index([publishedAt])
+  @@index([priority])
+  @@index([source])
+}
+
+model RegulationRead {
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  regulationId  String
+  regulation    RegulationItem @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  readAt        DateTime       @default(now())
+  pinned        Boolean        @default(false)
+
+  @@unique([userId, regulationId])
+  @@index([userId])
 }
