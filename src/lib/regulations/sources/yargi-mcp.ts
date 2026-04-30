@@ -3,14 +3,16 @@
 // Reuses the boardroom-side YargiMCPClient (module-level tools/list
 // cache, Streamable HTTP transport) without holding a long-lived
 // session — each scan opens a fresh client. For each topic we pick a
-// shared search query from its first two keywords and call the most
+// shared search query from its first keyword and call the most
 // general available tool. Results are extracted into raw candidates;
 // the orchestrator handles dedup + classification.
 //
-// Failure mode is intentionally lenient: if Yargı MCP is unreachable,
-// the adapter returns an empty list and a non-fatal error string —
-// the orchestrator records it per-source but keeps other adapters
-// running.
+// Failure mode is intentionally lenient: if Yargı MCP is unreachable
+// or a specific tool rejects our payload, the adapter skips that
+// query and records the error string. We never persist MCP error
+// envelopes as candidates — the classifier would otherwise pick up
+// keyword tokens inside a stack trace and misroute them as relevant
+// mevzuat.
 
 import { createHash } from "crypto";
 import { YargiMCPClient } from "@/lib/legal-research/yargi-mcp-client";
@@ -28,11 +30,38 @@ export interface YargiSourceResult {
 interface MCPToolDescriptor {
   name: string;
   description?: string;
+  inputSchema?: {
+    type?: string;
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
 }
 
+// Param names commonly used by Yargı MCP search tools for the free-text
+// query. We only set a value on the tool's *declared* properties so the
+// server-side pydantic model never rejects us with "unexpected keyword".
+const TEXT_PARAM_CANDIDATES = [
+  "phrase",
+  "keyword",
+  "keywords",
+  "query",
+  "icerik",
+  "karar_tamami",
+  "search",
+  "term",
+];
+
+const PAGINATION_HINTS = [
+  ["page", 1],
+  ["pageNumber", 1],
+  ["page_number", 1],
+  ["pageSize", ITEMS_PER_QUERY],
+  ["page_size", ITEMS_PER_QUERY],
+  ["limit", ITEMS_PER_QUERY],
+  ["max_results", ITEMS_PER_QUERY],
+] as const;
+
 function pickPreferredTool(tools: MCPToolDescriptor[]): MCPToolDescriptor | null {
-  // Prefer a tool whose name suggests text search across mevzuat.
-  // Fall back to the first available; null only when the list is empty.
   if (tools.length === 0) return null;
   const PRIORITY_HINTS = [
     "mevzuat",
@@ -52,16 +81,33 @@ function buildArgsFor(
   tool: MCPToolDescriptor,
   query: string,
 ): Record<string, unknown> | null {
-  // Pluck the first reasonable text-input parameter the tool exposes.
-  // Without poking at the schema we accept several common names.
-  const candidates = ["phrase", "keyword", "keywords", "query", "icerik", "karar_tamami"];
-  // We don't have the parameter schema here; YargiMCPClient.callTool
-  // returns content regardless of unrecognized fields. Pass all common
-  // names so at least one matches.
+  const props = tool.inputSchema?.properties;
+  if (!props || Object.keys(props).length === 0) {
+    // Schema yok — sadece "phrase" dene; yine reddedilirse adapter
+    // sessizce skip eder.
+    return { phrase: query };
+  }
+  const propNames = new Set(Object.keys(props));
   const args: Record<string, unknown> = {};
-  for (const key of candidates) args[key] = query;
-  args.page = 1;
-  args.pageSize = ITEMS_PER_QUERY;
+
+  // Tek bir text param'a ata; ilk eşleşeni alır.
+  const textParam = TEXT_PARAM_CANDIDATES.find((p) => propNames.has(p));
+  if (!textParam) return null;
+  args[textParam] = query;
+
+  // Pagination ipuçlarını sadece tool destekliyorsa ekle.
+  for (const [key, value] of PAGINATION_HINTS) {
+    if (propNames.has(key)) args[key] = value;
+  }
+
+  // Diğer required field'ları doldurabileceğimiz makul default yoksa
+  // bu tool'la bu sorguyu atmıyoruz.
+  const required = tool.inputSchema?.required ?? [];
+  for (const r of required) {
+    if (r in args) continue;
+    return null;
+  }
+
   return args;
 }
 
@@ -69,6 +115,32 @@ function externalIdFor(toolName: string, query: string, fragment: string): strin
   const h = createHash("sha256");
   h.update(`yargi-mcp::${toolName}::${query}::${fragment}`);
   return h.digest("hex").slice(0, 32);
+}
+
+function isErrorResult(result: unknown): boolean {
+  if (!result || typeof result !== "object") return false;
+  const r = result as {
+    isError?: unknown;
+    content?: Array<{ text?: unknown }>;
+  };
+  if (r.isError === true) return true;
+  // Heuristic: tool içerik akışında "Error calling tool" / "validation
+  // error" / "Unexpected keyword argument" gibi pydantic / wrapper
+  // hata mesajları geçiyorsa bunu içerik olarak değil hata olarak gör.
+  if (Array.isArray(r.content)) {
+    for (const item of r.content) {
+      if (typeof item.text !== "string") continue;
+      if (
+        /error calling tool/i.test(item.text) ||
+        /validation error/i.test(item.text) ||
+        /unexpected keyword argument/i.test(item.text) ||
+        /pydantic\.dev/i.test(item.text)
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function extractFragments(result: unknown): string[] {
@@ -81,7 +153,6 @@ function extractFragments(result: unknown): string[] {
 }
 
 function makeTitle(fragment: string, query: string): string {
-  // Take first sentence-ish chunk; keep it readable for list rows.
   const trimmed = fragment.replace(/\s+/g, " ").trim();
   if (trimmed.length <= 140) return trimmed;
   const cut = trimmed.slice(0, 140);
@@ -122,9 +193,18 @@ export async function fetchYargiMcpCandidates(): Promise<YargiSourceResult> {
     const queries = topic.keywords.slice(0, QUERIES_PER_TOPIC);
     for (const query of queries) {
       const args = buildArgsFor(tool, query);
-      if (!args) continue;
+      if (!args) {
+        errors.push(`${tool.name} / "${query}": tool şeması ile uyumlu argüman üretilemedi`);
+        continue;
+      }
       try {
         const result = await client.callTool(tool.name, args);
+        if (isErrorResult(result)) {
+          errors.push(
+            `${tool.name} / "${query}": tool hata yanıtı döndürdü (skip)`,
+          );
+          continue;
+        }
         const fragments = extractFragments(result);
         for (const fragment of fragments) {
           candidates.push({
@@ -134,8 +214,6 @@ export async function fetchYargiMcpCandidates(): Promise<YargiSourceResult> {
             summary: fragment.slice(0, 700),
             bodyExcerpt: fragment.slice(0, 2000),
             url: undefined,
-            // Yargı MCP returns historical content; we can't trust the
-            // tool to expose a publication date, so we mark fetch time.
             publishedAt: new Date(),
             rawPayload: { tool: tool.name, query, fragment: fragment.slice(0, 4000) },
           });

@@ -68,6 +68,17 @@ export async function runRegulationsScan(): Promise<ScanResult> {
           candidate.summary,
           candidate.bodyExcerpt ?? "",
         ].join("\n");
+        // Belt-and-suspenders: bir source adapter hata yanıtını
+        // candidate olarak emit ederse classifier'a hiç sokmadan at.
+        if (
+          /error calling tool/i.test(haystack) ||
+          /validation error/i.test(haystack) ||
+          /unexpected keyword argument/i.test(haystack) ||
+          /pydantic\.dev/i.test(haystack)
+        ) {
+          skipped++;
+          continue;
+        }
         const { topics, priority } = classifyText(haystack);
         if (topics.length === 0) {
           skipped++;
