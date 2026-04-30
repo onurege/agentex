@@ -1,10 +1,128 @@
-node_modules
-.next
-.env.local
-.env*.local
+# ─────────────────────────────────────────────────────────────
+# Dependencies
+# ─────────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+.pnp.cjs
+.yarn/cache
+.yarn/install-state.gz
+.yarn/build-state.yml
+.pnpm-store/
+
+# ─────────────────────────────────────────────────────────────
+# Next.js / Build artifacts
+# ─────────────────────────────────────────────────────────────
+.next/
+out/
+build/
+dist/
+.turbo/
+.vercel/
+.swc/
+next-env.d.ts.bak
+
+# ─────────────────────────────────────────────────────────────
+# TypeScript
+# ─────────────────────────────────────────────────────────────
+*.tsbuildinfo
 tsconfig.tsbuildinfo
-.artifacts
-.bg-shell
-.claude
+
+# ─────────────────────────────────────────────────────────────
+# Env / secrets — NEVER commit. .env.example serves as template.
+# ─────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+.envrc
+
+# ─────────────────────────────────────────────────────────────
+# Prisma — keep schema + migrations, ignore local SQLite dev DBs.
+# ─────────────────────────────────────────────────────────────
+prisma/dev.db
+prisma/dev.db-journal
+prisma/*.db
+prisma/.env
+
+# ─────────────────────────────────────────────────────────────
+# Logs
+# ─────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─────────────────────────────────────────────────────────────
+# Test / coverage
+# ─────────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+playwright-report/
+playwright/.cache/
+
+# ─────────────────────────────────────────────────────────────
+# Caches
+# ─────────────────────────────────────────────────────────────
+.cache/
+.eslintcache
+.stylelintcache
+.parcel-cache/
+.rpt2_cache/
+.rts2_cache/
+
+# ─────────────────────────────────────────────────────────────
+# Editors / IDE
+# ─────────────────────────────────────────────────────────────
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+.history/
+
+# ─────────────────────────────────────────────────────────────
+# OS
+# ─────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─────────────────────────────────────────────────────────────
+# Local data / uploads (runtime artifacts that shouldn't be in VCS)
+# ─────────────────────────────────────────────────────────────
+uploads/
+tmp/
+temp/
+public/uploads/
+
+# ─────────────────────────────────────────────────────────────
+# Docker / local services
+# ─────────────────────────────────────────────────────────────
+docker-data/
+*.pid
+*.seed
+*.tgz
+
+# ─────────────────────────────────────────────────────────────
+# Project-specific (developer context — not for public repo)
+# ─────────────────────────────────────────────────────────────
+.artifacts/
+.bg-shell/
+.claude/
+.planning/
 AGENTS.md
+AI-BOARDROOM-HANDOFF.md
 docs/
