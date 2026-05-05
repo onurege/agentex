@@ -199,6 +199,10 @@ model BoardRun {
   documentSize Int
   contextNotes String? @db.Text
 
+  // Representation context (frozen at run time)
+  clientParty String  @default("") // free-text party the user represents
+  stance      String  @default("objective") // aggressive | favor | objective | winwin
+
   // Run metadata
   analysisMode     String // "ai" | "ai-partial" | "fallback"
   modelInfo        String?
