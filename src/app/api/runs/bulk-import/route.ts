@@ -41,6 +41,8 @@ export async function POST(req: NextRequest) {
           documentType: snapshot.documentType,
           documentSize: snapshot.documentSize,
           contextNotes: snapshot.contextNotes || null,
+          clientParty: snapshot.clientParty ?? "",
+          stance: snapshot.stance ?? "objective",
           analysisMode: snapshot.analysisMode ?? "ai",
           modelInfo: snapshot.modelInfo ?? null,
           pipelineMetadata: snapshot.pipelineStages

@@ -136,4 +136,8 @@ export interface BoardroomAnalysisInput {
     sections: Array<{ title: string; content: string; clauseRef?: string }>;
   };
   contextNotes: string;
+  // Representation context — required, set in setup screen.
+  // Stance steers every agent prompt and the chief verdict.
+  clientParty: string;
+  stance: "aggressive" | "favor" | "objective" | "winwin";
 }

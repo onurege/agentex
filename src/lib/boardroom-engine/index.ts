@@ -43,6 +43,8 @@ export function buildAnalysisInput(
   agents: StageAgent[],
   doc: ParsedDocument | null,
   contextNotes: string,
+  clientParty: string,
+  stance: BoardroomAnalysisInput["stance"],
 ): BoardroomAnalysisInput {
   return {
     agents: agents.map((a) => ({
@@ -70,6 +72,8 @@ export function buildAnalysisInput(
       })),
     },
     contextNotes,
+    clientParty,
+    stance,
   };
 }
 

@@ -47,6 +47,8 @@ export default function BoardroomPage() {
   const chiefAgent = useStageChiefAgent();
   const uploadedFile = useBoardroomFlowStore((s) => s.uploadedFile);
   const contextNotes = useBoardroomFlowStore((s) => s.contextNotes);
+  const clientParty = useBoardroomFlowStore((s) => s.clientParty);
+  const stance = useBoardroomFlowStore((s) => s.stance);
   const boardroomStatus = useBoardroomFlowStore((s) => s.boardroomStatus);
   const boardroomPhase = useBoardroomFlowStore((s) => s.boardroomPhase);
   const activeSpeakerId = useBoardroomFlowStore((s) => s.activeSpeakerId);
@@ -130,6 +132,8 @@ export default function BoardroomPage() {
               documentType: state.uploadedFile?.type ?? "unknown",
               documentSize: state.uploadedFile?.size ?? 0,
               contextNotes: state.contextNotes,
+              clientParty: state.clientParty,
+              stance: state.stance ?? "objective",
               debateTimeline: useBoardroomFlowStore.getState().debateTimeline,
               verdictSeed: verdict,
               originalDocxBase64: parsedDocument?.originalDocxBase64 ?? null,
@@ -161,7 +165,13 @@ export default function BoardroomPage() {
 
     // Try AI analysis
     try {
-      const input = buildAnalysisInput(selectedAgents, parsedDocument, contextNotes);
+      const input = buildAnalysisInput(
+        selectedAgents,
+        parsedDocument,
+        contextNotes,
+        clientParty,
+        stance ?? "objective",
+      );
       const aiResult = await callBoardroomAnalysisAPI(input);
       aiResultRef.current = aiResult;
 
@@ -185,7 +195,7 @@ export default function BoardroomPage() {
       mode: "fallback" as const,
     }));
   }, [
-    selectedAgents, parsedDocument, contextNotes,
+    selectedAgents, parsedDocument, contextNotes, clientParty, stance,
     setBoardroomStatus, playSteps,
   ]);
 

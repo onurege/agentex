@@ -40,6 +40,7 @@ export function buildAgentPassPrompt(
   agent: BoardroomAnalysisInput["agents"][number],
   document: BoardroomAnalysisInput["document"],
   contextNotes: string,
+  stanceDirective: string,
   legalResearchContext?: string,
 ): string {
   const docContent = document.sections.length > 0
@@ -109,6 +110,8 @@ KURALLAR:
   }
 
   return `Sen ${agent.name} rolünde bir uzman AI ajanısın. Aşağıdaki belgeyi kendi uzmanlık alanından değerlendir.
+
+${stanceDirective}
 
 ## SENİN PROFİLİN
 

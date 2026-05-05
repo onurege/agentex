@@ -20,6 +20,7 @@ import { buildDisagreementPassPrompt, normalizeDisagreementPassResult, type Disa
 import { buildPerAgentRebuttalPrompt, normalizePerAgentRebuttalResult, type RebuttalPassResult, type RebuttalEntry } from "@/lib/boardroom-engine/rebuttal-pass";
 import type { DisagreementPassEntry } from "@/lib/boardroom-engine/disagreement-pass";
 import { buildChiefPassPrompt, normalizeChiefPassResult, type ChiefPassResult } from "@/lib/boardroom-engine/chief-pass";
+import { buildStanceDirective } from "@/lib/boardroom-engine/prompts";
 import { matchClause, type MatchableParagraph } from "@/lib/redline/clause-matcher";
 import type { ArbitratedEdit } from "@/lib/redline/types";
 import { formatLegalResearchForPrompt, runLegalResearchPass, shouldRunLegalResearch } from "@/lib/legal-research/research-pass";
@@ -38,6 +39,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const input = body.input as BoardroomAnalysisInput;
+
+    const stanceDirective = buildStanceDirective(
+      input?.clientParty ?? "",
+      input?.stance ?? "objective",
+    );
 
     if (!input || !input.agents || input.agents.length === 0) {
       return NextResponse.json(
@@ -153,6 +159,7 @@ export async function POST(request: NextRequest) {
           agent,
           input.document,
           input.contextNotes,
+          stanceDirective,
           agent.id === "case-law-researcher" ? legalResearchContext : undefined,
         );
         const raw = await generateJSON(prompt);
@@ -262,6 +269,7 @@ export async function POST(request: NextRequest) {
         rebuttalResult,
         input.document.fileName,
         input.contextNotes,
+        stanceDirective,
       );
       const raw = await generateJSON(prompt);
       chiefResult = normalizeChiefPassResult(raw as Record<string, unknown>, agentResults);

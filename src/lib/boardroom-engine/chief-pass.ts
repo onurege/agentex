@@ -82,6 +82,7 @@ export function buildChiefPassPrompt(
   rebuttalResult: RebuttalPassResult | null,
   documentFileName: string,
   contextNotes: string,
+  stanceDirective: string,
 ): string {
   const agentSummaries = agentResults.map((ar) => {
     return `### ${ar.agentName} (${ar.agentId}, avatar: ${ar.avatar})
@@ -137,6 +138,8 @@ Gözlem sayısı: ${ar.observations.length} (${ar.observations.filter((o) => o.s
       }).join("\n\n");
 
   return `Sen AI Boardroom Baş Ajanısın. Uzman ajanların değerlendirmelerini, anlaşmazlıklarını ve karşılıklı yanıtlarını sentezleyerek nihai kurul kararını oluştur.
+
+${stanceDirective}
 
 ## BELGE
 Dosya: ${documentFileName}

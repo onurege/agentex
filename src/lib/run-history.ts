@@ -60,6 +60,10 @@ export interface BoardroomRunSnapshot {
   agentSnapshots: FrozenAgentSnapshot[];
   contextNotes: string;
 
+  // Representation context (frozen at run time)
+  clientParty: string;
+  stance: "aggressive" | "favor" | "objective" | "winwin";
+
   // Debate
   debateTimeline: DebateEvent[];
 
@@ -205,6 +209,8 @@ export function buildRunSnapshot(params: {
   documentType: string;
   documentSize: number;
   contextNotes: string;
+  clientParty: string;
+  stance: BoardroomRunSnapshot["stance"];
   debateTimeline: DebateEvent[];
   verdictSeed: VerdictSeed;
   // Faz 4 — only passed in db mode; omitted keeps legacy snapshot shape.
@@ -221,6 +227,8 @@ export function buildRunSnapshot(params: {
     selectedAgentIds: params.selectedAgentIds,
     agentSnapshots: params.agentSnapshots,
     contextNotes: params.contextNotes,
+    clientParty: params.clientParty,
+    stance: params.stance,
     debateTimeline: params.debateTimeline,
     verdictSeed: params.verdictSeed,
     originalDocxBase64: params.originalDocxBase64,

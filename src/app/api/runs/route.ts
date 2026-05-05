@@ -71,6 +71,8 @@ export async function POST(req: NextRequest) {
         documentType: snapshot.documentType,
         documentSize: snapshot.documentSize,
         contextNotes: snapshot.contextNotes || null,
+        clientParty: snapshot.clientParty ?? "",
+        stance: snapshot.stance ?? "objective",
         analysisMode: snapshot.analysisMode ?? "ai",
         modelInfo: snapshot.modelInfo ?? null,
         pipelineMetadata: snapshot.pipelineStages
@@ -287,6 +289,8 @@ function runToSnapshot(run: RunWithRelations): import("@/lib/run-history").Board
       };
     }),
     contextNotes: run.contextNotes ?? "",
+    clientParty: run.clientParty ?? "",
+    stance: (run.stance as import("@/lib/run-history").BoardroomRunSnapshot["stance"]) ?? "objective",
     debateTimeline: run.debateMoments.map((m) => ({
       id: m.id,
       agentId: m.agentKey,
