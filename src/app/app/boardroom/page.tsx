@@ -22,6 +22,8 @@ import { useSelectedStageAgents, useStageChiefAgent } from "@/lib/stage-agents";
 import { saveBoardroomRun, buildRunSnapshot, buildFrozenAgentSnapshot } from "@/lib/run-history";
 import { buildAnalysisInput, callBoardroomAnalysisAPI } from "@/lib/boardroom-engine";
 import type { BoardroomAnalysisResult } from "@/lib/boardroom-engine/types";
+import { applyMask, reverseMaskInResult } from "@/lib/boardroom-engine/mask";
+import type { ParsedDocument } from "@/lib/ingestion/types";
 import { SITE } from "@/lib/config/site";
 
 // Seats sit on an ellipse around the oval table. Chief is always at
@@ -49,6 +51,7 @@ export default function BoardroomPage() {
   const contextNotes = useBoardroomFlowStore((s) => s.contextNotes);
   const clientParty = useBoardroomFlowStore((s) => s.clientParty);
   const stance = useBoardroomFlowStore((s) => s.stance);
+  const maskMappings = useBoardroomFlowStore((s) => s.maskMappings);
   const boardroomStatus = useBoardroomFlowStore((s) => s.boardroomStatus);
   const boardroomPhase = useBoardroomFlowStore((s) => s.boardroomPhase);
   const activeSpeakerId = useBoardroomFlowStore((s) => s.activeSpeakerId);
@@ -165,14 +168,34 @@ export default function BoardroomPage() {
 
     // Try AI analysis
     try {
+      // Mask sensitive fields before sending. The reverse on the result
+      // restores originals so the rest of the pipeline (verdict, redline,
+      // DB persistence) only ever sees real values.
+      const maskedDoc: ParsedDocument | null = parsedDocument && maskMappings.length > 0
+        ? {
+            ...parsedDocument,
+            fullText: parsedDocument.fullText
+              ? applyMask(parsedDocument.fullText, maskMappings)
+              : parsedDocument.fullText,
+            sections: parsedDocument.sections.map((s) => ({
+              ...s,
+              title: applyMask(s.title, maskMappings),
+              content: applyMask(s.content, maskMappings),
+            })),
+          }
+        : parsedDocument;
+
       const input = buildAnalysisInput(
         selectedAgents,
-        parsedDocument,
-        contextNotes,
-        clientParty,
+        maskedDoc,
+        applyMask(contextNotes, maskMappings),
+        applyMask(clientParty, maskMappings),
         stance ?? "objective",
       );
-      const aiResult = await callBoardroomAnalysisAPI(input);
+      const rawResult = await callBoardroomAnalysisAPI(input);
+      const aiResult = maskMappings.length > 0
+        ? reverseMaskInResult(rawResult, maskMappings)
+        : rawResult;
       aiResultRef.current = aiResult;
 
       // Convert AI result to cinematic steps
@@ -195,7 +218,7 @@ export default function BoardroomPage() {
       mode: "fallback" as const,
     }));
   }, [
-    selectedAgents, parsedDocument, contextNotes, clientParty, stance,
+    selectedAgents, parsedDocument, contextNotes, clientParty, stance, maskMappings,
     setBoardroomStatus, playSteps,
   ]);
 
