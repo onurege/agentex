@@ -19,6 +19,9 @@ import {
 } from "./boardroom-agents";
 import { useControlRoomStore } from "./control-room-store";
 import { getIngestionService } from "./ingestion";
+import { buildAlias, type MaskMapping } from "./boardroom-engine/mask";
+
+export type { MaskMapping };
 
 // Re-export CHIEF_AGENT so existing imports from this module keep
 // working after the definition moved to boardroom-agents.ts.
@@ -113,6 +116,9 @@ interface BoardroomFlowState {
   clientParty: string;
   stance: Stance | null;
 
+  // Board Setup — Mask mappings (optional; redacts originals before AI)
+  maskMappings: MaskMapping[];
+
   // Board Setup — Context
   contextNotes: string;
 
@@ -147,6 +153,12 @@ interface BoardroomFlowActions {
   // Representation
   setClientParty: (party: string) => void;
   setStance: (stance: Stance) => void;
+
+  // Mask mappings
+  addMaskMapping: (original: string) => void;
+  removeMaskMapping: (alias: string) => void;
+  updateMaskMappingOriginal: (alias: string, original: string) => void;
+  clearMaskMappings: () => void;
 
   // Context
   setContextNotes: (notes: string) => void;
@@ -220,6 +232,7 @@ const INITIAL_STATE: BoardroomFlowState = {
   uploadWarnings: [],
   clientParty: "",
   stance: null,
+  maskMappings: [],
   contextNotes: "",
   boardroomStatus: "idle",
   boardroomPhase: "idle",
@@ -352,6 +365,47 @@ export const useBoardroomFlowStore = create<BoardroomFlowStore>()(
     }));
   },
 
+  // ── Mask mappings ────────────────────────────────────────
+
+  addMaskMapping: (original) => {
+    const trimmed = original.trim();
+    if (trimmed.length === 0) return;
+    set((s) => {
+      // Skip if the same original is already mapped — duplicates produce
+      // multiple aliases for the same value and confuse the reverse.
+      if (s.maskMappings.some((m) => m.original === trimmed)) return {};
+      const next: MaskMapping[] = [
+        ...s.maskMappings,
+        { original: trimmed, alias: buildAlias(s.maskMappings.length + 1) },
+      ];
+      return { maskMappings: next };
+    });
+  },
+
+  removeMaskMapping: (alias) => {
+    set((s) => {
+      const filtered = s.maskMappings.filter((m) => m.alias !== alias);
+      // Renumber so aliases stay dense ([[MASK_1]], [[MASK_2]], ...).
+      const renumbered = filtered.map((m, i) => ({
+        original: m.original,
+        alias: buildAlias(i + 1),
+      }));
+      return { maskMappings: renumbered };
+    });
+  },
+
+  updateMaskMappingOriginal: (alias, original) => {
+    set((s) => ({
+      maskMappings: s.maskMappings.map((m) =>
+        m.alias === alias ? { ...m, original } : m,
+      ),
+    }));
+  },
+
+  clearMaskMappings: () => {
+    set({ maskMappings: [] });
+  },
+
   // ── Context ──────────────────────────────────────────────
 
   setContextNotes: (notes) => {
@@ -434,6 +488,7 @@ export const useBoardroomFlowStore = create<BoardroomFlowStore>()(
         parsedDocument: state.parsedDocument,
         clientParty: state.clientParty,
         stance: state.stance,
+        maskMappings: state.maskMappings,
         contextNotes: state.contextNotes,
         boardroomStatus: state.boardroomStatus,
         boardroomPhase: state.boardroomPhase,

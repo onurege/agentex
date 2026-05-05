@@ -8,6 +8,7 @@ import { DocumentUploadPanel } from "@/components/setup/DocumentUploadPanel";
 import { BoardSummaryPanel } from "@/components/setup/BoardSummaryPanel";
 import { ContextNotesInput } from "@/components/setup/ContextNotesInput";
 import { PartyStanceInput } from "@/components/setup/PartyStanceInput";
+import { MaskMappingsInput } from "@/components/setup/MaskMappingsInput";
 import { useBoardroomFlowStore } from "@/lib/boardroom-flow-store";
 import { SITE } from "@/lib/config/site";
 import { SceneIn } from "@/lib/motion/primitives";
@@ -64,6 +65,7 @@ export default function BoardSetupPage() {
           <SceneIn delay={0.12} className="flex flex-col gap-8">
             <BoardSummaryPanel />
             <PartyStanceInput />
+            <MaskMappingsInput />
             <ContextNotesInput />
           </SceneIn>
         </div>
