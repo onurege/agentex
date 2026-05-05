@@ -1,7 +1,9 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import type { DebateEvent } from "@/lib/boardroom-flow-store";
+
+const STICK_THRESHOLD_PX = 32;
 
 interface DebateTimelinePanelProps {
   events: DebateEvent[];
@@ -24,10 +26,17 @@ const TYPE_LABELS: Record<DebateEvent["type"], { label: string; style: string }>
 
 export function DebateTimelinePanel({ events }: DebateTimelinePanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
 
-  // Auto-scroll to bottom on new events
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    stickToBottomRef.current = distanceFromBottom <= STICK_THRESHOLD_PX;
+  }, []);
+
   useEffect(() => {
-    if (scrollRef.current) {
+    if (stickToBottomRef.current && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [events.length]);
@@ -43,7 +52,7 @@ export function DebateTimelinePanel({ events }: DebateTimelinePanelProps) {
         </p>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 space-y-3">
         {events.length === 0 && (
           <p className="text-base text-text-muted text-center py-8">
             Tartışma başladığında konuşmalar burada görünecek.
