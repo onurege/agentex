@@ -48,6 +48,9 @@ export type BoardroomStatus =
   | "running"
   | "complete";
 
+// Stance the user takes for this run. Required before launch.
+export type Stance = "aggressive" | "favor" | "objective" | "winwin";
+
 export type DebateEventType =
   | "arrival"
   | "observation"
@@ -106,6 +109,10 @@ interface BoardroomFlowState {
   uploadError: string | null;
   uploadWarnings: string[];
 
+  // Board Setup — Representation
+  clientParty: string;
+  stance: Stance | null;
+
   // Board Setup — Context
   contextNotes: string;
 
@@ -137,6 +144,10 @@ interface BoardroomFlowActions {
   ingestFile: (file: File) => Promise<void>;
   clearDocument: () => void;
 
+  // Representation
+  setClientParty: (party: string) => void;
+  setStance: (stance: Stance) => void;
+
   // Context
   setContextNotes: (notes: string) => void;
 
@@ -154,6 +165,8 @@ interface BoardroomFlowActions {
     runId: string;
     selectedAgentIds: string[];
     documentName: string;
+    clientParty: string;
+    stance: Stance;
     contextNotes: string;
     debateTimeline: DebateEvent[];
     verdictSeed: VerdictSeed;
@@ -184,11 +197,15 @@ function deriveCanLaunch(state: {
   selectedAgentIds: string[];
   uploadStatus: UploadStatus;
   parsedDocument: ParsedDocument | null;
+  clientParty: string;
+  stance: Stance | null;
 }): boolean {
   return (
     state.selectedAgentIds.length >= 2 &&
     state.uploadStatus === "success" &&
-    state.parsedDocument !== null
+    state.parsedDocument !== null &&
+    state.clientParty.trim().length > 0 &&
+    state.stance !== null
   );
 }
 
@@ -201,6 +218,8 @@ const INITIAL_STATE: BoardroomFlowState = {
   uploadStatus: "idle",
   uploadError: null,
   uploadWarnings: [],
+  clientParty: "",
+  stance: null,
   contextNotes: "",
   boardroomStatus: "idle",
   boardroomPhase: "idle",
@@ -317,6 +336,22 @@ export const useBoardroomFlowStore = create<BoardroomFlowStore>()(
     });
   },
 
+  // ── Representation ───────────────────────────────────────
+
+  setClientParty: (party) => {
+    set((s) => ({
+      clientParty: party,
+      canLaunchBoardroom: deriveCanLaunch({ ...s, clientParty: party }),
+    }));
+  },
+
+  setStance: (stance) => {
+    set((s) => ({
+      stance,
+      canLaunchBoardroom: deriveCanLaunch({ ...s, stance }),
+    }));
+  },
+
   // ── Context ──────────────────────────────────────────────
 
   setContextNotes: (notes) => {
@@ -370,6 +405,8 @@ export const useBoardroomFlowStore = create<BoardroomFlowStore>()(
       selectedAgentIds: params.selectedAgentIds,
       selectedAgents: deriveSelectedAgents(params.selectedAgentIds),
       uploadedFile: { name: params.documentName, size: 0, type: "" },
+      clientParty: params.clientParty,
+      stance: params.stance,
       contextNotes: params.contextNotes,
       boardroomStatus: "complete",
       boardroomPhase: "tamamlandi",
@@ -395,6 +432,8 @@ export const useBoardroomFlowStore = create<BoardroomFlowStore>()(
         selectedAgentIds: state.selectedAgentIds,
         uploadedFile: state.uploadedFile,
         parsedDocument: state.parsedDocument,
+        clientParty: state.clientParty,
+        stance: state.stance,
         contextNotes: state.contextNotes,
         boardroomStatus: state.boardroomStatus,
         boardroomPhase: state.boardroomPhase,

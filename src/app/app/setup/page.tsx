@@ -7,6 +7,7 @@ import { StageLayout } from "@/components/stage/StageLayout";
 import { DocumentUploadPanel } from "@/components/setup/DocumentUploadPanel";
 import { BoardSummaryPanel } from "@/components/setup/BoardSummaryPanel";
 import { ContextNotesInput } from "@/components/setup/ContextNotesInput";
+import { PartyStanceInput } from "@/components/setup/PartyStanceInput";
 import { useBoardroomFlowStore } from "@/lib/boardroom-flow-store";
 import { SITE } from "@/lib/config/site";
 import { SceneIn } from "@/lib/motion/primitives";
@@ -16,6 +17,8 @@ export default function BoardSetupPage() {
   const selectedAgentIds = useBoardroomFlowStore((s) => s.selectedAgentIds);
   const canLaunch = useBoardroomFlowStore((s) => s.canLaunchBoardroom);
   const uploadStatus = useBoardroomFlowStore((s) => s.uploadStatus);
+  const clientParty = useBoardroomFlowStore((s) => s.clientParty);
+  const stance = useBoardroomFlowStore((s) => s.stance);
 
   // Redirect to Agent Gallery if no agents selected
   useEffect(() => {
@@ -57,9 +60,10 @@ export default function BoardSetupPage() {
             <DocumentUploadPanel />
           </SceneIn>
 
-          {/* Right — Board & Context */}
+          {/* Right — Board, Representation & Context */}
           <SceneIn delay={0.12} className="flex flex-col gap-8">
             <BoardSummaryPanel />
+            <PartyStanceInput />
             <ContextNotesInput />
           </SceneIn>
         </div>
@@ -109,6 +113,12 @@ export default function BoardSetupPage() {
                   Devam etmek için belge yükleyin
                 </span>
               )}
+              {!isProcessing && uploadStatus === "success" &&
+                (clientParty.trim().length === 0 || stance === null) && (
+                  <span className="text-[14px] text-text-muted mt-2">
+                    Temsil ettiğiniz tarafı ve tutumu seçin
+                  </span>
+                )}
               {isProcessing && (
                 <span className="text-[14px] text-accent-primary mt-2">
                   Belge işleniyor...
