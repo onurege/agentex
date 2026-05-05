@@ -477,10 +477,12 @@ function buildInsertedParagraph(
 }
 
 /**
- * Best-effort phrase replacement. Finds the first <w:t> whose text
- * contains originalText and splits it into before + del + ins + after.
- * Returns null when the phrase spans multiple runs (out of scope for
- * v1); the caller falls back to orphan.
+ * Best-effort phrase replacement. Finds the first <w:r> whose <w:t>
+ * contains originalText and splits the whole run into
+ * (before-run) + <w:del> + <w:ins> + (after-run), inheriting the
+ * original <w:rPr> on each side so formatting survives. Returns null
+ * when the phrase spans multiple runs; the caller falls back to a
+ * paragraph-level del+ins pair via locatePhrase.
  */
 function replacePhraseInParagraph(
   p: ExtractedParagraph,
@@ -493,11 +495,29 @@ function replacePhraseInParagraph(
   if (!originalText) return null;
   const encoded = encodeEntities(originalText);
 
-  // Find a <w:t>...</w:t> block whose content contains the encoded phrase.
-  const regex = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g;
+  // Match a whole <w:r>...</w:r> run that contains the phrase. We need
+  // the full run (not just <w:t>) for two reasons:
+  //   1. The before/after splits must inherit the run's <w:rPr> so that
+  //      font, size, bold, italic, etc. survive the edit. The earlier
+  //      version copied only the <w:t> opening tag, dropping all the
+  //      formatting.
+  //   2. The earlier version emitted "<w:r><w:t>after" with no closing
+  //      "</w:t>", which produced invalid OOXML. Word silently dropped
+  //      the rest of the body when the parser hit the broken run, so
+  //      the downloaded DOCX appeared as a single corrupt paragraph.
+  // Replacing the run as an atomic unit avoids both issues.
+  const runRegex = /<w:r(?:\s[^>]*)?>[\s\S]*?<\/w:r>/g;
+  const tInnerRegex = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/;
+  const tOpenRegex = /<w:t(?:\s[^>]*)?>/;
+  const rPrRegex =
+    /<w:rPr(?:\s[^>]*)?>[\s\S]*?<\/w:rPr>|<w:rPr(?:\s[^>]*)?\/>/;
+
   let m: RegExpExecArray | null;
-  while ((m = regex.exec(p.rawXml)) !== null) {
-    const textContent = m[1];
+  while ((m = runRegex.exec(p.rawXml)) !== null) {
+    const runXml = m[0];
+    const tMatch = runXml.match(tInnerRegex);
+    if (!tMatch) continue;
+    const textContent = tMatch[1];
     if (!textContent.includes(encoded)) continue;
 
     const before = textContent.slice(0, textContent.indexOf(encoded));
@@ -505,22 +525,25 @@ function replacePhraseInParagraph(
       textContent.indexOf(encoded) + encoded.length,
     );
 
-    const opening = m[0].slice(0, m[0].indexOf(">") + 1);
-    // Surrounding text (`before` / `after`) keeps the original run's
-    // formatting. The del and ins runs get explicit red/green via
-    // DEL_RPR / INS_RPR so reviewers see color contrast regardless of
-    // Word's author-coloring settings.
-    const replacement =
-      `${opening}${before}</w:t></w:r>` +
+    const rPrMatch = runXml.match(rPrRegex);
+    const rPr = rPrMatch ? rPrMatch[0] : "";
+    const tOpen = runXml.match(tOpenRegex)?.[0] ?? '<w:t xml:space="preserve">';
+
+    const beforeRun =
+      before.length > 0 ? `<w:r>${rPr}${tOpen}${before}</w:t></w:r>` : "";
+    const afterRun =
+      after.length > 0 ? `<w:r>${rPr}${tOpen}${after}</w:t></w:r>` : "";
+    const delBlock =
       `<w:del w:id="${revIdStart}" w:author="${escapeAttr(author)}" w:date="${date}">` +
       `<w:r>${DEL_RPR}<w:delText xml:space="preserve">${encoded}</w:delText></w:r>` +
-      `</w:del>` +
+      `</w:del>`;
+    const insBlock =
       `<w:ins w:id="${revIdStart + 1}" w:author="${escapeAttr(author)}" w:date="${date}">` +
       `<w:r>${INS_RPR}<w:t xml:space="preserve">${encodeEntities(finalText)}</w:t></w:r>` +
-      `</w:ins>` +
-      `<w:r>${opening}${after}`;
+      `</w:ins>`;
 
-    return p.rawXml.replace(m[0], replacement);
+    const replacement = beforeRun + delBlock + insBlock + afterRun;
+    return p.rawXml.replace(runXml, replacement);
   }
 
   // Fallback: multi-run / whitespace-mismatch case. Word splits text
