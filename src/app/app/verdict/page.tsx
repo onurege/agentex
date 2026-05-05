@@ -24,6 +24,15 @@ export default function VerdictPage() {
   const verdictSeed = useBoardroomFlowStore((s) => s.verdictSeed);
   const uploadedFile = useBoardroomFlowStore((s) => s.uploadedFile);
   const parsedDocument = useBoardroomFlowStore((s) => s.parsedDocument);
+  const clientParty = useBoardroomFlowStore((s) => s.clientParty);
+  const stance = useBoardroomFlowStore((s) => s.stance);
+
+  const stanceLabel: Record<NonNullable<typeof stance>, string> = {
+    aggressive: "Sert Savunma",
+    favor: "Lehime · Dengeli",
+    objective: "Objektif",
+    winwin: "Uzlaşmacı",
+  };
 
   // Route guards
   useEffect(() => {
@@ -62,6 +71,21 @@ export default function VerdictPage() {
             agentCount={selectedAgents.length}
           />
         </StaggerItem>
+
+        {/* Representation badge — shows the stance applied to this run */}
+        {clientParty && stance && (
+          <StaggerItem className="flex items-center justify-center mb-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-workspace-elevated border border-workspace-border text-[13px]">
+              <span className="text-text-muted">Temsil edilen taraf:</span>
+              <span className="font-semibold text-text-primary">{clientParty}</span>
+              <span className="text-text-muted">·</span>
+              <span className="text-text-muted">Tutum:</span>
+              <span className="font-semibold text-accent-primary">
+                {stanceLabel[stance]}
+              </span>
+            </div>
+          </StaggerItem>
+        )}
 
         {/* Board participants — compact summary */}
         <StaggerItem className="flex items-center justify-center gap-2 mb-10">
