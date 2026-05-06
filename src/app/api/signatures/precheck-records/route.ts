@@ -86,6 +86,10 @@ export async function POST(req: NextRequest) {
           ? body.userDecisionNote
           : null,
       criticalOverride: body.criticalOverride === true,
+      // Critical override implicitly escalates to manager review — the
+      // gate exists precisely to flag cases needing supervisor attention,
+      // so don't require the user to also click "Yönetici onayına gönder".
+      managerReviewRequested: body.criticalOverride === true,
     },
   });
 
