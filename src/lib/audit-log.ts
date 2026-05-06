@@ -68,6 +68,10 @@ export type AuditAction =
   | "signature_precheck_warned"
   | "signature_precheck_failed"
   | "signature_external_verification"
+  | "signature_user_decision"
+  | "signature_review_requested"
+  | "signature_manager_approved"
+  | "signature_manager_rejected"
   | "regulations_scan_started"
   | "regulations_scan_completed"
   | "regulations_scan_failed"
@@ -238,6 +242,10 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   signature_precheck_passed: "İmza Ön Kontrolü Tutarlı",
   signature_precheck_warned: "İmza Ön Kontrolünde Uyarı",
   signature_external_verification: "Sicil Doğrulama (Manuel)",
+  signature_user_decision: "İmza Ön-Kontrol Kullanıcı Kararı",
+  signature_review_requested: "İmza Ön-Kontrol Yönetici Onayı İstendi",
+  signature_manager_approved: "İmza Ön-Kontrol Yönetici Onayladı",
+  signature_manager_rejected: "İmza Ön-Kontrol Yönetici Reddetti",
   signature_precheck_failed: "İmza Ön Kontrolünde Kritik Uyumsuzluk",
   regulations_scan_started: "Mevzuat Taraması Başladı",
   regulations_scan_completed: "Mevzuat Taraması Tamamlandı",
