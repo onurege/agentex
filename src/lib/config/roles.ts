@@ -33,11 +33,14 @@ export interface UserPermissions {
 
 const PERMISSION_MAP: Record<UserRole, UserPermissions> = {
   user: {
-    canAccessPanel: false,
+    // Limited panel access for transparency: dashboard + group runs +
+    // group audit. Agent / template / users / support stay hidden via
+    // sidebar item gating + per-route layout permission checks.
+    canAccessPanel: true,
     canManageOwnAgents: false,
     canManageOwnPrompts: false,
     canViewUsers: false,
-    canViewAudit: false,
+    canViewAudit: true,
   },
   authorized_user: {
     canAccessPanel: true,
