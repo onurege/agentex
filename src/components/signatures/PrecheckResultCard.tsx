@@ -32,21 +32,23 @@ interface Props {
   result: PrecheckResult;
 }
 
+// Binary tone — doğru ise yeşil, değil ise kırmızı. `warned` da kırmızı
+// tarafa düşer; başlık/alt metin farklılığı ayrım için yeterli.
 const STATUS_PRESET = {
   passed: {
     icon: ShieldCheck,
     iconColor: "text-semantic-positive",
-    border: "border-semantic-positive/30",
-    bg: "bg-semantic-positive/[0.06]",
+    border: "border-semantic-positive/40",
+    bg: "bg-semantic-positive/[0.10]",
     title: "Şirket bilgileri tutuyor",
     subtitle:
       "Sirkü ile dilekçe arasında kritik uyumsuzluk yok; imza karşılaştırmasına geçebilirsiniz.",
   },
   warned: {
-    icon: AlertTriangle,
-    iconColor: "text-accent-warning",
-    border: "border-accent-warning/30",
-    bg: "bg-accent-warning/[0.06]",
+    icon: ShieldAlert,
+    iconColor: "text-semantic-negative",
+    border: "border-semantic-negative/40",
+    bg: "bg-semantic-negative/[0.10]",
     title: "Bazı uyarılar var",
     subtitle:
       "İmza karşılaştırmasına devam edebilirsiniz; aşağıdaki uyarıları gözden geçirin.",
@@ -54,8 +56,8 @@ const STATUS_PRESET = {
   failed: {
     icon: ShieldAlert,
     iconColor: "text-semantic-negative",
-    border: "border-semantic-negative/30",
-    bg: "bg-semantic-negative/[0.08]",
+    border: "border-semantic-negative/40",
+    bg: "bg-semantic-negative/[0.10]",
     title: "Önemli uyumsuzluklar tespit edildi",
     subtitle:
       "İmza karşılaştırması açık tutuldu ama bu uyumsuzluklar dilekçenin geçerliliğini tartışmalı hale getirebilir.",
@@ -67,7 +69,7 @@ const SEVERITY_ICON: Record<
   { icon: typeof CheckCircle2; color: string }
 > = {
   ok: { icon: CheckCircle2, color: "text-semantic-positive" },
-  warning: { icon: AlertTriangle, color: "text-accent-warning" },
+  warning: { icon: AlertTriangle, color: "text-semantic-negative" },
   critical: { icon: XCircle, color: "text-semantic-negative" },
 };
 
