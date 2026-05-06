@@ -278,19 +278,23 @@ function buildDeletedParagraph(
   date: string,
   revId: number,
 ): string {
-  // Convert <w:t> → <w:delText> inside the inner runs, then wrap
-  // everything in <w:del>. pPr stays outside <w:del>. Each run is
-  // forced red so the deletion stands out even when the reviewer's
-  // Word ignores author-based coloring.
-  const innerAsDeleted = colorizeRuns(
-    p.inner
-      .replace(/<w:t(\s[^>]*)?>/g, "<w:delText$1>")
-      .replace(/<\/w:t>/g, "</w:delText>"),
-    DEL_COLOR_HEX,
-  );
-  const deletion = `<w:del w:id="${revId}" w:author="${escapeAttr(
-    author,
-  )}" w:date="${date}">${innerAsDeleted}</w:del>`;
+  // Word and other DOCX writers commonly fragment a paragraph into one
+  // <w:r> per character cluster — Turkish diacritics (İ, Ö, Ş, Ü, ğ,
+  // ç) routinely sit on font fallback boundaries that produce 100+
+  // separate runs per paragraph. Wrapping each fragment as its own
+  // delText was schema-correct but Word's reviewing pane rendered the
+  // deletion as letter-by-letter revisions, which users read as a
+  // broken redline.
+  //
+  // Flatten all the text into a single <w:r><w:delText> inside one
+  // <w:del>. The deletion's original formatting is meaningless once
+  // accepted (the text is gone), and a single run reads as one clean
+  // strike-through block in the reviewing pane.
+  const flatText = extractText(p.rawXml);
+  const deletion =
+    `<w:del w:id="${revId}" w:author="${escapeAttr(author)}" w:date="${date}">` +
+    `<w:r>${DEL_RPR}<w:delText xml:space="preserve">${encodeEntities(flatText)}</w:delText></w:r>` +
+    `</w:del>`;
   return `<w:p>${p.pPr}${deletion}</w:p>`;
 }
 
