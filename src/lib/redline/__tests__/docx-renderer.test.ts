@@ -157,7 +157,7 @@ describe("applyRedline — revision colors", () => {
       /<w:del[^>]*>\s*<w:r>\s*<w:rPr><w:color w:val="C00000"\/><\/w:rPr>\s*<w:delText/,
     );
     expect(xml).toMatch(
-      /<w:ins[^>]*>\s*<w:r>\s*<w:rPr><w:color w:val="00B050"\/><w:highlight w:val="green"\/><\/w:rPr>\s*<w:t/,
+      /<w:ins[^>]*>\s*<w:r>\s*<w:rPr><w:color w:val="00B050"\/><\/w:rPr>\s*<w:t/,
     );
   });
 
@@ -178,9 +178,8 @@ describe("applyRedline — revision colors", () => {
     const xml = await readDocumentXml(result.buffer);
     expect(xml).toContain(`<w:color w:val="C00000"/>`);
     expect(xml).toContain(`<w:color w:val="00B050"/>`);
-    // Insertions must also carry <w:highlight> so Word's "Insertions
-    // by author" default can't silently strip the green tint.
-    expect(xml).toContain(`<w:highlight w:val="green"/>`);
+    // Highlight intentionally not emitted — colors only.
+    expect(xml).not.toContain(`<w:highlight w:val="green"/>`);
   });
 });
 

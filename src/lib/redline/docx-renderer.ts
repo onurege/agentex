@@ -51,30 +51,17 @@ const PPR_REGEX = /<w:pPr(?:\s[^>]*)?>[\s\S]*?<\/w:pPr>|<w:pPr(?:\s[^>]*)?\/>/;
 
 const DEFAULT_AUTHOR = "Consulera";
 
-// Explicit revision styling. Two layers are applied per change:
-//
-//   1. <w:color w:val="HEX"/> — red for deletions, green for
-//      insertions. This is the "nice" layer that matches the standard
-//      Office "Dark Red" and "Green" theme palette.
-//
-//   2. <w:highlight w:val="green"/> on INSERTIONS only. Word's track-
-//      changes renderer overrides inline <w:color> on <w:ins> runs
-//      whenever the reviewer has Insertions color set to "By author"
-//      (the default). In that mode the author gets an auto-assigned
-//      tint and our green is ignored. <w:highlight> is NOT subject to
-//      that override, so adding it guarantees visible contrast even
-//      when the "By author" default is in effect. The enum is the
-//      CT_Highlight set (yellow, green, cyan, …); green pairs with the
-//      green color for a consistent before/after reading.
-//
-// Deletions keep only <w:color>. Strikethrough + color render reliably
-// on <w:del> without the highlight, and highlighted strikethrough is
-// harder to skim.
+// Explicit revision styling: color only, no highlight.
+//   - Deletions: red text. Strike-through comes from <w:del> wrapping.
+//   - Insertions: green text. No background fill.
+// Word's reviewing pane may still apply an author tint that overrides
+// <w:color> when the reviewer has "By author" set; the user can either
+// keep that or set Insertions/Deletions to a fixed color in Word's
+// Track Changes options for the strict red/green look.
 const DEL_COLOR_HEX = "C00000";
 const INS_COLOR_HEX = "00B050";
-const INS_HIGHLIGHT = "green";
 const DEL_RPR = `<w:rPr><w:color w:val="${DEL_COLOR_HEX}"/></w:rPr>`;
-const INS_RPR = `<w:rPr><w:color w:val="${INS_COLOR_HEX}"/><w:highlight w:val="${INS_HIGHLIGHT}"/></w:rPr>`;
+const INS_RPR = `<w:rPr><w:color w:val="${INS_COLOR_HEX}"/></w:rPr>`;
 
 /**
  * Accept all pre-existing track-changes in a document.xml string:
