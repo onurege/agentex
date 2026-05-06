@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser, unauthorized, forbidden, notFound, badRequest } from "@/lib/api-auth";
+import { canReadRun, getAuthUser, unauthorized, forbidden, notFound, badRequest } from "@/lib/api-auth";
 
 // GET /api/runs/[runId]/redline?generation=N
 // Streams the redlined DOCX for the run. Defaults to the latest
@@ -12,13 +12,18 @@ export async function GET(
   const user = await getAuthUser();
   if (!user) return unauthorized();
 
-  // Ownership check: owner or super_admin.
+  // Read access: owner, same-group, or super_admin.
   const run = await prisma.boardRun.findUnique({
     where: { id: params.runId },
-    select: { userId: true, deletedAt: true, documentName: true },
+    select: {
+      userId: true,
+      groupId: true,
+      deletedAt: true,
+      documentName: true,
+    },
   });
   if (!run || run.deletedAt) return notFound("Run not found");
-  if (run.userId !== user.id && user.role !== "super_admin") return forbidden();
+  if (!canReadRun(user, run)) return forbidden();
 
   const generationParam = req.nextUrl.searchParams.get("generation");
 

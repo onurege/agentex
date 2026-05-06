@@ -153,6 +153,33 @@ export function VerdictActionBar({ verdict, documentName }: VerdictActionBarProp
         </a>
       )}
 
+      {/* Original DOCX — unredlined source. Available to owner + group. */}
+      {latestRunId && (
+        <a
+          href={`/api/runs/${latestRunId}/original`}
+          className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-base font-semibold
+                     bg-workspace-surface text-text-secondary border border-workspace-border
+                     hover:bg-workspace-elevated hover:text-text-primary
+                     transition-colors min-h-[52px]"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span>Orijinal DOCX İndir</span>
+        </a>
+      )}
+
       {/* Copy */}
       <button
         onClick={handleCopy}

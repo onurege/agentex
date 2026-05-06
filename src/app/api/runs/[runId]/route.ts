@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser, unauthorized, notFound } from "@/lib/api-auth";
+import { canReadRun, getAuthUser, unauthorized, notFound, forbidden } from "@/lib/api-auth";
 
 export async function GET(
   _req: NextRequest,
@@ -9,8 +9,10 @@ export async function GET(
   const user = await getAuthUser();
   if (!user) return unauthorized();
 
+  // Read access: owner, same-group, or super_admin. Fetch by id only,
+  // gate visibility separately so we return 403 vs 404 correctly.
   const run = await prisma.boardRun.findFirst({
-    where: { id: params.runId, userId: user.id, deletedAt: null },
+    where: { id: params.runId, deletedAt: null },
     include: {
       agentSnapshots: { include: { agentVersion: true } },
       debateMoments: { orderBy: { timestamp: "asc" } },
@@ -20,6 +22,7 @@ export async function GET(
   });
 
   if (!run) return notFound("Run not found");
+  if (!canReadRun(user, run)) return forbidden();
 
   return NextResponse.json(run);
 }

@@ -10,7 +10,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { forbidden, getAuthUser, notFound, unauthorized } from "@/lib/api-auth";
+import { canReadRun, forbidden, getAuthUser, notFound, unauthorized } from "@/lib/api-auth";
 import {
   renderNegotiationRecordDocx,
   type NegotiationRecordData,
@@ -28,6 +28,7 @@ export async function GET(
     where: { id: params.runId },
     select: {
       userId: true,
+      groupId: true,
       deletedAt: true,
       documentName: true,
       startedAt: true,
@@ -35,7 +36,7 @@ export async function GET(
     },
   });
   if (!run || run.deletedAt) return notFound("Run not found");
-  if (run.userId !== user.id && user.role !== "super_admin") return forbidden();
+  if (!canReadRun(user, run)) return forbidden();
   if (!run.verdict) return notFound("Verdict not available for this run");
 
   // Prisma returns the JSON columns as `unknown`; the VerdictSeed
