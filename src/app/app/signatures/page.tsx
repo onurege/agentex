@@ -18,7 +18,7 @@ import { SignatureCropper } from "@/components/signatures/SignatureCropper";
 import { ReferenceSpecimensPanel } from "@/components/signatures/ReferenceSpecimensPanel";
 import { ComparisonResultCard } from "@/components/signatures/ComparisonResultCard";
 import { PrecheckResultCard } from "@/components/signatures/PrecheckResultCard";
-import { ExternalVerificationCard } from "@/components/signatures/ExternalVerificationCard";
+import { SignatureDecisionCard } from "@/components/signatures/SignatureDecisionCard";
 import { useSignaturesStore } from "@/lib/signatures/store";
 import { useHydrated } from "@/lib/draft/use-hydrated";
 import {
@@ -415,7 +415,11 @@ export default function SignaturesPage() {
               <>
                 <PrecheckResultCard result={precheckResult} />
                 <div className="mt-4">
-                  <ExternalVerificationCard result={precheckResult} />
+                  <SignatureDecisionCard
+                    result={precheckResult}
+                    sirkuFileName={referenceFileName}
+                    petitionFileName={contractFileName}
+                  />
                 </div>
               </>
             ) : precheckRunning ? (
