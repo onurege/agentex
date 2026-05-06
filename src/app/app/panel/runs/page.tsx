@@ -201,6 +201,32 @@ export default function PanelRunsPage() {
 
   const unassignedCount = allRuns.filter((r) => r.folderId === null).length;
 
+  // Version numbering — runs that share (folderId, documentName) form a
+  // version family. Oldest = v1, newest = vN. Computed across the
+  // currently visible 'allRuns' so a run in folder A and folder B don't
+  // pollute each other's numbering. Numbering is computed before the
+  // search/mode/risk filter so a hidden v2 doesn't leave v1 → v3 gaps.
+  const versionByRunId = new Map<string, { index: number; total: number }>();
+  {
+    const families = new Map<string, RunListItem[]>();
+    for (const r of allRuns) {
+      const key = `${r.folderId ?? "__none__"}::${r.documentName}`;
+      const list = families.get(key) ?? [];
+      list.push(r);
+      families.set(key, list);
+    }
+    families.forEach((list) => {
+      if (list.length < 2) return; // singletons don't need a v-badge
+      list.sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
+      list.forEach((r, i) => {
+        versionByRunId.set(r.id, { index: i + 1, total: list.length });
+      });
+    });
+  }
+
   return (
     <div className="flex gap-6">
       {/* Folder sidebar */}
@@ -430,6 +456,7 @@ export default function PanelRunsPage() {
             const date = new Date(run.createdAt);
             const hasCustomPrompt = run.agentSnapshots.some((a) => a.promptSnapshot !== null);
             const isDeleting = deleteConfirm === run.id;
+            const version = versionByRunId.get(run.id);
 
             return (
               <div
@@ -437,10 +464,18 @@ export default function PanelRunsPage() {
                 className="flex items-center gap-4 p-5 rounded-xl bg-workspace-surface border border-workspace-border hover:border-accent-primary/20 transition-colors"
               >
                 {/* Document icon */}
-                <div className="w-12 h-12 rounded-lg bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 rounded-lg bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center shrink-0 relative">
                   <span className="text-[11px] font-bold text-accent-primary uppercase font-mono">
                     {run.documentName.split(".").pop()?.toUpperCase() ?? "DOC"}
                   </span>
+                  {version && (
+                    <span
+                      className="absolute -top-1.5 -right-2 px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-accent-primary text-white shadow-sm"
+                      title={`Bu sözleşmenin ${version.total} versiyonu var (en eski → en yeni)`}
+                    >
+                      v{version.index}
+                    </span>
+                  )}
                 </div>
 
                 {/* Info */}
