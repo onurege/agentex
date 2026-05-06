@@ -236,6 +236,30 @@ export default function PanelRunsPage() {
                   >
                     Oynat
                   </Link>
+                  <a
+                    href={`/api/runs/${run.id}/redline`}
+                    title="Redline DOCX İndir (track-changes)"
+                    className="px-3 py-2.5 rounded-lg text-[13px] font-medium bg-accent-primary/10 text-accent-primary border border-accent-primary/30 hover:bg-accent-primary/20 transition-colors min-h-[40px] inline-flex items-center gap-1.5"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Redline
+                  </a>
+                  <a
+                    href={`/api/runs/${run.id}/original`}
+                    title="Orijinal DOCX İndir"
+                    className="px-3 py-2.5 rounded-lg text-[13px] font-medium bg-workspace-elevated text-text-secondary border border-workspace-border hover:bg-workspace-border/50 hover:text-text-primary transition-colors min-h-[40px] inline-flex items-center gap-1.5"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Orijinal
+                  </a>
 
                   {/* Delete */}
                   {isDeleting ? (

@@ -35,22 +35,29 @@ export async function GET(
     }
     artifact = await prisma.redlineArtifact.findUnique({
       where: { runId_generation: { runId: params.runId, generation } },
-      select: { docxBuffer: true, generation: true },
+      select: { docxBuffer: true, generation: true, generatedAt: true },
     });
   } else {
     artifact = await prisma.redlineArtifact.findFirst({
       where: { runId: params.runId, isLatest: true },
       orderBy: { generation: "desc" },
-      select: { docxBuffer: true, generation: true },
+      select: { docxBuffer: true, generation: true, generatedAt: true },
     });
   }
 
   if (!artifact) return notFound("Redline not generated for this run");
 
+  // Filename = <doc>-redline-<YYYY-MM-DD_HH-mm>.docx so multiple runs
+  // of the same source document are distinguishable in the filesystem.
+  // Strip any '-redline-vN' suffix from the source name so re-uploaded
+  // redline DOCXes don't compound the suffix on each pass.
   // Sanitize filename — Word doesn't like special characters in
   // Content-Disposition; keep ASCII fallback and provide UTF-8 filename*.
-  const baseName = run.documentName.replace(/\.docx$/i, "");
-  const fileName = `${baseName}-redline-v${artifact.generation}.docx`;
+  const baseName = run.documentName
+    .replace(/\.docx$/i, "")
+    .replace(/-redline-(?:v\d+|\d{4}-\d{2}-\d{2}_\d{2}-\d{2})$/i, "");
+  const stamp = formatRedlineStamp(artifact.generatedAt);
+  const fileName = `${baseName}-redline-${stamp}.docx`;
   const asciiName = fileName.replace(/[^\x20-\x7E]/g, "_");
 
   // Bytes field comes back as Uint8Array from Prisma; wrap into Buffer
@@ -69,4 +76,23 @@ export async function GET(
       "Cache-Control": "private, no-store",
     },
   });
+}
+
+// Local timezone (Europe/Istanbul in production) so users see filenames
+// matching the run's wall-clock time. UTC would be safer but harder for
+// non-technical users to map back to "the run I just did".
+function formatRedlineStamp(d: Date): string {
+  const tz = "Europe/Istanbul";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const get = (t: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === t)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")}_${get("hour")}-${get("minute")}`;
 }
