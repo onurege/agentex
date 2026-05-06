@@ -36,8 +36,8 @@
 
     /* Accents — Param Brand Concept */
     --color-accent-primary: 64 22 137;           /* #401689 */
-    --color-accent-secondary: 0 195 218;         /* #00C3DA */
-    --color-accent-success: 0 195 218;           /* #00C3DA */
+    --color-accent-secondary: 16 185 129;        /* #10B981 emerald-500 */
+    --color-accent-success: 16 185 129;          /* #10B981 emerald-500 */
     --color-accent-warning: 255 67 0;            /* #FF4300 */
     --color-accent-danger: 186 26 26;            /* accessible red */
     --color-accent-info: 97 40 193;              /* #6128C1 */
@@ -49,16 +49,16 @@
     /* Agent roles */
     --color-agent-chief: 64 22 137;              /* #401689 */
     --color-agent-legal: 40 0 100;               /* deep purple */
-    --color-agent-finance: 0 195 218;            /* turquoise */
+    --color-agent-finance: 20 184 166;           /* #14B8A6 teal-green */
     --color-agent-tax: 255 67 0;                 /* orange highlight */
     --color-agent-sales: 186 26 26;              /* critical red */
     --color-agent-product: 97 40 193;            /* gradient purple */
-    --color-agent-research: 0 113 128;           /* legal research teal */
+    --color-agent-research: 22 101 52;           /* #166534 deep green */
 
     /* Legacy pixel tokens */
     --color-pixel-amber: 255 67 0;
-    --color-pixel-green: 0 195 218;
-    --color-pixel-blue: 0 195 218;
+    --color-pixel-green: 21 128 61;              /* #15803D */
+    --color-pixel-blue: 21 128 61;               /* legacy alias of green */
     --color-pixel-red: 186 26 26;
     --color-pixel-purple: 64 22 137;
     --color-pixel-orange: 255 67 0;
@@ -66,8 +66,8 @@
     /* Shadows — subtle deep-purple elevation */
     --shadow-soft: 0 2px 10px rgb(64 22 137 / 0.05);
     --shadow-medium: 0 10px 40px rgb(64 22 137 / 0.08);
-    --shadow-glow-blue: 0 0 0 1px rgb(0 195 218 / 0.18), 0 10px 40px rgb(0 195 218 / 0.16);
-    --shadow-glow-success: 0 0 0 1px rgb(0 195 218 / 0.18), 0 10px 40px rgb(0 195 218 / 0.14);
+    --shadow-glow-blue: 0 0 0 1px rgb(16 185 129 / 0.18), 0 10px 40px rgb(16 185 129 / 0.16);
+    --shadow-glow-success: 0 0 0 1px rgb(16 185 129 / 0.18), 0 10px 40px rgb(16 185 129 / 0.14);
 
     --shadow-card: 0 10px 40px rgb(64 22 137 / 0.08);
     --shadow-card-hover: 0 16px 52px rgb(64 22 137 / 0.12);
@@ -76,7 +76,7 @@
     --shadow-btn-active: 0 2px 8px rgb(64 22 137 / 0.12);
     --shadow-bubble: 0 10px 32px rgb(64 22 137 / 0.12);
 
-    --terminal-glow: 0 0 10px rgb(0 195 218 / 0.24);
+    --terminal-glow: 0 0 10px rgb(16 185 129 / 0.24);
   }
 
   .dark {
@@ -97,10 +97,10 @@
     --color-text-tertiary: 137 122 166;          /* muted purple-grey */
     --color-text-muted: 109 96 135;              /* darker muted purple-grey */
 
-    /* Accents — cyan drives dark-mode action; purple owns atmosphere */
-    --color-accent-primary: 0 215 240;           /* #00D7F0 */
+    /* Accents — emerald drives dark-mode action; purple owns atmosphere */
+    --color-accent-primary: 52 211 153;          /* #34D399 emerald-400 */
     --color-accent-secondary: 97 40 193;         /* #6128C1 */
-    --color-accent-success: 0 215 240;           /* #00D7F0 */
+    --color-accent-success: 52 211 153;          /* #34D399 emerald-400 */
     --color-accent-warning: 255 85 26;           /* #FF551A */
     --color-accent-danger: 255 85 26;            /* #FF551A */
     --color-accent-info: 163 148 194;            /* #A394C2 */
@@ -109,34 +109,34 @@
     --color-semantic-positive: 34 197 94;        /* #22C55E green-500 */
     --color-semantic-negative: 248 113 113;      /* #F87171 red-400 */
 
-    --color-agent-chief: 0 215 240;
+    --color-agent-chief: 52 211 153;             /* #34D399 brand green */
     --color-agent-legal: 163 148 194;
-    --color-agent-finance: 0 215 240;
+    --color-agent-finance: 94 234 212;           /* #5EEAD4 teal-300 */
     --color-agent-tax: 255 85 26;
     --color-agent-sales: 255 85 26;
     --color-agent-product: 97 40 193;
-    --color-agent-research: 0 215 240;
+    --color-agent-research: 74 222 128;          /* #4ADE80 green-400 */
 
     --color-pixel-amber: 255 85 26;
-    --color-pixel-green: 0 215 240;
-    --color-pixel-blue: 0 215 240;
+    --color-pixel-green: 52 211 153;
+    --color-pixel-blue: 52 211 153;
     --color-pixel-red: 255 85 26;
     --color-pixel-purple: 163 148 194;
     --color-pixel-orange: 255 85 26;
 
     --shadow-soft: 0 2px 10px rgb(15 5 33 / 0.5);
     --shadow-medium: 0 14px 44px rgb(15 5 33 / 0.55);
-    --shadow-glow-blue: 0 0 0 1px rgb(0 215 240 / 0.24), 0 0 20px rgb(0 215 240 / 0.3);
-    --shadow-glow-success: 0 0 0 1px rgb(0 215 240 / 0.22), 0 0 20px rgb(0 215 240 / 0.24);
+    --shadow-glow-blue: 0 0 0 1px rgb(52 211 153 / 0.24), 0 0 20px rgb(52 211 153 / 0.3);
+    --shadow-glow-success: 0 0 0 1px rgb(52 211 153 / 0.22), 0 0 20px rgb(52 211 153 / 0.24);
 
     --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.05), 0 20px 60px rgb(15 5 33 / 0.42);
     --shadow-card-hover: 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 70px rgb(15 5 33 / 0.52);
-    --shadow-btn: 0 0 20px rgb(0 215 240 / 0.18);
-    --shadow-btn-hover: 0 0 20px rgb(0 215 240 / 0.3);
-    --shadow-btn-active: 0 0 12px rgb(0 215 240 / 0.2);
+    --shadow-btn: 0 0 20px rgb(52 211 153 / 0.18);
+    --shadow-btn-hover: 0 0 20px rgb(52 211 153 / 0.3);
+    --shadow-btn-active: 0 0 12px rgb(52 211 153 / 0.2);
     --shadow-bubble: 0 8px 24px rgb(15 5 33 / 0.52);
 
-    --terminal-glow: 0 0 10px rgb(0 215 240 / 0.28);
+    --terminal-glow: 0 0 10px rgb(52 211 153 / 0.28);
   }
 
   * {
@@ -152,7 +152,7 @@
     /* Premium airy substrate: light grey surface with purple/turquoise atmosphere. */
     background-image:
       radial-gradient(circle at 10% 8%, rgb(64 22 137 / 0.06), transparent 32%),
-      radial-gradient(circle at 84% 16%, rgb(0 195 218 / 0.08), transparent 30%),
+      radial-gradient(circle at 84% 16%, rgb(16 185 129 / 0.08), transparent 30%),
       radial-gradient(1px 1px at 12% 18%, rgb(64 22 137 / 0.02) 50%, transparent 50%);
     background-size: auto, auto, 42px 42px;
     background-position: 0 0, 0 0, 0 0;
@@ -161,7 +161,7 @@
   .dark body {
     background-image:
       radial-gradient(circle at 12% 10%, rgb(97 40 193 / 0.32), transparent 35%),
-      radial-gradient(circle at 82% 20%, rgb(0 215 240 / 0.16), transparent 32%),
+      radial-gradient(circle at 82% 20%, rgb(52 211 153 / 0.16), transparent 32%),
       radial-gradient(1px 1px at 12% 18%, rgb(255 255 255 / 0.03) 50%, transparent 50%);
   }
 
