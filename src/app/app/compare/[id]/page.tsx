@@ -176,7 +176,7 @@ export default function CompareResultsPage() {
                 )}
               </button>
               {exportStatus === "error" && exportError && (
-                <p className="text-xs text-accent-danger text-right max-w-[280px]">
+                <p className="text-xs text-semantic-negative text-right max-w-[280px]">
                   {exportError}
                 </p>
               )}
@@ -278,15 +278,15 @@ function StatCard({
 }) {
   const toneClass = {
     neutral: "border-workspace-border bg-workspace-surface",
-    danger: "border-accent-danger/30 bg-accent-danger/[0.05]",
+    danger: "border-semantic-negative/30 bg-semantic-negative/[0.05]",
     warning: "border-accent-warning/30 bg-accent-warning/[0.05]",
-    success: "border-accent-success/30 bg-accent-success/[0.05]",
+    success: "border-semantic-positive/30 bg-semantic-positive/[0.05]",
   }[tone];
   const textClass = {
     neutral: "text-text-primary",
-    danger: "text-accent-danger",
+    danger: "text-semantic-negative",
     warning: "text-accent-warning",
-    success: "text-accent-success",
+    success: "text-semantic-positive",
   }[tone];
   return (
     <div className={`rounded-xl border p-4 ${toneClass}`}>

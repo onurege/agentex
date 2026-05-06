@@ -102,7 +102,7 @@ export function ReferenceSpecimensPanel({
                 <button
                   type="button"
                   onClick={() => onRemove(sp.id)}
-                  className="absolute top-1 right-1 p-1 rounded-md bg-workspace-surface border border-workspace-border text-text-muted hover:text-accent-danger hover:bg-accent-danger/10 transition-colors"
+                  className="absolute top-1 right-1 p-1 rounded-md bg-workspace-surface border border-workspace-border text-text-muted hover:text-semantic-negative hover:bg-semantic-negative/10 transition-colors"
                   aria-label={`Örnek ${idx + 2} sil`}
                 >
                   <Trash2 size={12} />

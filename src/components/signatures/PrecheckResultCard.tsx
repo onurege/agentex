@@ -35,9 +35,9 @@ interface Props {
 const STATUS_PRESET = {
   passed: {
     icon: ShieldCheck,
-    iconColor: "text-accent-success",
-    border: "border-accent-success/30",
-    bg: "bg-accent-success/[0.06]",
+    iconColor: "text-semantic-positive",
+    border: "border-semantic-positive/30",
+    bg: "bg-semantic-positive/[0.06]",
     title: "Şirket bilgileri tutuyor",
     subtitle:
       "Sirkü ile dilekçe arasında kritik uyumsuzluk yok; imza karşılaştırmasına geçebilirsiniz.",
@@ -53,9 +53,9 @@ const STATUS_PRESET = {
   },
   failed: {
     icon: ShieldAlert,
-    iconColor: "text-accent-danger",
-    border: "border-accent-danger/30",
-    bg: "bg-accent-danger/[0.08]",
+    iconColor: "text-semantic-negative",
+    border: "border-semantic-negative/30",
+    bg: "bg-semantic-negative/[0.08]",
     title: "Önemli uyumsuzluklar tespit edildi",
     subtitle:
       "İmza karşılaştırması açık tutuldu ama bu uyumsuzluklar dilekçenin geçerliliğini tartışmalı hale getirebilir.",
@@ -66,9 +66,9 @@ const SEVERITY_ICON: Record<
   PrecheckSeverity,
   { icon: typeof CheckCircle2; color: string }
 > = {
-  ok: { icon: CheckCircle2, color: "text-accent-success" },
+  ok: { icon: CheckCircle2, color: "text-semantic-positive" },
   warning: { icon: AlertTriangle, color: "text-accent-warning" },
-  critical: { icon: XCircle, color: "text-accent-danger" },
+  critical: { icon: XCircle, color: "text-semantic-negative" },
 };
 
 export function PrecheckResultCard({ result }: Props) {

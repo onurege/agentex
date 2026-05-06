@@ -522,8 +522,8 @@ export default function SignaturesPage() {
                 </p>
               </div>
             ) : computeError ? (
-              <div className="rounded-xl border border-accent-danger/30 bg-accent-danger/[0.05] p-6 text-center">
-                <p className="text-sm text-accent-danger font-semibold mb-2">
+              <div className="rounded-xl border border-semantic-negative/30 bg-semantic-negative/[0.05] p-6 text-center">
+                <p className="text-sm text-semantic-negative font-semibold mb-2">
                   Karşılaştırma başarısız
                 </p>
                 <p className="text-xs text-text-tertiary mb-3">{computeError}</p>

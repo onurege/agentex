@@ -154,7 +154,7 @@ export function CompareUploadBox({
           dragging
             ? `border-accent-primary bg-accent-primary/5 ring-2 ${t.ring}`
             : errored
-              ? "border-accent-danger/40 bg-accent-danger/5"
+              ? "border-semantic-negative/40 bg-semantic-negative/5"
               : payload
                 ? "border-workspace-border bg-workspace-surface"
                 : "border-workspace-border bg-workspace-elevated hover:border-accent-primary/40 hover:bg-workspace-surface"
@@ -201,7 +201,7 @@ export function CompareUploadBox({
           <button
             type="button"
             onClick={handleClear}
-            className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text-secondary hover:text-accent-danger hover:bg-accent-danger/10 transition-colors"
+            className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text-secondary hover:text-semantic-negative hover:bg-semantic-negative/10 transition-colors"
           >
             <X size={14} />
             Kaldır
@@ -209,7 +209,7 @@ export function CompareUploadBox({
         </div>
       ) : errored ? (
         <div className="flex flex-col items-center text-center gap-3 w-full pt-4">
-          <div className="w-14 h-14 rounded-xl border border-accent-danger/25 bg-accent-danger/10 text-accent-danger flex items-center justify-center">
+          <div className="w-14 h-14 rounded-xl border border-semantic-negative/25 bg-semantic-negative/10 text-semantic-negative flex items-center justify-center">
             <AlertTriangle size={22} />
           </div>
           <div>

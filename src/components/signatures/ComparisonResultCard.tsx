@@ -56,9 +56,9 @@ const VERDICT_MAP = {
 
 const TONE_CLASSES = {
   success: {
-    bg: "bg-accent-success/10",
-    border: "border-accent-success/30",
-    text: "text-accent-success",
+    bg: "bg-semantic-positive/10",
+    border: "border-semantic-positive/30",
+    text: "text-semantic-positive",
   },
   warning: {
     bg: "bg-accent-warning/10",
@@ -66,9 +66,9 @@ const TONE_CLASSES = {
     text: "text-accent-warning",
   },
   danger: {
-    bg: "bg-accent-danger/10",
-    border: "border-accent-danger/30",
-    text: "text-accent-danger",
+    bg: "bg-semantic-negative/10",
+    border: "border-semantic-negative/30",
+    text: "text-semantic-negative",
   },
 };
 
@@ -223,9 +223,9 @@ export function ComparisonResultCard({
           {computing ? (
             <p className="mt-1 text-accent-primary font-medium">Sinyaller yeniden hesaplanıyor…</p>
           ) : errorMessage ? (
-            <p className="mt-1 text-accent-danger font-medium">{errorMessage}</p>
+            <p className="mt-1 text-semantic-negative font-medium">{errorMessage}</p>
           ) : statusMessage ? (
-            <p className="mt-1 text-accent-success font-medium">{statusMessage}</p>
+            <p className="mt-1 text-semantic-positive font-medium">{statusMessage}</p>
           ) : null}
         </div>
         <button

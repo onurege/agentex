@@ -47,13 +47,13 @@ const EXTERNAL_OPTIONS: Array<{
     value: "matched",
     label: "Eşleşiyor",
     description: "TTSG kaydı sirkü ile aynı.",
-    iconColor: "text-accent-success",
+    iconColor: "text-semantic-positive",
   },
   {
     value: "mismatch",
     label: "Eşleşmiyor",
     description: "TTSG kaydı sirkü ile uyuşmuyor.",
-    iconColor: "text-accent-danger",
+    iconColor: "text-semantic-negative",
   },
   {
     value: "unknown",
@@ -156,7 +156,7 @@ export function SignatureDecisionCard({
     return (
       <section className="rounded-2xl border border-accent-primary/30 bg-accent-primary/[0.04] p-6">
         <header className="flex items-start gap-3 mb-3">
-          <CheckCircle2 className="text-accent-success shrink-0" size={24} />
+          <CheckCircle2 className="text-semantic-positive shrink-0" size={24} />
           <div className="flex-1">
             <h2 className="text-xl font-semibold text-text-primary">
               Karar Kaydedildi
@@ -194,8 +194,8 @@ export function SignatureDecisionCard({
             <span
               className={`font-semibold ${
                 userDecision === "approved"
-                  ? "text-accent-success"
-                  : "text-accent-danger"
+                  ? "text-semantic-positive"
+                  : "text-semantic-negative"
               }`}
             >
               {userDecision === "approved" ? "Onaylandı" : "Reddedildi"}
@@ -228,7 +228,7 @@ export function SignatureDecisionCard({
           </button>
         )}
         {error && (
-          <p className="text-[13px] text-accent-danger mt-3">Hata: {error}</p>
+          <p className="text-[13px] text-semantic-negative mt-3">Hata: {error}</p>
         )}
       </section>
     );
@@ -353,11 +353,11 @@ export function SignatureDecisionCard({
             onClick={() => setUserDecision("approved")}
             className={`rounded-xl border p-3 transition-all flex items-center gap-2 ${
               userDecision === "approved"
-                ? "border-accent-success bg-accent-success/10 ring-1 ring-accent-success/40"
+                ? "border-semantic-positive bg-semantic-positive/10 ring-1 ring-semantic-positive/40"
                 : "border-workspace-border bg-workspace-bg hover:border-workspace-border/80"
             }`}
           >
-            <ShieldCheck size={18} className="text-accent-success" />
+            <ShieldCheck size={18} className="text-semantic-positive" />
             <span className="text-[14px] font-semibold text-text-primary">
               Onayla
             </span>
@@ -367,11 +367,11 @@ export function SignatureDecisionCard({
             onClick={() => setUserDecision("rejected")}
             className={`rounded-xl border p-3 transition-all flex items-center gap-2 ${
               userDecision === "rejected"
-                ? "border-accent-danger bg-accent-danger/10 ring-1 ring-accent-danger/40"
+                ? "border-semantic-negative bg-semantic-negative/10 ring-1 ring-semantic-negative/40"
                 : "border-workspace-border bg-workspace-bg hover:border-workspace-border/80"
             }`}
           >
-            <XCircle size={18} className="text-accent-danger" />
+            <XCircle size={18} className="text-semantic-negative" />
             <span className="text-[14px] font-semibold text-text-primary">
               Reddet
             </span>
@@ -388,7 +388,7 @@ export function SignatureDecisionCard({
           }
           className={`w-full rounded-xl bg-workspace-bg border px-4 py-3 text-[14px] text-text-primary placeholder:text-text-muted min-h-[72px] resize-none focus:outline-none transition-colors ${
             requireDecisionNote && decisionNote.trim().length === 0
-              ? "border-accent-danger/40 focus:border-accent-danger/60"
+              ? "border-semantic-negative/40 focus:border-semantic-negative/60"
               : "border-workspace-border focus:border-accent-primary/40"
           }`}
         />
@@ -403,7 +403,7 @@ export function SignatureDecisionCard({
             {submitting ? "Kaydediliyor..." : "Kararı kaydet"}
           </button>
           {error && (
-            <span className="text-[13px] text-accent-danger">Hata: {error}</span>
+            <span className="text-[13px] text-semantic-negative">Hata: {error}</span>
           )}
         </div>
 

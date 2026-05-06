@@ -99,7 +99,7 @@ export default function NewCompareRunPage() {
           <div className="text-sm text-text-secondary">
             {canStart ? (
               <span className="inline-flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-accent-success animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-semantic-positive animate-pulse" />
                 İki belge de hazır. Karşılaştırmayı başlatabilirsiniz.
               </span>
             ) : (

@@ -38,6 +38,10 @@ const config: Config = {
           danger: rgbVar("--color-accent-danger"),
           info: rgbVar("--color-accent-info"),
         },
+        semantic: {
+          positive: rgbVar("--color-semantic-positive"),
+          negative: rgbVar("--color-semantic-negative"),
+        },
         text: {
           primary: rgbVar("--color-text-primary"),
           secondary: rgbVar("--color-text-secondary"),

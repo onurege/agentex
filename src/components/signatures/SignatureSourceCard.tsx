@@ -148,7 +148,7 @@ export function SignatureSourceCard({
             <button
               type="button"
               onClick={handleClear}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-text-secondary hover:text-accent-danger hover:bg-accent-danger/10 transition-colors shrink-0"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-text-secondary hover:text-semantic-negative hover:bg-semantic-negative/10 transition-colors shrink-0"
             >
               <X size={13} />
               Kaldır
@@ -168,7 +168,7 @@ export function SignatureSourceCard({
               dragging
                 ? `border-accent-primary bg-accent-primary/5 ring-2 ${t.ring}`
                 : errored
-                  ? "border-accent-danger/40 bg-accent-danger/5"
+                  ? "border-semantic-negative/40 bg-semantic-negative/5"
                   : "border-workspace-border bg-workspace-elevated hover:border-accent-primary/40"
             }`}
         >
@@ -179,7 +179,7 @@ export function SignatureSourceCard({
             </div>
           ) : errored ? (
             <div className="flex flex-col items-center gap-2">
-              <div className="w-12 h-12 rounded-xl border border-accent-danger/25 bg-accent-danger/10 text-accent-danger flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl border border-semantic-negative/25 bg-semantic-negative/10 text-semantic-negative flex items-center justify-center">
                 <AlertTriangle size={20} />
               </div>
               <p className="text-sm text-text-primary font-semibold">

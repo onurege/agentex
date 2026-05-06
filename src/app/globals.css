@@ -42,6 +42,10 @@
     --color-accent-danger: 186 26 26;            /* accessible red */
     --color-accent-info: 97 40 193;              /* #6128C1 */
 
+    /* Semantic — true red/green for diff & decision UIs (compare, signatures) */
+    --color-semantic-positive: 22 163 74;        /* #16A34A green-600 */
+    --color-semantic-negative: 186 26 26;        /* accessible red */
+
     /* Agent roles */
     --color-agent-chief: 64 22 137;              /* #401689 */
     --color-agent-legal: 40 0 100;               /* deep purple */
@@ -100,6 +104,10 @@
     --color-accent-warning: 255 85 26;           /* #FF551A */
     --color-accent-danger: 255 85 26;            /* #FF551A */
     --color-accent-info: 163 148 194;            /* #A394C2 */
+
+    /* Semantic — true red/green for diff & decision UIs (compare, signatures) */
+    --color-semantic-positive: 34 197 94;        /* #22C55E green-500 */
+    --color-semantic-negative: 248 113 113;      /* #F87171 red-400 */
 
     --color-agent-chief: 0 215 240;
     --color-agent-legal: 163 148 194;

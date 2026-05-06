@@ -234,7 +234,7 @@ export function SignatureCropper({
         <Crop size={14} className="mt-0.5 text-text-tertiary shrink-0" />
         <div className="text-xs text-text-tertiary leading-relaxed">
           {error ? (
-            <span className="text-accent-danger">{error}</span>
+            <span className="text-semantic-negative">{error}</span>
           ) : source.crop ? (
             <>
               Seçim kaydedildi. Farklı bir bölge için yeniden sürükleyin,

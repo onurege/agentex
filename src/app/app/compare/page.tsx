@@ -142,7 +142,7 @@ export default function CompareModuleLanding() {
                             deleteRun(run.id);
                           }
                         }}
-                        className="relative z-10 p-1.5 rounded-md text-text-muted hover:text-accent-danger hover:bg-accent-danger/10 transition-colors"
+                        className="relative z-10 p-1.5 rounded-md text-text-muted hover:text-semantic-negative hover:bg-semantic-negative/10 transition-colors"
                         aria-label="Karşılaştırmayı sil"
                       >
                         <Trash2 size={14} />
@@ -167,7 +167,7 @@ export default function CompareModuleLanding() {
                         {run.stats.total} fark
                       </span>
                       {run.stats.high > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-accent-danger/10 text-accent-danger border border-accent-danger/25 font-mono">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-semantic-negative/10 text-semantic-negative border border-semantic-negative/25 font-mono">
                           <AlertTriangle size={11} />
                           {run.stats.high} yüksek
                         </span>
