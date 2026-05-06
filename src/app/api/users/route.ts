@@ -24,6 +24,8 @@ export async function GET() {
       active: true,
       createdAt: true,
       deletedAt: true,
+      groupId: true,
+      group: { select: { id: true, name: true } },
     },
   });
 
@@ -37,6 +39,8 @@ export async function GET() {
       active: u.active,
       createdAt: u.createdAt.toISOString(),
       deletedAt: u.deletedAt?.toISOString() ?? null,
+      groupId: u.groupId,
+      groupName: u.group?.name ?? null,
     })),
   );
 }

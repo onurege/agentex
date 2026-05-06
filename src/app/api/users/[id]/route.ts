@@ -26,6 +26,7 @@ export async function PATCH(
     active?: unknown;
     name?: unknown;
     password?: unknown;
+    groupId?: unknown;
   };
   try {
     body = await req.json();
@@ -37,6 +38,7 @@ export async function PATCH(
   const hasActive = body.active !== undefined;
   const hasName = body.name !== undefined;
   const hasPassword = body.password !== undefined;
+  const hasGroup = body.groupId !== undefined;
 
   if (hasRole && (typeof body.role !== "string" || !VALID_ROLES.includes(body.role as UserRole))) {
     return badRequest("invalid_role");
@@ -46,7 +48,12 @@ export async function PATCH(
   if (hasPassword && (typeof body.password !== "string" || !isStrongEnoughPassword(body.password))) {
     return badRequest("weak_password");
   }
-  if (!hasRole && !hasActive && !hasName && !hasPassword) return badRequest("empty_update");
+  if (hasGroup && body.groupId !== null && typeof body.groupId !== "string") {
+    return badRequest("invalid_group");
+  }
+  if (!hasRole && !hasActive && !hasName && !hasPassword && !hasGroup) {
+    return badRequest("empty_update");
+  }
 
   const target = await prisma.user.findUnique({ where: { id: params.id } });
   if (!target) return notFound("user_not_found");
@@ -55,6 +62,17 @@ export async function PATCH(
   const newRole = hasRole ? (body.role as UserRole) : (target.role as UserRole);
   const newActive = hasActive ? Boolean(body.active) : target.active;
   const newName = hasName ? (body.name as string).trim() || null : target.name;
+  const newGroupId = hasGroup
+    ? (body.groupId === null ? null : (body.groupId as string))
+    : target.groupId;
+
+  if (hasGroup && newGroupId !== null) {
+    const group = await prisma.group.findUnique({
+      where: { id: newGroupId },
+      select: { id: true },
+    });
+    if (!group) return notFound("group_not_found");
+  }
 
   // No-op short-circuit: detect via the request *intent* (hasPassword) rather
   // than comparing hashes. Each hashPassword() call yields a fresh salt, so
@@ -65,7 +83,8 @@ export async function PATCH(
     !hasPassword &&
     target.role === newRole &&
     target.active === newActive &&
-    target.name === newName
+    target.name === newName &&
+    target.groupId === newGroupId
   ) {
     return NextResponse.json({ ok: true, unchanged: true });
   }
@@ -110,12 +129,17 @@ export async function PATCH(
           active: newActive,
           name: newName,
           passwordHash: newPasswordHash,
+          groupId: newGroupId,
         },
       });
 
       await tx.auditLog.create({
         data: {
-          action: hasRole && !hasActive && !hasName && !hasPassword ? "role_changed" : "user_updated",
+          action: hasGroup && !hasRole && !hasActive && !hasName && !hasPassword
+            ? "user_group_changed"
+            : hasRole && !hasActive && !hasName && !hasPassword && !hasGroup
+              ? "role_changed"
+              : "user_updated",
           targetType: "user",
           targetId: params.id,
           summary: `${target.email} kullanıcısı güncellendi`,
@@ -128,6 +152,8 @@ export async function PATCH(
             newActive,
             nameChanged: target.name !== newName,
             passwordChanged: hasPassword,
+            previousGroupId: target.groupId,
+            newGroupId,
           },
           actorId: caller.id,
         },

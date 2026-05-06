@@ -14,6 +14,15 @@ interface UserRow {
   active: boolean;
   createdAt: string;
   deletedAt?: string | null;
+  groupId: string | null;
+  groupName: string | null;
+}
+
+interface GroupRow {
+  id: string;
+  name: string;
+  createdAt: string;
+  memberCount: number;
 }
 
 const ROLE_OPTIONS: Array<{ value: UserRole; label: string }> = [
@@ -59,6 +68,70 @@ export default function UsersPage() {
     active: true,
   });
   const [passwordDrafts, setPasswordDrafts] = useState<Record<string, string>>({});
+  const [groups, setGroups] = useState<GroupRow[]>([]);
+  const [groupDraft, setGroupDraft] = useState("");
+
+  const fetchGroups = useCallback(async () => {
+    try {
+      const res = await fetch("/api/groups");
+      if (!res.ok) return;
+      const data = (await res.json()) as GroupRow[];
+      setGroups(data);
+    } catch {
+      // non-fatal — group select will be empty
+    }
+  }, []);
+
+  async function createGroup(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = groupDraft.trim();
+    if (name.length === 0) return;
+    setPendingFor("group-create");
+    try {
+      const res = await fetch("/api/groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setToast({
+          kind: "error",
+          message:
+            body.error === "name_taken"
+              ? "Bu isimde bir grup zaten var."
+              : "Grup oluşturulamadı.",
+        });
+        return;
+      }
+      setGroups((g) => [...g, body as GroupRow].sort((a, b) => a.name.localeCompare(b.name)));
+      setGroupDraft("");
+      setToast({ kind: "success", message: "Grup oluşturuldu." });
+    } catch {
+      setToast({ kind: "error", message: "Ağ hatası — grup oluşturulamadı." });
+    } finally {
+      setPendingFor(null);
+    }
+  }
+
+  async function deleteGroup(id: string) {
+    setPendingFor(`group-${id}`);
+    try {
+      const res = await fetch(`/api/groups/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        setToast({ kind: "error", message: "Grup silinemedi." });
+        return;
+      }
+      setGroups((g) => g.filter((x) => x.id !== id));
+      // Users that were in this group are now ungrouped — refetch.
+      void fetchUsers();
+      setToast({ kind: "success", message: "Grup silindi." });
+    } catch {
+      setToast({ kind: "error", message: "Ağ hatası — grup silinemedi." });
+    } finally {
+      setPendingFor(null);
+    }
+  }
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -80,7 +153,8 @@ export default function UsersPage() {
 
   useEffect(() => {
     void fetchUsers();
-  }, [fetchUsers]);
+    void fetchGroups();
+  }, [fetchUsers, fetchGroups]);
 
   useEffect(() => {
     if (!toast) return;
@@ -113,9 +187,28 @@ export default function UsersPage() {
   }
 
   const updateUser = useCallback(
-    async (userId: string, patch: Partial<Pick<UserRow, "role" | "active" | "name">> & { password?: string }) => {
+    async (
+      userId: string,
+      patch: Partial<Pick<UserRow, "role" | "active" | "name">> & {
+        password?: string;
+        groupId?: string | null;
+      },
+    ) => {
       const previous = users;
-      setUsers((rows) => rows.map((u) => (u.id === userId ? { ...u, ...patch } : u)));
+      setUsers((rows) =>
+        rows.map((u) => {
+          if (u.id !== userId) return u;
+          const next = { ...u, ...patch };
+          if (patch.groupId !== undefined) {
+            next.groupId = patch.groupId;
+            next.groupName =
+              patch.groupId === null
+                ? null
+                : groups.find((g) => g.id === patch.groupId)?.name ?? u.groupName;
+          }
+          return next;
+        }),
+      );
       setPendingFor(userId);
 
       try {
@@ -138,7 +231,7 @@ export default function UsersPage() {
         setPendingFor(null);
       }
     },
-    [users],
+    [users, groups],
   );
 
   async function deleteUser(userId: string) {
@@ -192,6 +285,64 @@ export default function UsersPage() {
           {toast.message}
         </div>
       )}
+
+      <section className="mb-8 rounded-2xl border border-workspace-border bg-workspace-surface p-6 shadow-soft">
+        <div className="mb-4">
+          <h2 className="font-display text-xl font-bold text-text-primary">Gruplar</h2>
+          <p className="text-sm text-text-secondary">
+            Aynı gruptaki kullanıcılar birbirinin Boardroom run'larını ve
+            sözleşme indirmelerini görür (read-only). Edit/sil sadece sahibinde.
+          </p>
+        </div>
+        <form
+          onSubmit={createGroup}
+          className="mb-4 flex items-center gap-2"
+        >
+          <input
+            value={groupDraft}
+            onChange={(e) => setGroupDraft(e.target.value)}
+            placeholder="Yeni grup adı (örn: 'Hukuk Departmanı')"
+            className="h-10 flex-1 rounded-xl border border-workspace-border bg-workspace-bg px-4 text-sm text-text-primary outline-none focus:border-accent-primary/50"
+          />
+          <button
+            type="submit"
+            disabled={
+              pendingFor === "group-create" || groupDraft.trim().length === 0
+            }
+            className="h-10 rounded-xl bg-accent-primary px-4 text-sm font-semibold text-white hover:bg-accent-secondary disabled:opacity-50"
+          >
+            {pendingFor === "group-create" ? "Ekleniyor..." : "Grup ekle"}
+          </button>
+        </form>
+        {groups.length === 0 ? (
+          <p className="text-sm text-text-muted">Henüz grup yok.</p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {groups.map((g) => (
+              <li
+                key={g.id}
+                className="flex items-center gap-2 rounded-full border border-workspace-border bg-workspace-bg px-3 py-1.5"
+              >
+                <span className="text-sm font-medium text-text-primary">
+                  {g.name}
+                </span>
+                <span className="text-[12px] text-text-muted">
+                  · {g.memberCount} üye
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void deleteGroup(g.id)}
+                  disabled={pendingFor === `group-${g.id}`}
+                  className="text-xs font-semibold text-accent-danger hover:underline disabled:opacity-40"
+                  aria-label={`${g.name} grubunu sil`}
+                >
+                  Sil
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {showCreate && (
         <form
@@ -251,8 +402,8 @@ export default function UsersPage() {
       )}
 
       <div className="overflow-hidden rounded-xl border border-workspace-border bg-workspace-surface">
-        <div className="grid grid-cols-[1.2fr_1.5fr_160px_110px_180px_120px_130px] gap-4 border-b border-workspace-border bg-workspace-elevated/50 px-6 py-4">
-          {["Kullanıcı", "Email", "Rol", "Aktif", "Şifre", "Katılma", "İşlem"].map((col) => (
+        <div className="grid grid-cols-[1.1fr_1.4fr_140px_140px_100px_160px_110px_120px] gap-4 border-b border-workspace-border bg-workspace-elevated/50 px-6 py-4">
+          {["Kullanıcı", "Email", "Grup", "Rol", "Aktif", "Şifre", "Katılma", "İşlem"].map((col) => (
             <span key={col} className="text-[13px] font-semibold uppercase tracking-wide text-text-muted">
               {col}
             </span>
@@ -275,7 +426,7 @@ export default function UsersPage() {
             return (
               <div
                 key={u.id}
-                className="grid grid-cols-[1.2fr_1.5fr_160px_110px_180px_120px_130px] items-center gap-4 border-b border-workspace-border/30 px-6 py-4"
+                className="grid grid-cols-[1.1fr_1.4fr_140px_140px_100px_160px_110px_120px] items-center gap-4 border-b border-workspace-border/30 px-6 py-4"
               >
                 <input
                   value={u.name ?? ""}
@@ -291,6 +442,27 @@ export default function UsersPage() {
                   {u.email}
                   {isSelf && <span className="ml-2 text-[12px] font-medium text-accent-primary">(siz)</span>}
                 </span>
+
+                <select
+                  value={u.groupId ?? ""}
+                  onChange={(event) =>
+                    void updateUser(u.id, {
+                      groupId: event.target.value === "" ? null : event.target.value,
+                    })
+                  }
+                  disabled={isPending}
+                  className={`rounded-lg border border-workspace-border bg-workspace-bg px-2 py-1 text-[13px] text-text-primary outline-none focus:border-accent-primary/40 ${
+                    isPending ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                  }`}
+                  aria-label="Grup ataması"
+                >
+                  <option value="">— grupsuz —</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
 
                 <select
                   value={u.role}
