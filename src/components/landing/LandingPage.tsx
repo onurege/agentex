@@ -147,7 +147,7 @@ export function LandingPage() {
                 <Shield className="h-7 w-7 text-white" />
               </div>
               <h2 className="max-w-lg font-display text-[48px] font-extrabold leading-[1.1] tracking-[-0.03em] text-white drop-shadow">
-                Hukuki süreçler için güvenli karar merkezi
+                İş süreçleri için güvenli karar merkezi
               </h2>
               <p className="mt-8 max-w-md text-lg leading-relaxed text-white/80">
                 Kullanıcılar, yetkiler, ajanlar ve tüm işlem izleri tek bir
