@@ -18,6 +18,7 @@ import { SignatureCropper } from "@/components/signatures/SignatureCropper";
 import { ReferenceSpecimensPanel } from "@/components/signatures/ReferenceSpecimensPanel";
 import { ComparisonResultCard } from "@/components/signatures/ComparisonResultCard";
 import { PrecheckResultCard } from "@/components/signatures/PrecheckResultCard";
+import { ExternalVerificationCard } from "@/components/signatures/ExternalVerificationCard";
 import { useSignaturesStore } from "@/lib/signatures/store";
 import { useHydrated } from "@/lib/draft/use-hydrated";
 import {
@@ -411,7 +412,12 @@ export default function SignaturesPage() {
         {bothLoaded ? (
           <>
             {precheckResult ? (
-              <PrecheckResultCard result={precheckResult} />
+              <>
+                <PrecheckResultCard result={precheckResult} />
+                <div className="mt-4">
+                  <ExternalVerificationCard result={precheckResult} />
+                </div>
+              </>
             ) : precheckRunning ? (
               <div className="rounded-xl border border-workspace-border bg-workspace-elevated p-4 mb-6 flex items-center gap-3 text-sm text-text-secondary">
                 <Loader2

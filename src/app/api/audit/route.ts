@@ -20,6 +20,7 @@ const CLIENT_ALLOWED_ACTIONS: ReadonlySet<AuditAction> = new Set<AuditAction>([
   "signature_crop_selected",
   "signature_compared",
   "signature_failed",
+  "signature_external_verification",
   "template_applied",
   "cv_draft_saved",
   "prompt_draft_saved",
