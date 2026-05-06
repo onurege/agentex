@@ -67,13 +67,29 @@ export async function GET(req: NextRequest) {
       : undefined;
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 200), 500);
 
+  // Visibility scope:
+  //   super_admin → no actor filter (full transparency, includes admin
+  //     module so role/user changes stay auditable).
+  //   group member → events whose actor shares the viewer's groupId,
+  //     plus the viewer's own events (covers actions taken before
+  //     joining a group). Admin-module events suppressed so user_*
+  //     and role_changed entries about other people aren't exposed.
+  //   groupless → only the viewer's own events.
+  const where: import("@prisma/client").Prisma.AuditLogWhereInput = {
+    ...(action && { action }),
+    ...(targetType && { targetType }),
+    ...(moduleFilter && { module: moduleFilter }),
+    ...(severity && { severity }),
+  };
+  if (user.role !== "super_admin") {
+    where.NOT = { module: "admin" };
+    where.OR = user.groupId
+      ? [{ actorId: user.id }, { actor: { groupId: user.groupId } }]
+      : [{ actorId: user.id }];
+  }
+
   const events = await prisma.auditLog.findMany({
-    where: {
-      ...(action && { action }),
-      ...(targetType && { targetType }),
-      ...(moduleFilter && { module: moduleFilter }),
-      ...(severity && { severity }),
-    },
+    where,
     include: {
       actor: {
         select: {

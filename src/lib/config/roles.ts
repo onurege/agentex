@@ -44,7 +44,10 @@ const PERMISSION_MAP: Record<UserRole, UserPermissions> = {
     canManageOwnAgents: true,
     canManageOwnPrompts: true,
     canViewUsers: false,
-    canViewAudit: false,
+    // Audit page is open for transparency — the API scopes events to
+    // same-group members and excludes admin-module entries. Super admin
+    // still gets the unfiltered view.
+    canViewAudit: true,
   },
   super_admin: {
     canAccessPanel: true,
