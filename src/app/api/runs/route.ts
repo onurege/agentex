@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
   const editProposals: EditProposal[] = snapshot.editProposals ?? [];
   const arbitratedEdits: ArbitratedEdit[] = snapshot.arbitratedEdits ?? [];
 
+  try {
   await prisma.$transaction(async (tx) => {
     const existing = await tx.boardRun.findUnique({ where: { id: snapshot.id } });
     if (existing) return;
@@ -205,6 +206,16 @@ export async function POST(req: NextRequest) {
       },
     });
   });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    // eslint-disable-next-line no-console
+    console.error("[POST /api/runs] transaction failed:", message, stack);
+    return NextResponse.json(
+      { error: `runs_persist_failed: ${message}` },
+      { status: 500 },
+    );
+  }
 
   // Faz 4: generate redline DOCX outside the transaction (jszip I/O
   // shouldn't hold row locks). Skip silently if prerequisites missing.
