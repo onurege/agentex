@@ -39,15 +39,23 @@ export function renderDraft(
     .filter((c) => isClauseEnabled(c, session, template))
     .sort((a, b) => a.order - b.order);
 
-  const clauses: ClauseText[] = enabled.map((c, idx) => ({
-    clauseId: c.id,
-    number: `Madde ${idx + 1}`,
-    title: c.title,
-    body: renderClauseBody(c, session, template),
-  }));
+  const manualEdits = session.manualEdits ?? {};
+  const clauses: ClauseText[] = enabled.map((c, idx) => {
+    const override = manualEdits[c.id];
+    return {
+      clauseId: c.id,
+      number: `Madde ${idx + 1}`,
+      title: override?.title ?? c.title,
+      body: override?.body ?? renderClauseBody(c, session, template),
+    };
+  });
 
   const missingByClause: Record<string, string[]> = {};
   for (const c of enabled) {
+    // Manually edited clauses are frozen; missing-answer detection no
+    // longer applies because the user has taken full responsibility
+    // for the clause text.
+    if (manualEdits[c.id]?.body !== undefined) continue;
     const missing = findMissingAnswers(c, session, template);
     if (missing.length > 0) missingByClause[c.id] = missing;
   }

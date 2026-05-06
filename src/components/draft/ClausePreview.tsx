@@ -11,8 +11,15 @@
 // wizard cevaplarından türediği için burada toggle edilmez.
 // ============================================================
 
-import { Fragment, useCallback, useMemo, useState } from "react";
-import { Download, Loader2 } from "lucide-react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Download, Loader2, RotateCcw } from "lucide-react";
 import type { DraftSession, DraftTemplate } from "@/lib/draft/types";
 import { renderDraft } from "@/lib/draft/renderer";
 import { useDraftStore } from "@/lib/draft/store";
@@ -28,6 +35,9 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
   const { clauses, missingByClause } = renderDraft(template, session);
   const toggleClause = useDraftStore((s) => s.toggleClause);
   const setStatus = useDraftStore((s) => s.setStatus);
+  const setManualEdit = useDraftStore((s) => s.setManualEdit);
+  const clearManualEdit = useDraftStore((s) => s.clearManualEdit);
+  const manualEdits = session.manualEdits ?? {};
 
   const [exportState, setExportState] = useState<"idle" | "working" | "error">(
     "idle",
@@ -68,6 +78,7 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
           answers: session.answers,
           aiAccepted: session.aiAccepted,
           disabledClauses: session.disabledClauses,
+          manualEdits: session.manualEdits ?? {},
         }),
       });
 
@@ -101,6 +112,7 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
     session.answers,
     session.aiAccepted,
     session.disabledClauses,
+    session.manualEdits,
     setStatus,
     template.label,
   ]);
@@ -169,26 +181,38 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
               Soruları doldurdukça madde metinleri burada şekillenecek.
             </p>
           ) : (
-            clauses.map((c) => (
-              <section key={c.clauseId}>
-                <h3 className="font-display text-[17px] font-semibold text-text-primary mb-2">
-                  {c.number} — {c.title}
-                </h3>
-                <p className="text-[16px] text-text-secondary leading-8 whitespace-pre-wrap">
-                  {renderBodyWithHighlights(c.body)}
-                </p>
-                {aiEditableSet.has(c.clauseId) && (
-                  <div className="mt-2">
-                    <AISuggestBox
-                      templateId={template.id}
-                      clauseId={c.clauseId}
-                      clauseTitle={c.title}
-                      session={session}
-                    />
-                  </div>
-                )}
-              </section>
-            ))
+            clauses.map((c) => {
+              const edit = manualEdits[c.clauseId];
+              const isEdited =
+                edit?.title !== undefined || edit?.body !== undefined;
+              return (
+                <section key={c.clauseId}>
+                  <EditableClause
+                    number={c.number}
+                    title={c.title}
+                    body={c.body}
+                    isEdited={isEdited}
+                    onEditTitle={(next) =>
+                      setManualEdit(session.id, c.clauseId, "title", next)
+                    }
+                    onEditBody={(next) =>
+                      setManualEdit(session.id, c.clauseId, "body", next)
+                    }
+                    onReset={() => clearManualEdit(session.id, c.clauseId)}
+                  />
+                  {aiEditableSet.has(c.clauseId) && !isEdited && (
+                    <div className="mt-2">
+                      <AISuggestBox
+                        templateId={template.id}
+                        clauseId={c.clauseId}
+                        clauseTitle={c.title}
+                        session={session}
+                      />
+                    </div>
+                  )}
+                </section>
+              );
+            })
           )}
         </div>
       </article>
@@ -241,6 +265,124 @@ function triggerDownload(blob: Blob, fileName: string) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+// EditableClause — başlık ve gövdeyi contentEditable olarak çizer.
+// Otomatik madde numarası kilitli (select-none span). Kullanıcı yapıştırma
+// yaparken plain-text'e düşürürüz; aksi takdirde format kalıntıları
+// DOCX export'a kaçar. Reset olunca DOM textContent'i prop ile hizalanır
+// (contentEditable + React'in birlikte çalışmaması için elle sync).
+function EditableClause({
+  number,
+  title,
+  body,
+  isEdited,
+  onEditTitle,
+  onEditBody,
+  onReset,
+}: {
+  number: string;
+  title: string;
+  body: string;
+  isEdited: boolean;
+  onEditTitle: (next: string) => void;
+  onEditBody: (next: string) => void;
+  onReset: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-baseline justify-between gap-3 mb-2">
+        <h3 className="font-display text-[17px] font-semibold text-text-primary leading-snug">
+          <span className="select-none">{number} — </span>
+          <EditableText
+            value={title}
+            onCommit={onEditTitle}
+            ariaLabel="Madde başlığı"
+            className="outline-none focus:bg-accent-primary/[0.06] rounded px-0.5 -mx-0.5"
+          />
+        </h3>
+        {isEdited && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="inline-flex items-center gap-1 text-[11px] font-mono uppercase tracking-wide text-accent-warning hover:text-text-primary transition-colors shrink-0"
+            title="Bu maddedeki manuel düzenlemeyi sıfırla — şablon metnine geri dön."
+          >
+            <RotateCcw size={11} />
+            Düzenlendi · sıfırla
+          </button>
+        )}
+      </div>
+      <EditableText
+        value={body}
+        onCommit={onEditBody}
+        multiline
+        ariaLabel="Madde gövdesi"
+        className="block text-[16px] text-text-secondary leading-8 whitespace-pre-wrap outline-none focus:bg-accent-primary/[0.04] rounded px-1 -mx-1 py-0.5"
+        renderInitial={(text) => renderBodyWithHighlights(text)}
+      />
+    </>
+  );
+}
+
+// EditableText — contentEditable + React arasındaki çatışmayı yöneten
+// minimal sarmalayıcı. Prop değeri değiştiğinde, DOM textContent'i
+// odakta değilse hizalanır (kullanıcı yazarken DOM'u patlatmıyoruz).
+function EditableText({
+  value,
+  onCommit,
+  ariaLabel,
+  className,
+  multiline = false,
+  renderInitial,
+}: {
+  value: string;
+  onCommit: (next: string) => void;
+  ariaLabel: string;
+  className: string;
+  multiline?: boolean;
+  /**
+   * İlk render'da gösterilecek zenginleştirilmiş içerik (örn. eksik
+   * cevap badge'leri). Düzenleme başlayınca DOM textContent ile
+   * sürekli hale geliriz; bu yüzden zengin görünüm yalnızca odaklanmadan
+   * önceki ilk render için geçerli.
+   */
+  renderInitial?: (text: string) => React.ReactNode;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (document.activeElement === el) return;
+    if (el.textContent !== value) {
+      el.textContent = value;
+    }
+  }, [value]);
+
+  return (
+    <span
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      role="textbox"
+      aria-multiline={multiline}
+      aria-label={ariaLabel}
+      spellCheck
+      className={className}
+      onPaste={(e) => {
+        e.preventDefault();
+        const text = e.clipboardData.getData("text/plain");
+        document.execCommand("insertText", false, text);
+      }}
+      onBlur={(e) => {
+        const next = e.currentTarget.textContent ?? "";
+        if (next !== value) onCommit(next);
+      }}
+    >
+      {renderInitial ? renderInitial(value) : value}
+    </span>
+  );
 }
 
 const INLINE_MARKUP_RE = /(\[ [^\]]+ \]|\*\*[^*]+\*\*)/g;

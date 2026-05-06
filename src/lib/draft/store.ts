@@ -33,6 +33,13 @@ interface DraftState {
     clauseId: string,
     text: string,
   ): void;
+  setManualEdit(
+    sessionId: string,
+    clauseId: string,
+    field: "title" | "body",
+    value: string,
+  ): void;
+  clearManualEdit(sessionId: string, clauseId: string): void;
   setStatus(sessionId: string, status: DraftStatus): void;
   deleteSession(id: string): void;
 }
@@ -59,6 +66,7 @@ export const useDraftStore = create<DraftState>()(
           answers: {},
           aiAccepted: {},
           disabledClauses: [],
+          manualEdits: {},
         };
         set((s) => ({
           sessions: { ...s.sessions, [id]: session },
@@ -120,6 +128,45 @@ export const useDraftStore = create<DraftState>()(
               [sessionId]: {
                 ...session,
                 aiAccepted: { ...session.aiAccepted, [clauseId]: text },
+                updatedAt: new Date().toISOString(),
+              },
+            },
+          };
+        }),
+
+      setManualEdit: (sessionId, clauseId, field, value) =>
+        set((s) => {
+          const session = s.sessions[sessionId];
+          if (!session) return s;
+          const current = session.manualEdits ?? {};
+          const existing = current[clauseId] ?? {};
+          return {
+            sessions: {
+              ...s.sessions,
+              [sessionId]: {
+                ...session,
+                manualEdits: {
+                  ...current,
+                  [clauseId]: { ...existing, [field]: value },
+                },
+                updatedAt: new Date().toISOString(),
+              },
+            },
+          };
+        }),
+
+      clearManualEdit: (sessionId, clauseId) =>
+        set((s) => {
+          const session = s.sessions[sessionId];
+          if (!session) return s;
+          const next = { ...(session.manualEdits ?? {}) };
+          delete next[clauseId];
+          return {
+            sessions: {
+              ...s.sessions,
+              [sessionId]: {
+                ...session,
+                manualEdits: next,
                 updatedAt: new Date().toISOString(),
               },
             },

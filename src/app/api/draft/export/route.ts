@@ -24,6 +24,7 @@ interface ExportPayload {
   answers?: Record<string, unknown>;
   aiAccepted?: Record<string, string>;
   disabledClauses?: string[];
+  manualEdits?: Record<string, { title?: string; body?: string }>;
   sessionId?: string;
 }
 
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
     answers: payload.answers ?? {},
     aiAccepted: payload.aiAccepted ?? {},
     disabledClauses: payload.disabledClauses ?? [],
+    manualEdits: payload.manualEdits ?? {},
   };
 
   const { clauses } = renderDraft(template, session);

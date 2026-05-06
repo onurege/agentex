@@ -115,6 +115,13 @@ export interface DraftSession {
   aiAccepted: Record<string, string>;
   /** Kullanıcının kapattığı opsiyonel maddeler. */
   disabledClauses: string[];
+  /**
+   * Kullanıcının preview'de elle düzenlediği maddeler. Her override
+   * AI önerisinden ve template render'ından önce uygulanır; cevap
+   * değişiklikleri bu maddelere yansımaz (donmuş copy). Opsiyonel —
+   * eski persist edilmiş oturumlar undefined gelir, defansif okunur.
+   */
+  manualEdits?: Record<string, { title?: string; body?: string }>;
   /** En son render'dan preview için cache — opsiyonel. */
   renderedClauses?: ClauseText[];
 }
