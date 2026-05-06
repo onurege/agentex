@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
     externalNote?: unknown;
     userDecision?: unknown;
     userDecisionNote?: unknown;
+    criticalOverride?: unknown;
   };
   try {
     body = await req.json();
@@ -84,6 +85,7 @@ export async function POST(req: NextRequest) {
         typeof body.userDecisionNote === "string" && body.userDecisionNote.trim().length > 0
           ? body.userDecisionNote
           : null,
+      criticalOverride: body.criticalOverride === true,
     },
   });
 
@@ -103,6 +105,7 @@ export async function POST(req: NextRequest) {
       petitionFileName: body.petitionFileName,
       userDecision: body.userDecision,
       externalStatus: body.externalStatus ?? null,
+      criticalOverride: body.criticalOverride === true,
     },
     requestId,
     actorId: user.id,
@@ -154,6 +157,7 @@ export async function GET(req: NextRequest) {
       externalNote: r.externalNote,
       userDecision: r.userDecision,
       userDecisionNote: r.userDecisionNote,
+      criticalOverride: r.criticalOverride,
       decidedAt: r.decidedAt.toISOString(),
       managerReviewRequested: r.managerReviewRequested,
       managerReviewedBy: r.managerReviewedBy,

@@ -429,6 +429,7 @@ export default function SignaturesPage() {
                     result={precheckResult}
                     sirkuFileName={referenceFileName}
                     petitionFileName={contractFileName}
+                    criticalOverride={hasCriticalPrecheck && precheckOverride}
                   />
                 </div>
               </>

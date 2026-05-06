@@ -87,6 +87,11 @@ model SignaturePrecheck {
   userDecisionNote String?
   decidedAt        DateTime @default(now())
 
+  // Kullanıcı, ön kontrolde kritik uyumsuzluk olmasına rağmen
+  // imza karşılaştırmasına manuel onayla devam ettiyse true. Panel
+  // incelemesinde bu durum belirgin işaretlenir.
+  criticalOverride Boolean @default(false)
+
   // Aşama 2 — yönetici onayı (opsiyonel).
   managerReviewRequested Boolean   @default(false)
   managerReviewedBy      String?

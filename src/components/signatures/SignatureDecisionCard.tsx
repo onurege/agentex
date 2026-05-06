@@ -29,6 +29,10 @@ interface Props {
   result: PrecheckResult;
   sirkuFileName: string;
   petitionFileName: string;
+  // True when the user manually overrode a critical precheck finding
+  // to reach the comparison step. Persisted on submit so the panel
+  // review can flag this decision.
+  criticalOverride?: boolean;
 }
 
 type ExternalStatus = "matched" | "mismatch" | "unknown";
@@ -46,13 +50,13 @@ const EXTERNAL_OPTIONS: Array<{
   {
     value: "matched",
     label: "Eşleşiyor",
-    description: "TTSG kaydı sirkü ile aynı.",
+    description: "TTSG kaydı imza sirküsüyle aynı.",
     iconColor: "text-semantic-positive",
   },
   {
     value: "mismatch",
     label: "Eşleşmiyor",
-    description: "TTSG kaydı sirkü ile uyuşmuyor.",
+    description: "TTSG kaydı imza sirküsüyle uyuşmuyor.",
     iconColor: "text-semantic-negative",
   },
   {
@@ -67,6 +71,7 @@ export function SignatureDecisionCard({
   result,
   sirkuFileName,
   petitionFileName,
+  criticalOverride = false,
 }: Props) {
   const companyName = result.sirku.companyName ?? "";
   const taxNumber = result.sirku.taxNumber ?? "";
@@ -110,6 +115,7 @@ export function SignatureDecisionCard({
           externalNote: externalNote.trim() || undefined,
           userDecision,
           userDecisionNote: decisionNote.trim() || undefined,
+          criticalOverride,
         }),
       });
       const body = (await res.json().catch(() => ({}))) as {
@@ -163,8 +169,8 @@ export function SignatureDecisionCard({
             </h2>
             <p className="text-base text-text-secondary mt-1">
               {userDecision === "approved"
-                ? "Bu sirkü+dilekçe çiftini onayladın. Karar kilitli — değiştiremezsin."
-                : "Bu sirkü+dilekçe çiftini reddettin. Karar kilitli — değiştiremezsin."}
+                ? "Bu imza sirküsü ve belge çiftini onayladın. Karar kilitli — değiştiremezsin."
+                : "Bu imza sirküsü ve belge çiftini reddettin. Karar kilitli — değiştiremezsin."}
             </p>
           </div>
         </header>
@@ -214,7 +220,7 @@ export function SignatureDecisionCard({
             <span className="font-semibold text-accent-warning">
               Yönetici onayına gönderildi.
             </span>{" "}
-            Yetkililer Panel → İmza Onayları'nda bu kaydı görüyor; sonuç
+            Yetkililer Panel → İmza Onayları&apos;nda bu kaydı görüyor; sonuç
             bildirilecek.
           </div>
         ) : (
@@ -244,7 +250,7 @@ export function SignatureDecisionCard({
             Sicil Doğrulama ve Karar
           </h2>
           <p className="text-base text-text-secondary mt-1">
-            Şirket bilgilerini TTSG'de doğrula, ardından bu sirkü+dilekçe
+            Şirket bilgilerini TTSG&apos;de doğrula, ardından bu imza sirküsü ve belge
             çifti için kendi kararını ver. Karar bir kez kaydedilir ve
             kilitlenir; istersen yöneticiye gönderebilirsin.
           </p>
@@ -254,7 +260,7 @@ export function SignatureDecisionCard({
       {copyHints.length > 0 && (
         <div className="mb-4 rounded-xl bg-workspace-bg border border-workspace-border/60 p-4">
           <p className="text-[12px] font-semibold uppercase tracking-wide text-text-muted mb-2">
-            Sirküde tespit edilen
+            İmza sirküsünde tespit edilen
           </p>
           <ul className="space-y-1">
             {companyName && (
@@ -298,7 +304,7 @@ export function SignatureDecisionCard({
         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[14px] font-semibold bg-accent-primary/10 text-accent-primary border border-accent-primary/30 hover:bg-accent-primary/20 transition-colors mb-5"
       >
         <ExternalLink size={16} />
-        TTSG'de aç
+        TTSG&apos;de aç
       </a>
 
       <div className="mb-5">
@@ -341,7 +347,7 @@ export function SignatureDecisionCard({
 
       <div className="border-t border-workspace-border/40 pt-5">
         <p className="text-[14px] font-semibold text-text-primary mb-1">
-          Bu sirkü+dilekçe çifti için kararın:
+          Bu imza sirküsü ve belge çifti için kararın:
         </p>
         <p className="text-[12px] text-text-muted mb-3">
           Karar kaydedildikten sonra değiştirilemez. Reddedersen sebep

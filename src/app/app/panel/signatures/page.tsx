@@ -35,6 +35,7 @@ interface PrecheckRow {
   externalNote: string | null;
   userDecision: "approved" | "rejected";
   userDecisionNote: string | null;
+  criticalOverride: boolean;
   decidedAt: string;
   managerReviewRequested: boolean;
   managerReviewedBy: string | null;
@@ -147,7 +148,7 @@ export default function PanelSignaturesPage() {
           İmza Onayları
         </h1>
         <p className="text-lg text-text-secondary">
-          Kullanıcıların gönderdiği sirkü+dilekçe ön kontrolleri ve karar
+          Kullanıcıların gönderdiği imza sirküsü ve belge ön kontrolleri ile karar
           durumları. {counts.pending > 0 && (
             <span className="inline-flex items-center gap-1 text-accent-warning font-semibold ml-1">
               <AlertCircle size={16} /> {counts.pending} kayıt yönetici onayı bekliyor
@@ -427,6 +428,18 @@ function DetailBlock({
 
 function StatusBadges({ row }: { row: PrecheckRow }) {
   const badges: React.ReactNode[] = [];
+  if (row.criticalOverride) {
+    badges.push(
+      <span
+        key="override"
+        className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-semantic-negative/10 text-semantic-negative border border-semantic-negative/40"
+        title="Kullanıcı, ön kontroldeki kritik uyumsuzluğa rağmen imza karşılaştırmasına manuel onayla devam etti."
+      >
+        <ShieldAlert size={10} className="inline mr-1" />
+        Kullanıcı kritik uyarıyı geçti
+      </span>,
+    );
+  }
   if (row.managerDecision === "approved") {
     badges.push(
       <span
