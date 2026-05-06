@@ -76,6 +76,27 @@ const INS_HIGHLIGHT = "green";
 const DEL_RPR = `<w:rPr><w:color w:val="${DEL_COLOR_HEX}"/></w:rPr>`;
 const INS_RPR = `<w:rPr><w:color w:val="${INS_COLOR_HEX}"/><w:highlight w:val="${INS_HIGHLIGHT}"/></w:rPr>`;
 
+/**
+ * Accept all pre-existing track-changes in a document.xml string:
+ *   - <w:ins>...</w:ins> → unwrap (insertion becomes regular content)
+ *   - <w:del>...</w:del> → remove entirely (deletion is final)
+ * Other revision markers (w:moveFrom, w:moveTo, w:rPrChange, w:pPrChange,
+ * w:cellIns, w:cellDel) are intentionally left untouched — they're rare
+ * in contracts and stripping them risks visual regressions; if a user
+ * hits one we can extend the list.
+ *
+ * Runs before our redline so the output never mixes legacy and new
+ * revisions in Word's reviewing pane.
+ */
+export function acceptPreExistingRevisions(xml: string): string {
+  let out = xml;
+  // Order matters: handle del first so any nested ins inside a del is
+  // already gone with the parent block.
+  out = out.replace(/<w:del\s[^>]*>[\s\S]*?<\/w:del>/g, "");
+  out = out.replace(/<w:ins\s[^>]*>([\s\S]*?)<\/w:ins>/g, "$1");
+  return out;
+}
+
 export async function applyRedline(
   originalDocx: Buffer,
   edits: ArbitratedEdit[],
@@ -89,7 +110,14 @@ export async function applyRedline(
   if (!documentFile) {
     throw new Error("INVALID_DOCX: word/document.xml missing");
   }
-  const originalXml = await documentFile.async("string");
+  const rawXml = await documentFile.async("string");
+  // Accept any pre-existing track-changes in the input. Without this,
+  // a DOCX that already carried <w:ins>/<w:del> from a prior round
+  // (common when users re-upload "X-redline-v1.docx") would mix legacy
+  // revisions with ours in the reviewing pane and read as a corrupted
+  // letter-by-letter diff. After this pass the body has only our new
+  // <w:ins>/<w:del> blocks.
+  const originalXml = acceptPreExistingRevisions(rawXml);
 
   const paragraphs = extractParagraphs(originalXml);
 
