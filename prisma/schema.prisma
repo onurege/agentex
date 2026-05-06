@@ -234,6 +234,12 @@ model BoardRun {
   completedAt DateTime?
   deletedAt   DateTime?
 
+  // Folder organization (T-4) — null = root, group-scoped folder
+  // memberships are enforced by API. Set NULL on folder delete so
+  // runs survive their folder being removed.
+  folderId String?
+  folder   RunFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
   // Relations
   agentSnapshots    RunAgentSnapshot[]
   opinions          AgentOpinion[]
@@ -248,7 +254,23 @@ model BoardRun {
   @@index([userId, deletedAt])
   @@index([groupId])
   @@index([groupId, deletedAt])
+  @@index([folderId])
   @@index([startedAt])
+}
+
+// Folder for grouping runs in Panel → Runs. Group-scoped: when the
+// creator has a groupId, every group member sees and can move runs
+// into the folder. Groupless creators get private folders.
+model RunFolder {
+  id        String     @id @default(cuid())
+  name      String
+  ownerId   String
+  groupId   String?
+  createdAt DateTime   @default(now())
+  runs      BoardRun[]
+
+  @@index([ownerId])
+  @@index([groupId])
 }
 
 // ─── Run <-> Agent Version (join table) ───────────────
