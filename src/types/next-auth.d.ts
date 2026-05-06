@@ -17,12 +17,14 @@ declare module "next-auth" {
       id: string;
       role: UserRole;
       active: boolean;
+      groupId: string | null;
     } & DefaultSession["user"];
   }
 
   interface User extends DefaultUser {
     role: UserRole;
     active: boolean;
+    groupId?: string | null;
   }
 }
 
@@ -30,5 +32,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     role?: UserRole;
     active?: boolean;
+    groupId?: string | null;
   }
 }

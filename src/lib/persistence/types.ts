@@ -76,8 +76,16 @@ export interface BoardTemplateDTO {
 export interface RunStore {
   listRuns(
     userId: string,
-    opts?: { limit?: number; offset?: number },
-  ): Promise<{ runs: BoardroomRunSnapshot[]; total: number }>;
+    opts?: {
+      limit?: number;
+      offset?: number;
+      scope?: "mine" | "group" | "all";
+    },
+  ): Promise<{
+    runs: import("../run-history").RunListItem[];
+    total: number;
+    scope: "mine" | "group" | "all";
+  }>;
   getRunById(id: string): Promise<BoardroomRunSnapshot | null>;
   createRun(userId: string, snapshot: BoardroomRunSnapshot): Promise<void>;
   deleteRun(id: string): Promise<void>;

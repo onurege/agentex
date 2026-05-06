@@ -89,6 +89,23 @@ export interface BoardroomRunSnapshot {
   arbitratedEdits?: ArbitratedEdit[];
 }
 
+/**
+ * Server-side list DTO. Carries the snapshot plus ownership + group
+ * fields that the listing endpoint resolves from the join. Lets the UI
+ * render owner/group badges and filter without a second roundtrip.
+ *
+ * Not persisted client-side (localStorage stores plain snapshots).
+ */
+export interface RunListItem extends BoardroomRunSnapshot {
+  ownerId: string;
+  ownerName: string | null;
+  ownerEmail: string;
+  groupId: string | null;
+  groupName: string | null;
+  /** True when the viewer is the run's creator. UI gates edit/delete. */
+  isOwn: boolean;
+}
+
 // --- localStorage key ---
 
 const LS_KEY = "ai-boardroom-run-history";

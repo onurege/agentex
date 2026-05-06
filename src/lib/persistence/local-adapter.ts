@@ -30,15 +30,31 @@ import type {
 class LocalRunStore implements RunStore {
   async listRuns(
     _userId: string,
-    opts?: { limit?: number; offset?: number },
-  ): Promise<{ runs: BoardroomRunSnapshot[]; total: number }> {
+    opts?: {
+      limit?: number;
+      offset?: number;
+      scope?: "mine" | "group" | "all";
+    },
+  ): Promise<{
+    runs: import("../run-history").RunListItem[];
+    total: number;
+    scope: "mine" | "group" | "all";
+  }> {
     const all = getBoardroomRuns();
     const offset = opts?.offset ?? 0;
     const limit = opts?.limit ?? 50;
-    return {
-      runs: all.slice(offset, offset + limit),
-      total: all.length,
-    };
+    // Local mode has no group concept — every snapshot is the user's own.
+    // Synthesize the list-item shape so the UI doesn't need to branch.
+    const runs = all.slice(offset, offset + limit).map((s) => ({
+      ...s,
+      ownerId: "local",
+      ownerName: null,
+      ownerEmail: "",
+      groupId: null,
+      groupName: null,
+      isOwn: true,
+    }));
+    return { runs, total: all.length, scope: opts?.scope ?? "mine" };
   }
 
   async getRunById(id: string): Promise<BoardroomRunSnapshot | null> {

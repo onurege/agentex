@@ -13,9 +13,41 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 100);
   const offset = Number(url.searchParams.get("offset") ?? 0);
 
+  // Visibility scope. Defaults:
+  //   - super_admin sees everything ('all')
+  //   - users in a group see own + group runs ('group')
+  //   - groupless users see only their own ('mine')
+  // Explicit ?scope=mine|group|all overrides; super_admin is the only
+  // role allowed to widen to 'all'.
+  const requestedScope = url.searchParams.get("scope");
+  let scope: "mine" | "group" | "all";
+  if (requestedScope === "all" && user.role === "super_admin") {
+    scope = "all";
+  } else if (requestedScope === "mine") {
+    scope = "mine";
+  } else if (requestedScope === "group") {
+    scope = "group";
+  } else {
+    scope = user.role === "super_admin" ? "all" : user.groupId ? "group" : "mine";
+  }
+
+  const where: import("@prisma/client").Prisma.BoardRunWhereInput = {
+    deletedAt: null,
+  };
+  if (scope === "mine") {
+    where.userId = user.id;
+  } else if (scope === "group") {
+    if (user.groupId) {
+      where.OR = [{ userId: user.id }, { groupId: user.groupId }];
+    } else {
+      where.userId = user.id;
+    }
+  }
+  // scope === "all": no userId/groupId filter (super_admin only)
+
   const [runs, total] = await Promise.all([
     prisma.boardRun.findMany({
-      where: { userId: user.id, deletedAt: null },
+      where,
       orderBy: { startedAt: "desc" },
       skip: offset,
       take: limit,
@@ -24,16 +56,24 @@ export async function GET(req: NextRequest) {
         debateMoments: { orderBy: { timestamp: "asc" } },
         verdict: true,
         document: true,
+        user: { select: { name: true, email: true } },
+        group: { select: { name: true } },
       },
     }),
-    prisma.boardRun.count({
-      where: { userId: user.id, deletedAt: null },
-    }),
+    prisma.boardRun.count({ where }),
   ]);
 
-  const snapshots = runs.map(runToSnapshot);
+  const snapshots: import("@/lib/run-history").RunListItem[] = runs.map((r) => ({
+    ...runToSnapshot(r),
+    ownerId: r.userId,
+    ownerName: r.user?.name ?? null,
+    ownerEmail: r.user?.email ?? "",
+    groupId: r.groupId,
+    groupName: r.group?.name ?? null,
+    isOwn: r.userId === user.id,
+  }));
 
-  return NextResponse.json({ runs: snapshots, total });
+  return NextResponse.json({ runs: snapshots, total, scope });
 }
 
 export async function POST(req: NextRequest) {
@@ -68,6 +108,9 @@ export async function POST(req: NextRequest) {
       data: {
         id: snapshot.id,
         userId: user.id,
+        // Freeze the user's current group at run create time. Same-group
+        // members get read-only visibility via the GET filter above.
+        groupId: user.groupId ?? null,
         documentName: snapshot.documentName,
         documentType: snapshot.documentType,
         documentSize: snapshot.documentSize,

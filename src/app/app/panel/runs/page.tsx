@@ -4,7 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { saveAuditEvent } from "@/lib/audit-log";
 import { getPersistenceAdapter } from "@/lib/persistence/factory";
-import type { BoardroomRunSnapshot } from "@/lib/run-history";
+import type { RunListItem } from "@/lib/run-history";
+
+type Scope = "mine" | "group" | "all";
+
+const SCOPE_LABELS: Record<Scope, string> = {
+  mine: "Kendim",
+  group: "Grubum",
+  all: "Hepsi",
+};
 
 const RISK_LABELS: Record<string, { label: string; style: string }> = {
   high: { label: "Yüksek", style: "text-accent-danger bg-accent-danger/10" },
@@ -19,27 +27,30 @@ const MODE_LABELS: Record<string, { label: string; style: string }> = {
 };
 
 export default function PanelRunsPage() {
-  const [allRuns, setAllRuns] = useState<BoardroomRunSnapshot[]>([]);
+  const [allRuns, setAllRuns] = useState<RunListItem[]>([]);
   const [mounted, setMounted] = useState(false);
   const [search, setSearch] = useState("");
   const [modeFilter, setModeFilter] = useState("all");
   const [riskFilter, setRiskFilter] = useState("all");
+  const [scope, setScope] = useState<Scope>("group");
+  const [resolvedScope, setResolvedScope] = useState<Scope>("group");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const loadRuns = useCallback(async () => {
+  const loadRuns = useCallback(async (s: Scope) => {
     const adapter = await getPersistenceAdapter();
-    const result = await adapter.runs.listRuns("", { limit: 100 });
+    const result = await adapter.runs.listRuns("", { limit: 100, scope: s });
     setAllRuns(result.runs);
+    setResolvedScope(result.scope);
   }, []);
 
   useEffect(() => {
-    loadRuns()
+    loadRuns(scope)
       .catch((err) => {
         console.error("[runs] load failed:", err);
         setAllRuns([]);
       })
       .finally(() => setMounted(true));
-  }, [loadRuns]);
+  }, [loadRuns, scope]);
 
   const handleDelete = useCallback(async (runId: string, docName: string) => {
     const adapter = await getPersistenceAdapter();
@@ -50,9 +61,9 @@ export default function PanelRunsPage() {
       targetId: runId,
       summary: `"${docName}" çalıştırması silindi`,
     });
-    await loadRuns();
+    await loadRuns(scope);
     setDeleteConfirm(null);
-  }, [loadRuns]);
+  }, [loadRuns, scope]);
 
   // Filter runs
   let filtered = allRuns;
@@ -75,6 +86,28 @@ export default function PanelRunsPage() {
           Tamamlanan kurul tartışmaları ve sonuçları. {mounted && `${allRuns.length} kayıt`}
         </p>
       </div>
+
+      {mounted && (
+        <div className="mb-4 inline-flex rounded-xl border border-workspace-border bg-workspace-surface p-1">
+          {(["mine", "group", "all"] as Scope[]).map((s) => {
+            const isActive = resolvedScope === s;
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setScope(s)}
+                className={`px-4 py-2 text-[14px] font-medium rounded-lg transition-colors ${
+                  isActive
+                    ? "bg-accent-primary text-white"
+                    : "text-text-muted hover:text-text-primary"
+                }`}
+              >
+                {SCOPE_LABELS[s]}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Search + Filters */}
       {mounted && allRuns.length > 0 && (
@@ -163,6 +196,16 @@ export default function PanelRunsPage() {
                       {date.toLocaleDateString("tr-TR")} · {date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                     <span className="text-[13px] text-text-muted">· {expertCount} ajan</span>
+                    {!run.isOwn && (
+                      <span className="text-[12px] text-text-muted">
+                        · Sahibi: <span className="font-medium text-text-secondary">{run.ownerName ?? run.ownerEmail}</span>
+                      </span>
+                    )}
+                    {run.groupName && (
+                      <span className="text-[11px] font-mono font-semibold text-accent-primary bg-accent-primary/10 px-1.5 py-0.5 rounded">
+                        Grup: {run.groupName}
+                      </span>
+                    )}
                     {hasCustomPrompt && (
                       <span className="text-[11px] font-mono font-semibold text-accent-info bg-accent-info/10 px-1.5 py-0.5 rounded">
                         Özel Prompt
@@ -213,8 +256,9 @@ export default function PanelRunsPage() {
                   ) : (
                     <button
                       onClick={() => setDeleteConfirm(run.id)}
-                      className="px-3 py-2.5 rounded-lg text-[14px] font-medium text-text-muted hover:text-accent-danger hover:bg-accent-danger/10 border border-transparent hover:border-accent-danger/20 transition-colors min-h-[40px]"
-                      title="Sil"
+                      disabled={!run.isOwn}
+                      className="px-3 py-2.5 rounded-lg text-[14px] font-medium text-text-muted hover:text-accent-danger hover:bg-accent-danger/10 border border-transparent hover:border-accent-danger/20 transition-colors min-h-[40px] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-muted disabled:hover:border-transparent"
+                      title={run.isOwn ? "Sil" : "Sadece sahibi silebilir"}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6" />

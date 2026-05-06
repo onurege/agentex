@@ -9,6 +9,7 @@ export interface SessionUser {
   role: UserRole;
   name?: string | null;
   image?: string | null;
+  groupId: string | null;
 }
 
 export async function getAuthUser(): Promise<SessionUser | null> {
@@ -21,6 +22,7 @@ export async function getAuthUser(): Promise<SessionUser | null> {
     role: session.user.role,
     name: session.user.name,
     image: session.user.image,
+    groupId: session.user.groupId ?? null,
   };
 }
 

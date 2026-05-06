@@ -44,9 +44,19 @@ function qs(params: Record<string, string | number | undefined>): string {
 class HttpRunStore implements RunStore {
   async listRuns(
     _userId: string,
-    opts?: { limit?: number; offset?: number },
-  ): Promise<{ runs: BoardroomRunSnapshot[]; total: number }> {
-    return api(`/api/runs${qs({ limit: opts?.limit, offset: opts?.offset })}`);
+    opts?: {
+      limit?: number;
+      offset?: number;
+      scope?: "mine" | "group" | "all";
+    },
+  ): Promise<{
+    runs: import("../run-history").RunListItem[];
+    total: number;
+    scope: "mine" | "group" | "all";
+  }> {
+    return api(
+      `/api/runs${qs({ limit: opts?.limit, offset: opts?.offset, scope: opts?.scope })}`,
+    );
   }
 
   async getRunById(id: string): Promise<BoardroomRunSnapshot | null> {

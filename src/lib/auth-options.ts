@@ -117,6 +117,7 @@ export const authOptions: NextAuthOptions = {
             role: true,
             active: true,
             deletedAt: true,
+            groupId: true,
           },
         });
 
@@ -126,6 +127,7 @@ export const authOptions: NextAuthOptions = {
           token.picture = dbUser.image;
           token.role = dbUser.role as "user" | "authorized_user" | "super_admin";
           token.active = dbUser.active && !dbUser.deletedAt;
+          token.groupId = dbUser.groupId ?? null;
         }
       }
 
@@ -139,6 +141,7 @@ export const authOptions: NextAuthOptions = {
         session.user.image = token.picture ?? null;
         session.user.role = (token.role ?? "user") as "user" | "authorized_user" | "super_admin";
         session.user.active = Boolean(token.active);
+        session.user.groupId = (token.groupId as string | null | undefined) ?? null;
       }
       return session;
     },
