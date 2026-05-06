@@ -38,6 +38,10 @@ model User {
   regulationReads  RegulationRead[]
   supportTickets   SupportTicket[]
 
+  // İmza ön-kontrol — sahip + reviewer ilişkileri (T-6).
+  ownedSigPrechecks    SignaturePrecheck[] @relation("SigPrecheckOwner")
+  reviewedSigPrechecks SignaturePrecheck[] @relation("SigPrecheckReviewer")
+
   @@index([email])
   @@index([deletedAt])
   @@index([groupId])
@@ -51,6 +55,52 @@ model Group {
   createdAt DateTime @default(now())
   users     User[]
   boardRuns BoardRun[]
+}
+
+// İmza ön-kontrol kayıtları (T-6). Stateless precheck akışının
+// üzerine iki aşamalı onay süreci kurulur:
+//   1. Kullanıcı sirkü+dilekçe yükler, regex precheck + TTSG manuel
+//      teyit yapılır, kullanıcı kendi kararını verir (approved /
+//      rejected). Bu karar kilitlenir.
+//   2. Opsiyonel: kullanıcı yöneticiye eskalasyon ister. Yetkili
+//      (authorized_user) ya da super_admin son kararı verir.
+//      authorized_user kararı kilitlenir; super_admin istediği zaman
+//      override edebilir.
+model SignaturePrecheck {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("SigPrecheckOwner", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Frozen group for visibility scoping (same rules as BoardRun).
+  groupId String?
+
+  // Frozen file metadata + precheck result snapshot.
+  sirkuFileName    String
+  petitionFileName String
+  precheckResult   Json
+  // TTSG manuel teyit
+  externalStatus   String? // matched | mismatch | unknown
+  externalNote     String?
+
+  // Aşama 1 — kullanıcının kendi kararı (kilitli).
+  userDecision     String   // approved | rejected
+  userDecisionNote String?
+  decidedAt        DateTime @default(now())
+
+  // Aşama 2 — yönetici onayı (opsiyonel).
+  managerReviewRequested Boolean   @default(false)
+  managerReviewedBy      String?
+  managerReviewer        User?     @relation("SigPrecheckReviewer", fields: [managerReviewedBy], references: [id], onDelete: SetNull)
+  managerReviewedAt      DateTime?
+  managerDecision        String?   // approved | rejected
+  managerDecisionNote    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([userDecision])
+  @@index([managerReviewRequested, managerDecision])
 }
 
 // Destek talepleri — kullanıcı self-serve gönderir, super_admin
