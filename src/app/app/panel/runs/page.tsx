@@ -14,6 +14,22 @@ const SCOPE_LABELS: Record<Scope, string> = {
   all: "Hepsi",
 };
 
+interface FolderRow {
+  id: string;
+  name: string;
+  ownerId: string;
+  groupId: string | null;
+  createdAt: string;
+  runCount: number;
+  isOwn: boolean;
+}
+
+// "All" + "Unassigned" pseudo-folders are rendered in the sidebar
+// alongside real RunFolder entries; selectedFolderId carries the
+// pseudo value so we can run a single filter per render.
+const FOLDER_ALL = "__all__";
+const FOLDER_UNASSIGNED = "__unassigned__";
+
 const RISK_LABELS: Record<string, { label: string; style: string }> = {
   high: { label: "Yüksek", style: "text-accent-danger bg-accent-danger/10" },
   medium: { label: "Orta", style: "text-accent-warning bg-accent-warning/10" },
@@ -35,6 +51,24 @@ export default function PanelRunsPage() {
   const [scope, setScope] = useState<Scope>("group");
   const [resolvedScope, setResolvedScope] = useState<Scope>("group");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [folders, setFolders] = useState<FolderRow[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string>(FOLDER_ALL);
+  const [folderDraft, setFolderDraft] = useState("");
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [folderRenameDraft, setFolderRenameDraft] = useState("");
+  const [renamingRunId, setRenamingRunId] = useState<string | null>(null);
+  const [runRenameDraft, setRunRenameDraft] = useState("");
+  const [movingRunId, setMovingRunId] = useState<string | null>(null);
+
+  const fetchFolders = useCallback(async () => {
+    try {
+      const res = await fetch("/api/folders");
+      if (!res.ok) return;
+      setFolders((await res.json()) as FolderRow[]);
+    } catch {
+      // non-fatal
+    }
+  }, []);
 
   const loadRuns = useCallback(async (s: Scope) => {
     const adapter = await getPersistenceAdapter();
@@ -50,7 +84,89 @@ export default function PanelRunsPage() {
         setAllRuns([]);
       })
       .finally(() => setMounted(true));
-  }, [loadRuns, scope]);
+    void fetchFolders();
+  }, [loadRuns, scope, fetchFolders]);
+
+  const createFolder = useCallback(async () => {
+    const name = folderDraft.trim();
+    if (!name) return;
+    const res = await fetch("/api/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) return;
+    const folder = (await res.json()) as FolderRow;
+    setFolders((rows) => [...rows, folder].sort((a, b) => a.name.localeCompare(b.name)));
+    setFolderDraft("");
+    setSelectedFolderId(folder.id);
+  }, [folderDraft]);
+
+  const deleteFolder = useCallback(async (id: string) => {
+    const res = await fetch(`/api/folders/${id}`, { method: "DELETE" });
+    if (!res.ok) return;
+    setFolders((rows) => rows.filter((f) => f.id !== id));
+    if (selectedFolderId === id) setSelectedFolderId(FOLDER_ALL);
+    // Runs in the deleted folder fall back to root — refresh so the
+    // affected runs reflect their new folderId=null state in the UI.
+    await loadRuns(scope);
+  }, [selectedFolderId, loadRuns, scope]);
+
+  const renameFolder = useCallback(async (id: string) => {
+    const name = folderRenameDraft.trim();
+    if (!name) {
+      setRenamingFolderId(null);
+      return;
+    }
+    const res = await fetch(`/api/folders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (res.ok) {
+      setFolders((rows) =>
+        rows
+          .map((f) => (f.id === id ? { ...f, name } : f))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      );
+    }
+    setRenamingFolderId(null);
+  }, [folderRenameDraft]);
+
+  const moveRun = useCallback(async (runId: string, folderId: string | null) => {
+    const res = await fetch(`/api/runs/${runId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folderId }),
+    });
+    if (res.ok) {
+      setAllRuns((rows) =>
+        rows.map((r) => (r.id === runId ? { ...r, folderId } : r)),
+      );
+      // Refresh folder counts.
+      void fetchFolders();
+    }
+    setMovingRunId(null);
+  }, [fetchFolders]);
+
+  const renameRun = useCallback(async (runId: string) => {
+    const name = runRenameDraft.trim();
+    if (!name) {
+      setRenamingRunId(null);
+      return;
+    }
+    const res = await fetch(`/api/runs/${runId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ documentName: name }),
+    });
+    if (res.ok) {
+      setAllRuns((rows) =>
+        rows.map((r) => (r.id === runId ? { ...r, documentName: name } : r)),
+      );
+    }
+    setRenamingRunId(null);
+  }, [runRenameDraft]);
 
   const handleDelete = useCallback(async (runId: string, docName: string) => {
     const adapter = await getPersistenceAdapter();
@@ -67,6 +183,11 @@ export default function PanelRunsPage() {
 
   // Filter runs
   let filtered = allRuns;
+  if (selectedFolderId === FOLDER_UNASSIGNED) {
+    filtered = filtered.filter((r) => r.folderId === null);
+  } else if (selectedFolderId !== FOLDER_ALL) {
+    filtered = filtered.filter((r) => r.folderId === selectedFolderId);
+  }
   if (search) {
     const q = search.toLowerCase();
     filtered = filtered.filter((r) => r.documentName.toLowerCase().includes(q));
@@ -78,8 +199,142 @@ export default function PanelRunsPage() {
     filtered = filtered.filter((r) => r.verdictSeed.riskLevel === riskFilter);
   }
 
+  const unassignedCount = allRuns.filter((r) => r.folderId === null).length;
+
   return (
-    <div>
+    <div className="flex gap-6">
+      {/* Folder sidebar */}
+      <aside className="w-[240px] shrink-0">
+        <div className="rounded-xl border border-workspace-border bg-workspace-surface p-4">
+          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-text-muted mb-3">
+            Klasörler
+          </h3>
+
+          <ul className="space-y-1 mb-4">
+            <li>
+              <button
+                type="button"
+                onClick={() => setSelectedFolderId(FOLDER_ALL)}
+                className={`w-full text-left px-3 py-2 rounded-lg text-[14px] flex items-center justify-between transition-colors ${
+                  selectedFolderId === FOLDER_ALL
+                    ? "bg-accent-primary/10 text-accent-primary"
+                    : "text-text-secondary hover:bg-workspace-elevated"
+                }`}
+              >
+                <span>Tümü</span>
+                <span className="text-[12px] text-text-muted">{allRuns.length}</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                onClick={() => setSelectedFolderId(FOLDER_UNASSIGNED)}
+                className={`w-full text-left px-3 py-2 rounded-lg text-[14px] flex items-center justify-between transition-colors ${
+                  selectedFolderId === FOLDER_UNASSIGNED
+                    ? "bg-accent-primary/10 text-accent-primary"
+                    : "text-text-secondary hover:bg-workspace-elevated"
+                }`}
+              >
+                <span>Atanmamış</span>
+                <span className="text-[12px] text-text-muted">{unassignedCount}</span>
+              </button>
+            </li>
+          </ul>
+
+          {folders.length > 0 && (
+            <ul className="space-y-1 mb-4 border-t border-workspace-border/40 pt-3">
+              {folders.map((f) => (
+                <li key={f.id} className="group relative">
+                  {renamingFolderId === f.id ? (
+                    <input
+                      autoFocus
+                      value={folderRenameDraft}
+                      onChange={(e) => setFolderRenameDraft(e.target.value)}
+                      onBlur={() => void renameFolder(f.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void renameFolder(f.id);
+                        } else if (e.key === "Escape") {
+                          setRenamingFolderId(null);
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-lg text-[14px] bg-workspace-bg border border-accent-primary/40 text-text-primary outline-none"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFolderId(f.id)}
+                      onDoubleClick={() => {
+                        setRenamingFolderId(f.id);
+                        setFolderRenameDraft(f.name);
+                      }}
+                      title="Çift tıkla: yeniden adlandır"
+                      className={`w-full text-left px-3 py-2 rounded-lg text-[14px] flex items-center justify-between transition-colors ${
+                        selectedFolderId === f.id
+                          ? "bg-accent-primary/10 text-accent-primary"
+                          : "text-text-secondary hover:bg-workspace-elevated"
+                      }`}
+                    >
+                      <span className="truncate">{f.name}</span>
+                      <span className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[12px] text-text-muted">{f.runCount}</span>
+                        {f.isOwn && (
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`"${f.name}" klasörünü sil?`)) void deleteFolder(f.id);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (confirm(`"${f.name}" klasörünü sil?`)) void deleteFolder(f.id);
+                              }
+                            }}
+                            className="text-[11px] text-text-muted hover:text-accent-danger opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                          >
+                            Sil
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex gap-2 pt-2 border-t border-workspace-border/40">
+            <input
+              type="text"
+              value={folderDraft}
+              onChange={(e) => setFolderDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void createFolder();
+                }
+              }}
+              placeholder="Yeni klasör"
+              className="flex-1 min-w-0 px-3 py-2 rounded-lg text-[13px] bg-workspace-bg border border-workspace-border text-text-primary placeholder:text-text-muted outline-none focus:border-accent-primary/40"
+            />
+            <button
+              type="button"
+              onClick={() => void createFolder()}
+              disabled={folderDraft.trim().length === 0}
+              className="px-3 py-2 rounded-lg text-[13px] font-semibold bg-accent-primary/10 text-accent-primary border border-accent-primary/30 hover:bg-accent-primary/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Ekle
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1 min-w-0">
       <div className="mb-8">
         <h1 className="font-display text-3xl font-bold text-text-primary mb-2">Runs</h1>
         <p className="text-lg text-text-secondary">
@@ -190,7 +445,34 @@ export default function PanelRunsPage() {
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-lg font-semibold text-text-primary truncate">{run.documentName}</p>
+                  {renamingRunId === run.id ? (
+                    <input
+                      autoFocus
+                      value={runRenameDraft}
+                      onChange={(e) => setRunRenameDraft(e.target.value)}
+                      onBlur={() => void renameRun(run.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void renameRun(run.id);
+                        } else if (e.key === "Escape") {
+                          setRenamingRunId(null);
+                        }
+                      }}
+                      className="w-full text-lg font-semibold text-text-primary px-2 py-1 rounded-md bg-workspace-bg border border-accent-primary/40 outline-none"
+                    />
+                  ) : (
+                    <p
+                      className="text-lg font-semibold text-text-primary truncate cursor-text"
+                      title="Çift tıkla: yeniden adlandır"
+                      onDoubleClick={() => {
+                        setRenamingRunId(run.id);
+                        setRunRenameDraft(run.documentName);
+                      }}
+                    >
+                      {run.documentName}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-base text-text-secondary">
                       {date.toLocaleDateString("tr-TR")} · {date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
@@ -261,6 +543,38 @@ export default function PanelRunsPage() {
                     Orijinal
                   </a>
 
+                  {/* Move to folder — opens an inline select on click */}
+                  {movingRunId === run.id ? (
+                    <select
+                      autoFocus
+                      value={run.folderId ?? ""}
+                      onChange={(e) =>
+                        void moveRun(run.id, e.target.value === "" ? null : e.target.value)
+                      }
+                      onBlur={() => setMovingRunId(null)}
+                      className="px-3 py-2 rounded-lg text-[13px] font-medium bg-workspace-bg border border-accent-primary/40 text-text-primary outline-none min-h-[40px]"
+                    >
+                      <option value="">— atanmamış —</option>
+                      {folders.map((f) => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setMovingRunId(run.id)}
+                      title="Klasöre taşı"
+                      className="px-3 py-2.5 rounded-lg text-[13px] font-medium text-text-muted hover:text-text-primary hover:bg-workspace-elevated border border-transparent hover:border-workspace-border transition-colors min-h-[40px] inline-flex items-center gap-1.5"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                      </svg>
+                      {run.folderId
+                        ? folders.find((f) => f.id === run.folderId)?.name ?? "Klasör"
+                        : "Taşı"}
+                    </button>
+                  )}
+
                   {/* Delete */}
                   {isDeleting ? (
                     <div className="flex items-center gap-1">
@@ -296,6 +610,7 @@ export default function PanelRunsPage() {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }
