@@ -33,10 +33,11 @@ interface DraftState {
     clauseId: string,
     text: string,
   ): void;
-  setManualEdit(
+  setManualTitle(sessionId: string, clauseId: string, value: string): void;
+  setManualStatic(
     sessionId: string,
     clauseId: string,
-    field: "title" | "body",
+    staticIndex: number,
     value: string,
   ): void;
   clearManualEdit(sessionId: string, clauseId: string): void;
@@ -134,7 +135,7 @@ export const useDraftStore = create<DraftState>()(
           };
         }),
 
-      setManualEdit: (sessionId, clauseId, field, value) =>
+      setManualTitle: (sessionId, clauseId, value) =>
         set((s) => {
           const session = s.sessions[sessionId];
           if (!session) return s;
@@ -147,7 +148,29 @@ export const useDraftStore = create<DraftState>()(
                 ...session,
                 manualEdits: {
                   ...current,
-                  [clauseId]: { ...existing, [field]: value },
+                  [clauseId]: { ...existing, title: value },
+                },
+                updatedAt: new Date().toISOString(),
+              },
+            },
+          };
+        }),
+
+      setManualStatic: (sessionId, clauseId, staticIndex, value) =>
+        set((s) => {
+          const session = s.sessions[sessionId];
+          if (!session) return s;
+          const current = session.manualEdits ?? {};
+          const existing = current[clauseId] ?? {};
+          const statics = { ...(existing.statics ?? {}), [staticIndex]: value };
+          return {
+            sessions: {
+              ...s.sessions,
+              [sessionId]: {
+                ...session,
+                manualEdits: {
+                  ...current,
+                  [clauseId]: { ...existing, statics },
                 },
                 updatedAt: new Date().toISOString(),
               },

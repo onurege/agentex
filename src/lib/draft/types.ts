@@ -96,11 +96,20 @@ export interface DraftTemplate {
 
 export type DraftStatus = "draft" | "complete";
 
+export type ClauseSegment =
+  | { kind: "static"; text: string; staticIndex: number }
+  | { kind: "answer"; text: string; questionId: string };
+
 export interface ClauseText {
   clauseId: string;
   number: string;
   title: string;
+  /** Tüm statik + cevap segmentlerinin birleşimi (DOCX export ve diğer
+   *  düz-metin tüketiciler için). */
   body: string;
+  /** Render edilmiş segment dizisi — preview UI bunu inline contentEditable
+   *  + locked span olarak işler. */
+  segments: ClauseSegment[];
 }
 
 export interface DraftSession {
@@ -116,12 +125,15 @@ export interface DraftSession {
   /** Kullanıcının kapattığı opsiyonel maddeler. */
   disabledClauses: string[];
   /**
-   * Kullanıcının preview'de elle düzenlediği maddeler. Her override
-   * AI önerisinden ve template render'ından önce uygulanır; cevap
-   * değişiklikleri bu maddelere yansımaz (donmuş copy). Opsiyonel —
-   * eski persist edilmiş oturumlar undefined gelir, defansif okunur.
+   * Kullanıcının preview'de elle düzenlediği maddeler. `title` skaler
+   * override; `statics` her statik segmentin (cevap-token'ları arası)
+   * kullanıcı yazdığı metni indeksiyle saklar. Cevap-bağlı segmentler
+   * her zaman canlı — formdaki değer değişince preview'de güncellenir.
    */
-  manualEdits?: Record<string, { title?: string; body?: string }>;
+  manualEdits?: Record<
+    string,
+    { title?: string; statics?: Record<number, string> }
+  >;
   /** En son render'dan preview için cache — opsiyonel. */
   renderedClauses?: ClauseText[];
 }

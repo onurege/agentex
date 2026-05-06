@@ -18,6 +18,7 @@
 // ============================================================
 
 import type {
+  ClauseSegment,
   ClauseTemplate,
   ClauseText,
   DraftSession,
@@ -42,20 +43,18 @@ export function renderDraft(
   const manualEdits = session.manualEdits ?? {};
   const clauses: ClauseText[] = enabled.map((c, idx) => {
     const override = manualEdits[c.id];
+    const segments = renderClauseSegments(c, session, template, override?.statics);
     return {
       clauseId: c.id,
       number: `Madde ${idx + 1}`,
       title: override?.title ?? c.title,
-      body: override?.body ?? renderClauseBody(c, session, template),
+      body: segments.map((s) => s.text).join(""),
+      segments,
     };
   });
 
   const missingByClause: Record<string, string[]> = {};
   for (const c of enabled) {
-    // Manually edited clauses are frozen; missing-answer detection no
-    // longer applies because the user has taken full responsibility
-    // for the clause text.
-    if (manualEdits[c.id]?.body !== undefined) continue;
     const missing = findMissingAnswers(c, session, template);
     if (missing.length > 0) missingByClause[c.id] = missing;
   }
@@ -86,14 +85,91 @@ export function isClauseEnabled(
 
 // --- Placeholder resolution -------------------------------------------------
 
-function renderClauseBody(
+function renderClauseSegments(
   clause: ClauseTemplate,
   session: DraftSession,
   template: DraftTemplate,
-): string {
-  const override = session.aiAccepted[clause.id];
-  if (override) return override;
-  return resolveTemplate(clause.template, session, template);
+  staticOverrides?: Record<number, string>,
+): ClauseSegment[] {
+  // AI suggestion override: store as a single static segment so the
+  // user can still edit on top of it; answer-token structure is lost
+  // but that's acceptable — the user explicitly accepted finished text.
+  const aiOverride = session.aiAccepted[clause.id];
+  if (aiOverride) {
+    const text = staticOverrides?.[0] ?? aiOverride;
+    return [{ kind: "static", text, staticIndex: 0 }];
+  }
+  return resolveTemplateSegments(
+    clause.template,
+    session,
+    template,
+    staticOverrides,
+  );
+}
+
+export function resolveTemplateSegments(
+  body: string,
+  session: DraftSession,
+  template: DraftTemplate,
+  staticOverrides?: Record<number, string>,
+): ClauseSegment[] {
+  // Conditionals collapse to plain string first (same logic as the
+  // legacy resolveTemplate), then we tokenize on {{path}} to split
+  // into static + answer segments.
+  let result = body;
+  const answers = session.answers;
+
+  result = result.replace(
+    /\{\{#if\s+([^\s=}]+)\s*=\s*([^}]+?)\s*\}\}([\s\S]*?)\{\{\/if\}\}/g,
+    (_match, path: string, expected: string, inner: string) => {
+      const actual = answers[path];
+      return String(actual) === expected.trim() ? inner : "";
+    },
+  );
+
+  result = result.replace(
+    /\{\{#if\s+([^\s}]+)\s*\}\}([\s\S]*?)\{\{\/if\}\}/g,
+    (_match, path: string, inner: string) => {
+      return isTruthy(answers[path]) ? inner : "";
+    },
+  );
+
+  const segments: ClauseSegment[] = [];
+  const re = /\{\{\s*([^\s{}]+)\s*\}\}/g;
+  let lastIndex = 0;
+  let staticIdx = 0;
+  let m: RegExpExecArray | null;
+
+  const pushStatic = (text: string) => {
+    if (text.length === 0) return;
+    const idx = staticIdx++;
+    segments.push({
+      kind: "static",
+      text: staticOverrides?.[idx] ?? text,
+      staticIndex: idx,
+    });
+  };
+
+  while ((m = re.exec(result)) !== null) {
+    if (m.index > lastIndex) {
+      pushStatic(result.slice(lastIndex, m.index));
+    }
+    const path = m[1];
+    const value = answers[path];
+    let text: string;
+    if (value === undefined || value === null || value === "") {
+      const q = template.questions.find((q) => q.id === path);
+      text = `[ ${q?.label ?? path} ]`;
+    } else {
+      text = formatAnswer(template, path, value, answers);
+    }
+    segments.push({ kind: "answer", text, questionId: path });
+    lastIndex = re.lastIndex;
+  }
+  if (lastIndex < result.length) {
+    pushStatic(result.slice(lastIndex));
+  }
+  return segments;
 }
 
 export function resolveTemplate(

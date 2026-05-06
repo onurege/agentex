@@ -12,7 +12,6 @@
 // ============================================================
 
 import {
-  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -20,7 +19,11 @@ import {
   useState,
 } from "react";
 import { Download, Loader2, RotateCcw } from "lucide-react";
-import type { DraftSession, DraftTemplate } from "@/lib/draft/types";
+import type {
+  ClauseSegment,
+  DraftSession,
+  DraftTemplate,
+} from "@/lib/draft/types";
 import { renderDraft } from "@/lib/draft/renderer";
 import { useDraftStore } from "@/lib/draft/store";
 import { ClauseToggle } from "./ClauseToggle";
@@ -35,7 +38,8 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
   const { clauses, missingByClause } = renderDraft(template, session);
   const toggleClause = useDraftStore((s) => s.toggleClause);
   const setStatus = useDraftStore((s) => s.setStatus);
-  const setManualEdit = useDraftStore((s) => s.setManualEdit);
+  const setManualTitle = useDraftStore((s) => s.setManualTitle);
+  const setManualStatic = useDraftStore((s) => s.setManualStatic);
   const clearManualEdit = useDraftStore((s) => s.clearManualEdit);
   const manualEdits = session.manualEdits ?? {};
 
@@ -183,20 +187,23 @@ export function ClausePreview({ template, session }: ClausePreviewProps) {
           ) : (
             clauses.map((c) => {
               const edit = manualEdits[c.clauseId];
-              const isEdited =
-                edit?.title !== undefined || edit?.body !== undefined;
+              const hasTitleEdit = edit?.title !== undefined;
+              const hasStaticEdit = !!(
+                edit?.statics && Object.keys(edit.statics).length > 0
+              );
+              const isEdited = hasTitleEdit || hasStaticEdit;
               return (
                 <section key={c.clauseId}>
                   <EditableClause
                     number={c.number}
                     title={c.title}
-                    body={c.body}
+                    segments={c.segments}
                     isEdited={isEdited}
                     onEditTitle={(next) =>
-                      setManualEdit(session.id, c.clauseId, "title", next)
+                      setManualTitle(session.id, c.clauseId, next)
                     }
-                    onEditBody={(next) =>
-                      setManualEdit(session.id, c.clauseId, "body", next)
+                    onEditStatic={(idx, next) =>
+                      setManualStatic(session.id, c.clauseId, idx, next)
                     }
                     onReset={() => clearManualEdit(session.id, c.clauseId)}
                   />
@@ -267,26 +274,27 @@ function triggerDownload(blob: Blob, fileName: string) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-// EditableClause — başlık ve gövdeyi contentEditable olarak çizer.
-// Otomatik madde numarası kilitli (select-none span). Kullanıcı yapıştırma
-// yaparken plain-text'e düşürürüz; aksi takdirde format kalıntıları
-// DOCX export'a kaçar. Reset olunca DOM textContent'i prop ile hizalanır
-// (contentEditable + React'in birlikte çalışmaması için elle sync).
+// EditableClause — başlık ve segment'leri inline olarak çizer.
+// Madde numarası ve cevap-bağlı segmentler (formdan resolve edilen
+// değerler) contentEditable={false} olarak kilitli; statik metin
+// segmentleri ayrı ayrı düzenlenebilir. Bu sayede form alanlarına
+// karşılık gelen yerler preview üstünden değiştirilemez — kullanıcı
+// onları soldaki form ile günceller.
 function EditableClause({
   number,
   title,
-  body,
+  segments,
   isEdited,
   onEditTitle,
-  onEditBody,
+  onEditStatic,
   onReset,
 }: {
   number: string;
   title: string;
-  body: string;
+  segments: ClauseSegment[];
   isEdited: boolean;
   onEditTitle: (next: string) => void;
-  onEditBody: (next: string) => void;
+  onEditStatic: (staticIndex: number, next: string) => void;
   onReset: () => void;
 }) {
   return (
@@ -313,15 +321,62 @@ function EditableClause({
           </button>
         )}
       </div>
-      <EditableText
-        value={body}
-        onCommit={onEditBody}
-        multiline
-        ariaLabel="Madde gövdesi"
-        className="block text-[16px] text-text-secondary leading-8 whitespace-pre-wrap outline-none focus:bg-accent-primary/[0.04] rounded px-1 -mx-1 py-0.5"
-        renderInitial={(text) => renderBodyWithHighlights(text)}
-      />
+      <p className="text-[16px] text-text-secondary leading-8 whitespace-pre-wrap">
+        {segments.map((seg, i) => {
+          if (seg.kind === "answer") {
+            return <AnswerToken key={`a:${i}:${seg.questionId}`} text={seg.text} />;
+          }
+          return (
+            <EditableText
+              key={`s:${seg.staticIndex}`}
+              value={seg.text}
+              onCommit={(next) => onEditStatic(seg.staticIndex, next)}
+              ariaLabel="Madde metni"
+              className="outline-none focus:bg-accent-primary/[0.04] rounded px-0.5 -mx-0.5"
+            />
+          );
+        })}
+      </p>
     </>
+  );
+}
+
+// AnswerToken — formdan resolve edilen değerleri kilitli (non-editable)
+// inline span olarak çizer. `[ Etiket ]` boş placeholder'ları kırmızı,
+// dolu değerler nötr renk + ince hover hint'i ile gösterilir. **bold**
+// markup'ı (parti adları için) <strong>'a çevrilir.
+function AnswerToken({ text }: { text: string }) {
+  if (/^\[ [^\]]+ \]$/.test(text)) {
+    return (
+      <span
+        contentEditable={false}
+        className="inline-flex items-center px-1.5 py-0.5 rounded bg-accent-danger/10 text-accent-danger text-[13px] font-mono mx-0.5 align-middle select-none"
+        title="Soldaki formu doldurun"
+      >
+        {text}
+      </span>
+    );
+  }
+  const boldMatch = /^\*\*([^*]+)\*\*$/.exec(text);
+  if (boldMatch) {
+    return (
+      <strong
+        contentEditable={false}
+        className="font-semibold text-text-primary bg-workspace-elevated/40 rounded px-0.5 cursor-default"
+        title="Soldaki formdan gelir"
+      >
+        {boldMatch[1]}
+      </strong>
+    );
+  }
+  return (
+    <span
+      contentEditable={false}
+      className="bg-workspace-elevated/40 rounded px-0.5 cursor-default"
+      title="Soldaki formdan gelir"
+    >
+      {text}
+    </span>
   );
 }
 
@@ -334,20 +389,12 @@ function EditableText({
   ariaLabel,
   className,
   multiline = false,
-  renderInitial,
 }: {
   value: string;
   onCommit: (next: string) => void;
   ariaLabel: string;
   className: string;
   multiline?: boolean;
-  /**
-   * İlk render'da gösterilecek zenginleştirilmiş içerik (örn. eksik
-   * cevap badge'leri). Düzenleme başlayınca DOM textContent ile
-   * sürekli hale geliriz; bu yüzden zengin görünüm yalnızca odaklanmadan
-   * önceki ilk render için geçerli.
-   */
-  renderInitial?: (text: string) => React.ReactNode;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -380,34 +427,8 @@ function EditableText({
         if (next !== value) onCommit(next);
       }}
     >
-      {renderInitial ? renderInitial(value) : value}
+      {value}
     </span>
   );
 }
 
-const INLINE_MARKUP_RE = /(\[ [^\]]+ \]|\*\*[^*]+\*\*)/g;
-
-function renderBodyWithHighlights(body: string) {
-  const parts = body.split(INLINE_MARKUP_RE);
-  return parts.map((part, i) => {
-    const key = `${i}-${part.slice(0, 12)}`;
-    if (/^\[ [^\]]+ \]$/.test(part)) {
-      return (
-        <span
-          key={key}
-          className="inline-flex items-center px-1.5 py-0.5 rounded bg-accent-danger/10 text-accent-danger text-[13px] font-mono mx-0.5 align-middle"
-        >
-          {part}
-        </span>
-      );
-    }
-    if (/^\*\*[^*]+\*\*$/.test(part)) {
-      return (
-        <strong key={key} className="font-semibold text-text-primary">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    return <Fragment key={key}>{part}</Fragment>;
-  });
-}

@@ -24,7 +24,10 @@ interface ExportPayload {
   answers?: Record<string, unknown>;
   aiAccepted?: Record<string, string>;
   disabledClauses?: string[];
-  manualEdits?: Record<string, { title?: string; body?: string }>;
+  manualEdits?: Record<
+    string,
+    { title?: string; statics?: Record<number, string> }
+  >;
   sessionId?: string;
 }
 
