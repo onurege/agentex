@@ -11,7 +11,7 @@
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertCircle, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, Loader2, ShieldAlert, Sparkles } from "lucide-react";
 import { SignatureLayout } from "@/components/signatures/SignatureLayout";
 import { SignatureSourceCard } from "@/components/signatures/SignatureSourceCard";
 import { SignatureCropper } from "@/components/signatures/SignatureCropper";
@@ -58,6 +58,7 @@ export default function SignaturesPage() {
   const [computeNotice, setComputeNotice] = useState<string | null>(null);
   const [precheckRunning, setPrecheckRunning] = useState(false);
   const [precheckError, setPrecheckError] = useState<string | null>(null);
+  const [precheckOverride, setPrecheckOverride] = useState(false);
   const precheckInflightRef = useRef(false);
 
   const sessionId = session?.id;
@@ -69,10 +70,19 @@ export default function SignaturesPage() {
 
   // Reset transient precheck error whenever a new source is uploaded so
   // the auto-trigger can attempt again on fresh inputs without looping
-  // on the previous failure.
+  // on the previous failure. The user's manual override is also tied to
+  // a specific source pair — a fresh upload should re-gate the workflow.
   useEffect(() => {
     setPrecheckError(null);
+    setPrecheckOverride(false);
   }, [contractText, referenceText]);
+
+  // Critical precheck findings (X) block the comparison flow until the
+  // user explicitly confirms they have reviewed the issues. Warnings
+  // alone do not gate.
+  const hasCriticalPrecheck =
+    (precheckResult?.checks ?? []).some((c) => c.severity === "critical");
+  const comparisonGated = hasCriticalPrecheck && !precheckOverride;
 
   // Precheck auto-trigger: when both PDFs have produced a text layer and
   // we don't yet have a result, POST to /api/signatures/precheck. Image
@@ -278,7 +288,7 @@ export default function SignaturesPage() {
       action: "signature_crop_selected",
       targetType: "signature",
       targetId: session.id,
-      summary: `${side === "contract" ? "Dökümandaki" : "Sirküdeki"} imza alanı seçildi`,
+      summary: `${side === "contract" ? "Belgedeki" : "İmza sirküsündeki"} imza alanı seçildi`,
       module: "signatures",
       metadata: {
         side,
@@ -342,7 +352,7 @@ export default function SignaturesPage() {
             İmza Karşılaştırma
           </div>
           <h1 className="font-display text-3xl md:text-4xl font-bold text-text-primary mb-3 tracking-tight">
-            Dökümandaki imzayı imza sirküleri ile karşılaştırın
+            Belgedeki imzayı imza sirküsüyle karşılaştırın
           </h1>
           <p className="text-base text-text-secondary max-w-2xl leading-relaxed">
             İki belgedeki imza bölgelerini kırpın; sistem ham görüntüyü değil,
@@ -374,7 +384,7 @@ export default function SignaturesPage() {
                 action: "signature_source_uploaded",
                 targetType: "signature",
                 targetId: session.id,
-                summary: "Dökümandaki imza kaynağı yüklendi",
+                summary: "Belgedeki imza kaynağı yüklendi",
                 module: "signatures",
                 metadata: {
                   side: "contract",
@@ -445,6 +455,39 @@ export default function SignaturesPage() {
               </div>
             ) : null}
 
+            {comparisonGated ? (
+              <section
+                className="rounded-xl border border-semantic-negative/40 bg-workspace-surface p-6 mb-6 flex items-start gap-4"
+                aria-live="polite"
+              >
+                <ShieldAlert
+                  size={24}
+                  className="text-semantic-negative shrink-0 mt-0.5"
+                />
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-display text-lg font-semibold text-text-primary mb-1">
+                    Kritik uyumsuzluk var
+                  </h2>
+                  <p className="text-sm text-text-secondary leading-relaxed mb-4">
+                    Ön kontrolde X ile işaretlenen kritik bir uyumsuzluk
+                    bulundu. İmza karşılaştırmasına geçmek için kontrolü
+                    kendiniz teyit edin.
+                  </p>
+                  <label className="inline-flex items-start gap-2.5 cursor-pointer text-sm text-text-primary select-none">
+                    <input
+                      type="checkbox"
+                      checked={precheckOverride}
+                      onChange={(e) => setPrecheckOverride(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 cursor-pointer"
+                    />
+                    <span>
+                      Kontrol ettim, sorun görmüyorum — imza karşılaştırmasına geç
+                    </span>
+                  </label>
+                </div>
+              </section>
+            ) : (
+            <>
             <section className="mb-6">
               <header className="mb-3">
                 <h2 className="font-display text-lg font-semibold text-text-primary">
@@ -545,6 +588,8 @@ export default function SignaturesPage() {
                   otomatik hesaplanır.
                 </p>
               </div>
+            )}
+            </>
             )}
           </>
         ) : (
