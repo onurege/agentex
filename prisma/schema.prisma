@@ -21,6 +21,11 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Group membership — null = groupless. Super admin assigns via panel.
+  // Same-group members see each other's runs (read-only).
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id])
+
   // NextAuth relations
   accounts Account[]
   sessions Session[]
@@ -35,6 +40,17 @@ model User {
 
   @@index([email])
   @@index([deletedAt])
+  @@index([groupId])
+}
+
+// Group — collection of users that share read access to each other's
+// runs. Created and managed by super_admin via Panel → Users.
+model Group {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  users     User[]
+  boardRuns BoardRun[]
 }
 
 // Destek talepleri — kullanıcı self-serve gönderir, super_admin
@@ -193,6 +209,11 @@ model BoardRun {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
+  // Group ownership — frozen at run time from User.groupId. Same-group
+  // users get read-only visibility; null means run is private to owner.
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id])
+
   // Document info (frozen at run time)
   documentName String
   documentType String
@@ -225,6 +246,8 @@ model BoardRun {
 
   @@index([userId])
   @@index([userId, deletedAt])
+  @@index([groupId])
+  @@index([groupId, deletedAt])
   @@index([startedAt])
 }
 
