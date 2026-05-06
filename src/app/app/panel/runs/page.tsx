@@ -461,7 +461,7 @@ export default function PanelRunsPage() {
             return (
               <div
                 key={run.id}
-                className="flex items-center gap-4 p-5 rounded-xl bg-workspace-surface border border-workspace-border hover:border-accent-primary/20 transition-colors"
+                className="group flex items-center gap-4 p-5 rounded-xl bg-workspace-surface border border-workspace-border hover:border-accent-primary/20 transition-colors"
               >
                 {/* Document icon */}
                 <div className="w-12 h-12 rounded-lg bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center shrink-0 relative">
@@ -497,16 +497,33 @@ export default function PanelRunsPage() {
                       className="w-full text-lg font-semibold text-text-primary px-2 py-1 rounded-md bg-workspace-bg border border-accent-primary/40 outline-none"
                     />
                   ) : (
-                    <p
-                      className="text-lg font-semibold text-text-primary truncate cursor-text"
-                      title="Çift tıkla: yeniden adlandır"
-                      onDoubleClick={() => {
-                        setRenamingRunId(run.id);
-                        setRunRenameDraft(run.documentName);
-                      }}
-                    >
-                      {run.documentName}
-                    </p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p
+                        className="text-lg font-semibold text-text-primary truncate cursor-text"
+                        onDoubleClick={() => {
+                          setRenamingRunId(run.id);
+                          setRunRenameDraft(run.documentName);
+                        }}
+                        title="Çift tıkla: yeniden adlandır"
+                      >
+                        {run.documentName}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRenamingRunId(run.id);
+                          setRunRenameDraft(run.documentName);
+                        }}
+                        title="Sözleşmeyi yeniden adlandır"
+                        aria-label="Sözleşmeyi yeniden adlandır"
+                        className="shrink-0 p-1.5 rounded-md text-text-muted hover:text-accent-primary hover:bg-accent-primary/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg>
+                      </button>
+                    </div>
                   )}
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-base text-text-secondary">
