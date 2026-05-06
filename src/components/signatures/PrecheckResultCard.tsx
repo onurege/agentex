@@ -32,14 +32,12 @@ interface Props {
   result: PrecheckResult;
 }
 
-// Binary tone — doğru ise yeşil, değil ise kırmızı. `warned` da kırmızı
-// tarafa düşer; başlık/alt metin farklılığı ayrım için yeterli.
+// Card chrome stays neutral — yeşil/kırmızı ayrımı sadece başlık ikonu +
+// satır ikonlarıyla taşınır. Renkli arka plan / kenarlık yok.
 const STATUS_PRESET = {
   passed: {
     icon: ShieldCheck,
     iconColor: "text-semantic-positive",
-    border: "border-semantic-positive/40",
-    bg: "bg-semantic-positive/[0.10]",
     title: "Şirket bilgileri tutuyor",
     subtitle:
       "Sirkü ile dilekçe arasında kritik uyumsuzluk yok; imza karşılaştırmasına geçebilirsiniz.",
@@ -47,8 +45,6 @@ const STATUS_PRESET = {
   warned: {
     icon: ShieldAlert,
     iconColor: "text-semantic-negative",
-    border: "border-semantic-negative/40",
-    bg: "bg-semantic-negative/[0.10]",
     title: "Bazı uyarılar var",
     subtitle:
       "İmza karşılaştırmasına devam edebilirsiniz; aşağıdaki uyarıları gözden geçirin.",
@@ -56,8 +52,6 @@ const STATUS_PRESET = {
   failed: {
     icon: ShieldAlert,
     iconColor: "text-semantic-negative",
-    border: "border-semantic-negative/40",
-    bg: "bg-semantic-negative/[0.10]",
     title: "Önemli uyumsuzluklar tespit edildi",
     subtitle:
       "İmza karşılaştırması açık tutuldu ama bu uyumsuzluklar dilekçenin geçerliliğini tartışmalı hale getirebilir.",
@@ -80,7 +74,7 @@ export function PrecheckResultCard({ result }: Props) {
 
   return (
     <section
-      className={`rounded-xl border ${preset.border} ${preset.bg} p-6 mb-6`}
+      className="rounded-xl border border-workspace-border bg-workspace-surface p-6 mb-6"
       aria-live="polite"
     >
       <header className="flex items-start gap-4">
