@@ -67,9 +67,10 @@ export function ExternalVerificationCard({ result }: Props) {
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // TTSG arama URL'i — sayfa query string ile önceden doldurmayı kabul
-  // etmiyor. Kullanıcı yeni sekmede açıp ünvanı kendi yapıştırıyor.
-  const ttsgUrl = "https://www.ticaretsicil.gov.tr/";
+  // TTSG ünvan sorgu sayfası — sayfa query string ile önceden doldurmayı
+  // kabul etmiyor. Kullanıcı yeni sekmede açıp ünvanı kendi yapıştırıyor.
+  const ttsgUrl =
+    "https://www.ticaretsicil.gov.tr/view/hizlierisim/unvansorgulama.php";
 
   const canSave = status !== null;
 
