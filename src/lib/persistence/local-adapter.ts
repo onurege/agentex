@@ -52,6 +52,7 @@ class LocalRunStore implements RunStore {
       ownerEmail: "",
       groupId: null,
       groupName: null,
+      folderId: null,
       isOwn: true,
     }));
     return { runs, total: all.length, scope: opts?.scope ?? "mine" };

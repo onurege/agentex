@@ -70,6 +70,7 @@ export async function GET(req: NextRequest) {
     ownerEmail: r.user?.email ?? "",
     groupId: r.groupId,
     groupName: r.group?.name ?? null,
+    folderId: r.folderId ?? null,
     isOwn: r.userId === user.id,
   }));
 

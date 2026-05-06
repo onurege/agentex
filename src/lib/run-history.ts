@@ -102,7 +102,8 @@ export interface RunListItem extends BoardroomRunSnapshot {
   ownerEmail: string;
   groupId: string | null;
   groupName: string | null;
-  /** True when the viewer is the run's creator. UI gates edit/delete. */
+  folderId: string | null;
+  /** True when the viewer is the run's creator. UI gates delete. */
   isOwn: boolean;
 }
 
