@@ -261,6 +261,9 @@ export async function GET(
     sourceTool:
       (item.sourceTool as RegulationSourceTool | null) ?? null,
     companies: item.companies ?? [],
+    aiVerdict:
+      (item.aiVerdict as import("@/lib/regulations/types").RegulationAIVerdictDTO | null) ??
+      null,
     readAt: read?.readAt ? read.readAt.toISOString() : null,
     pinned: Boolean(read?.pinned),
   };

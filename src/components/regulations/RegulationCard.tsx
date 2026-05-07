@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, ExternalLink, Pin, PinOff } from "lucide-react";
+import { ArrowUpRight, ExternalLink, Pin, PinOff, Sparkles } from "lucide-react";
 import { TOPIC_BY_ID } from "@/lib/regulations/topics";
 import { COMPANY_BY_ID } from "@/lib/regulations/companies";
 import type {
@@ -149,11 +149,39 @@ export function RegulationCard({ item, onTogglePinned }: Props) {
         </button>
       </header>
 
-      <div className="flex-1 mb-3">
+      <div className="flex-1 mb-3 space-y-3">
         {item.summary && (
           <p className="text-sm text-text-secondary leading-relaxed line-clamp-3">
             {item.summary}
           </p>
+        )}
+        {item.aiVerdict && (
+          <div className="rounded-lg border border-accent-primary/25 bg-accent-primary/[0.05] px-3 py-2.5">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Sparkles size={12} className="text-accent-primary" />
+              <span className="text-[11px] font-mono uppercase tracking-wider text-accent-primary font-semibold">
+                Param ile ilişki
+              </span>
+              <span className="ml-auto text-[10px] font-mono uppercase tracking-wider text-text-tertiary">
+                %{Math.round(item.aiVerdict.confidence * 100)} güven
+              </span>
+            </div>
+            <p className="text-sm text-text-primary leading-relaxed">
+              {item.aiVerdict.paramRelation.summary}
+            </p>
+            {item.aiVerdict.paramRelation.impactedOperations.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {item.aiVerdict.paramRelation.impactedOperations.map((op) => (
+                  <span
+                    key={op}
+                    className="text-[11px] px-2 py-0.5 rounded-full bg-workspace-surface border border-accent-primary/20 text-accent-primary/90"
+                  >
+                    {op}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 

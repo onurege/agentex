@@ -10,6 +10,7 @@ import { getAuthUser, unauthorized } from "@/lib/api-auth";
 import { TOPIC_BY_ID } from "@/lib/regulations/topics";
 import { COMPANY_BY_ID } from "@/lib/regulations/companies";
 import type {
+  RegulationAIVerdictDTO,
   RegulationFeedResponse,
   RegulationItemDTO,
   RegulationPriority,
@@ -194,6 +195,7 @@ export async function GET(req: NextRequest) {
       sourceTool:
         (item.sourceTool as RegulationSourceTool | null) ?? null,
       companies: item.companies ?? [],
+      aiVerdict: (item.aiVerdict as RegulationAIVerdictDTO | null) ?? null,
       readAt: read?.readAt ? read.readAt.toISOString() : null,
       pinned: Boolean(read?.pinned),
     };

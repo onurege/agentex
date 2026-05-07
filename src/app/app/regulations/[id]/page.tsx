@@ -10,9 +10,10 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Loader2, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ExternalLink, Loader2, ShieldAlert, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { TOPIC_BY_ID } from "@/lib/regulations/topics";
+import { COMPANY_BY_ID } from "@/lib/regulations/companies";
 import type {
   RegulationItemDTO,
   RegulationPriority,
@@ -221,6 +222,8 @@ function DetailBody({ data }: { data: DetailResponse }) {
           )}
         </p>
       </header>
+
+      {item.aiVerdict && <AIVerdictPanel verdict={item.aiVerdict} />}
 
       {data.markdown ? (
         <MarkdownView markdown={data.markdown} />
@@ -557,6 +560,119 @@ function FallbackView({
           Kaynağa git <ExternalLink size={14} />
         </a>
       )}
+    </section>
+  );
+}
+
+const ACTION_BADGE: Record<
+  "review" | "monitor" | "no-action",
+  { label: string; className: string }
+> = {
+  review: {
+    label: "İncelenmeli",
+    className: "bg-accent-danger/12 text-accent-danger border-accent-danger/30",
+  },
+  monitor: {
+    label: "İzlenmeli",
+    className: "bg-accent-warning/12 text-accent-warning border-accent-warning/30",
+  },
+  "no-action": {
+    label: "Aksiyon yok",
+    className: "bg-workspace-elevated text-text-tertiary border-workspace-border",
+  },
+};
+
+function AIVerdictPanel({
+  verdict,
+}: {
+  verdict: NonNullable<RegulationItemDTO["aiVerdict"]>;
+}) {
+  const action = ACTION_BADGE[verdict.paramRelation.suggestedAction];
+  const evaluatedAt = (() => {
+    try {
+      return new Date(verdict.evaluatedAt).toLocaleString("tr-TR", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+    } catch {
+      return verdict.evaluatedAt;
+    }
+  })();
+
+  return (
+    <section className="mb-6 rounded-xl border border-accent-primary/30 bg-accent-primary/[0.05] p-5">
+      <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+        <div className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-accent-primary font-semibold">
+          <Sparkles size={14} /> AI değerlendirmesi — Param ile ilişki
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-xs font-semibold ${action.className}`}
+          >
+            {action.label}
+          </span>
+          <span className="text-[11px] font-mono uppercase tracking-wider text-text-tertiary">
+            %{Math.round(verdict.confidence * 100)} güven
+          </span>
+        </div>
+      </div>
+
+      <p className="text-base text-text-primary leading-relaxed mb-4">
+        {verdict.paramRelation.summary}
+      </p>
+
+      {verdict.paramRelation.impactedOperations.length > 0 && (
+        <div className="mb-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-text-tertiary mb-1.5">
+            Etkilenen operasyonlar
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {verdict.paramRelation.impactedOperations.map((op) => (
+              <span
+                key={op}
+                className="text-xs px-2 py-0.5 rounded-full bg-workspace-surface border border-accent-primary/25 text-accent-primary"
+              >
+                {op}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {verdict.paramRelation.impactedCompanies.length > 0 && (
+        <div className="mb-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-text-tertiary mb-1.5">
+            Etkilenen şirketler
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {verdict.paramRelation.impactedCompanies.map((id) => {
+              const c = COMPANY_BY_ID[id];
+              return (
+                <span
+                  key={id}
+                  title={c?.description}
+                  className="text-xs font-medium px-2 py-0.5 rounded-full bg-accent-primary/10 border border-accent-primary/30 text-accent-primary"
+                >
+                  {c?.displayName ?? id}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {verdict.paramRelation.severityReason && (
+        <div className="text-sm text-text-secondary leading-relaxed border-t border-accent-primary/20 pt-3 mt-3">
+          <span className="font-mono uppercase text-[11px] tracking-wider text-text-tertiary mr-2">
+            Önem gerekçesi
+          </span>
+          {verdict.paramRelation.severityReason}
+        </div>
+      )}
+
+      <div className="text-[11px] font-mono uppercase tracking-wider text-text-tertiary mt-3">
+        {verdict.model} · {evaluatedAt}
+      </div>
     </section>
   );
 }
