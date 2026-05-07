@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { StageLayout } from "@/components/stage/StageLayout";
 import { DocumentUploadPanel } from "@/components/setup/DocumentUploadPanel";
 import { BoardSummaryPanel } from "@/components/setup/BoardSummaryPanel";
@@ -20,6 +21,8 @@ export default function BoardSetupPage() {
   const uploadStatus = useBoardroomFlowStore((s) => s.uploadStatus);
   const clientParty = useBoardroomFlowStore((s) => s.clientParty);
   const stance = useBoardroomFlowStore((s) => s.stance);
+  // Maske + Bağlam opsiyonel; varsayılan kapalı, viewport'a sığsın diye.
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // Redirect to Agent Gallery if no agents selected
   useEffect(() => {
@@ -43,38 +46,58 @@ export default function BoardSetupPage() {
 
   return (
     <StageLayout currentStep="board-setup">
-      <div className="flex flex-col flex-1 min-h-0 overflow-y-auto px-12 py-8">
-        {/* Header — sola hizalı, kompakt */}
-        <div className="mb-8">
-          <p className="text-[11px] font-mono uppercase tracking-widest text-text-muted mb-1.5">
-            Kurul Hazırlığı
-          </p>
-          <h1 className="font-display text-3xl font-bold text-text-primary mb-1.5">
-            Belgeyi yükleyin, kuruluna hazırlanın
-          </h1>
-          <p className="text-base text-text-secondary">
-            Aşağıdaki dört adımı tamamladığınızda kurul tartışmaya başlayabilir.
+      <div className="flex flex-col flex-1 min-h-0 overflow-y-auto px-12 py-5">
+        {/* Header — kompakt, sola hizalı */}
+        <div className="mb-4 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-mono uppercase tracking-widest text-text-muted mb-0.5">
+              Kurul Hazırlığı
+            </p>
+            <h1 className="font-display text-xl font-bold text-text-primary">
+              Belgeyi yükleyin, kuruluna hazırlanın
+            </h1>
+          </div>
+          <p className="text-sm text-text-muted hidden md:block">
+            Belge + temsil/tutum zorunlu · maske ve bağlam opsiyonel
           </p>
         </div>
 
         {/* Üst sıra: Belge | Kurul | Temsil ve Tutum */}
-        <SceneIn className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
+        <SceneIn className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-3">
           <DocumentUploadPanel />
           <BoardSummaryPanel />
           <PartyStanceInput />
         </SceneIn>
 
-        {/* Alt sıra: Maske | Bağlam */}
-        <SceneIn
-          delay={0.12}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-        >
-          <MaskMappingsInput />
-          <ContextNotesInput />
+        {/* Opsiyonel detaylar — viewport'a sığsın diye kapalı başlar. */}
+        <SceneIn delay={0.08}>
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen((v) => !v)}
+            className="w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border border-workspace-border/60 bg-workspace-surface/40 hover:bg-workspace-elevated/50 transition-colors text-sm font-medium text-text-secondary"
+            aria-expanded={advancedOpen}
+          >
+            <span className="flex items-center gap-2">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-text-muted">
+                Opsiyonel
+              </span>
+              Hassas alan maskeleme · bağlam notu
+            </span>
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${advancedOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {advancedOpen && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-3">
+              <MaskMappingsInput />
+              <ContextNotesInput />
+            </div>
+          )}
         </SceneIn>
 
         {/* Bottom Action Bar */}
-        <div className="flex items-center justify-between mt-8 pt-6 border-t border-workspace-border/30 w-full">
+        <div className="flex items-center justify-between mt-auto pt-4 border-t border-workspace-border/30 w-full">
           {/* Back link */}
           <Link
             href={SITE.paths.boardroomAgents}
@@ -92,10 +115,10 @@ export default function BoardSetupPage() {
           {canLaunch ? (
             <Link
               href={SITE.paths.boardroom}
-              className="flex items-center gap-2 px-10 py-4 rounded-xl text-xl font-semibold
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-base font-semibold
                          bg-accent-primary text-workspace-surface border border-accent-primary
                          hover:bg-accent-secondary
-                         transition-all duration-150 min-h-[56px] shadow-glow-blue"
+                         transition-all duration-150 shadow-glow-blue"
             >
               <span>Tartışmayı Başlat</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -106,10 +129,10 @@ export default function BoardSetupPage() {
             <div className="flex flex-col items-end">
               <button
                 disabled
-                className="px-10 py-4 rounded-xl text-xl font-semibold
+                className="px-6 py-2.5 rounded-xl text-base font-semibold
                            bg-workspace-elevated text-text-muted
                            border border-workspace-border
-                           cursor-not-allowed min-h-[56px]"
+                           cursor-not-allowed"
               >
                 Tartışmayı Başlat
               </button>
