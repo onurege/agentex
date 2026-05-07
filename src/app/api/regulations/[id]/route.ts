@@ -260,6 +260,7 @@ export async function GET(
     status: (item.status as RegulationStatus | null) ?? null,
     sourceTool:
       (item.sourceTool as RegulationSourceTool | null) ?? null,
+    companies: item.companies ?? [],
     readAt: read?.readAt ? read.readAt.toISOString() : null,
     pinned: Boolean(read?.pinned),
   };

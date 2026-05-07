@@ -12,11 +12,12 @@
 
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, RefreshCw, Search, ShieldAlert } from "lucide-react";
+import { Loader2, Newspaper, RefreshCw, Search, ShieldAlert } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { TopicChips } from "@/components/regulations/TopicChips";
 import { RegulationCard } from "@/components/regulations/RegulationCard";
 import { DEFAULT_TOPIC_FILTER } from "@/lib/regulations/topics";
+import { PARAM_GROUP_COMPANIES } from "@/lib/regulations/companies";
 import type {
   RegulationFeedResponse,
   RegulationItemDTO,
@@ -24,6 +25,8 @@ import type {
   RegulationSourceTool,
 } from "@/lib/regulations/types";
 import { SOURCE_TOOL_LABEL } from "@/lib/regulations/types";
+
+type FeedView = "mevzuat" | "haberler";
 
 const SOURCE_TOOL_ORDER: RegulationSourceTool[] = [
   "bedesten",
@@ -64,17 +67,27 @@ export default function RegulationsPage() {
   );
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"all" | "pinned">("all");
+  const [feedView, setFeedView] = useState<FeedView>("mevzuat");
+  // Boş set = "Hepsi" — UI'da Hepsi butonu basıldığında temizlenir.
+  const [companyFilter, setCompanyFilter] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
-    if (topicFilter.size > 0) {
-      params.set("topics", Array.from(topicFilter).join(","));
-    }
-    if (priorityFloor !== "all") {
-      params.set("priority", priorityFloor);
-    }
-    if (sourceTools.size > 0) {
-      params.set("sourceTool", Array.from(sourceTools).join(","));
+    params.set("view", feedView);
+    if (feedView === "mevzuat") {
+      if (topicFilter.size > 0) {
+        params.set("topics", Array.from(topicFilter).join(","));
+      }
+      if (priorityFloor !== "all") {
+        params.set("priority", priorityFloor);
+      }
+      if (sourceTools.size > 0) {
+        params.set("sourceTool", Array.from(sourceTools).join(","));
+      }
+    } else if (companyFilter.size > 0) {
+      params.set("companies", Array.from(companyFilter).join(","));
     }
     if (search.trim()) {
       params.set("search", search.trim());
@@ -84,7 +97,15 @@ export default function RegulationsPage() {
     }
     params.set("limit", "100");
     return params.toString();
-  }, [topicFilter, priorityFloor, sourceTools, search, viewMode]);
+  }, [
+    feedView,
+    topicFilter,
+    priorityFloor,
+    sourceTools,
+    search,
+    viewMode,
+    companyFilter,
+  ]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -184,6 +205,15 @@ export default function RegulationsPage() {
     });
   };
 
+  const toggleCompany = (id: string) => {
+    setCompanyFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const lastScannedLabel = lastScannedAt
     ? new Date(lastScannedAt).toLocaleString("tr-TR", {
         dateStyle: "short",
@@ -192,15 +222,21 @@ export default function RegulationsPage() {
     : "henüz tarama yapılmadı";
 
   const activeFilterCount =
-    (priorityFloor !== "all" ? 1 : 0) +
-    sourceTools.size +
-    (search.trim() ? 1 : 0);
+    feedView === "mevzuat"
+      ? (priorityFloor !== "all" ? 1 : 0) +
+        sourceTools.size +
+        (search.trim() ? 1 : 0)
+      : companyFilter.size + (search.trim() ? 1 : 0);
 
   const resetFilters = () => {
-    setPriorityFloor("all");
-    setSourceTools(new Set());
     setSearch("");
-    setTopicFilter(new Set(DEFAULT_TOPIC_FILTER));
+    if (feedView === "mevzuat") {
+      setPriorityFloor("all");
+      setSourceTools(new Set());
+      setTopicFilter(new Set(DEFAULT_TOPIC_FILTER));
+    } else {
+      setCompanyFilter(new Set());
+    }
   };
 
   return (
@@ -225,53 +261,91 @@ export default function RegulationsPage() {
               />
             </div>
 
-            <FilterSection title="Öncelik">
-              <select
-                value={priorityFloor}
-                onChange={(e) =>
-                  setPriorityFloor(
-                    e.target.value as RegulationPriority | "all",
-                  )
-                }
-                className="w-full px-3 py-2 rounded-lg text-sm bg-workspace-surface border border-workspace-border text-text-secondary"
-              >
-                {(
-                  Object.keys(PRIORITY_LABEL) as Array<
-                    RegulationPriority | "all"
+            {feedView === "mevzuat" ? (
+              <>
+                <FilterSection title="Öncelik">
+                  <select
+                    value={priorityFloor}
+                    onChange={(e) =>
+                      setPriorityFloor(
+                        e.target.value as RegulationPriority | "all",
+                      )
+                    }
+                    className="w-full px-3 py-2 rounded-lg text-sm bg-workspace-surface border border-workspace-border text-text-secondary"
                   >
-                ).map((p) => (
-                  <option key={p} value={p}>
-                    {PRIORITY_LABEL[p]}
-                  </option>
-                ))}
-              </select>
-            </FilterSection>
+                    {(
+                      Object.keys(PRIORITY_LABEL) as Array<
+                        RegulationPriority | "all"
+                      >
+                    ).map((p) => (
+                      <option key={p} value={p}>
+                        {PRIORITY_LABEL[p]}
+                      </option>
+                    ))}
+                  </select>
+                </FilterSection>
 
-            <FilterSection title="Kaynak">
-              <div className="flex flex-wrap gap-1.5">
-                {SOURCE_TOOL_ORDER.map((id) => {
-                  const active = sourceTools.has(id);
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => toggleSourceTool(id)}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
-                        active
-                          ? "bg-accent-primary/10 border-accent-primary/40 text-accent-primary"
-                          : "bg-workspace-surface border-workspace-border text-text-secondary hover:text-text-primary"
-                      }`}
-                    >
-                      {SOURCE_TOOL_LABEL[id]}
-                    </button>
-                  );
-                })}
-              </div>
-            </FilterSection>
+                <FilterSection title="Kaynak">
+                  <div className="flex flex-wrap gap-1.5">
+                    {SOURCE_TOOL_ORDER.map((id) => {
+                      const active = sourceTools.has(id);
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => toggleSourceTool(id)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                            active
+                              ? "bg-accent-primary/10 border-accent-primary/40 text-accent-primary"
+                              : "bg-workspace-surface border-workspace-border text-text-secondary hover:text-text-primary"
+                          }`}
+                        >
+                          {SOURCE_TOOL_LABEL[id]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </FilterSection>
 
-            <FilterSection title="Konu">
-              <TopicChips selected={topicFilter} onToggle={toggleTopic} />
-            </FilterSection>
+                <FilterSection title="Konu">
+                  <TopicChips selected={topicFilter} onToggle={toggleTopic} />
+                </FilterSection>
+              </>
+            ) : (
+              <FilterSection title="Şirket">
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCompanyFilter(new Set())}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                      companyFilter.size === 0
+                        ? "bg-accent-primary/10 border-accent-primary/40 text-accent-primary"
+                        : "bg-workspace-surface border-workspace-border text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    Hepsi
+                  </button>
+                  {PARAM_GROUP_COMPANIES.map((c) => {
+                    const active = companyFilter.has(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => toggleCompany(c.id)}
+                        title={c.description}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                          active
+                            ? "bg-accent-primary/10 border-accent-primary/40 text-accent-primary"
+                            : "bg-workspace-surface border-workspace-border text-text-secondary hover:text-text-primary"
+                        }`}
+                      >
+                        {c.displayName}
+                      </button>
+                    );
+                  })}
+                </div>
+              </FilterSection>
+            )}
 
             {activeFilterCount > 0 && (
               <button
@@ -285,14 +359,51 @@ export default function RegulationsPage() {
           </aside>
 
           <main className="lg:col-span-9 min-w-0">
+            <div className="flex items-center gap-1 p-1 mb-5 rounded-lg bg-workspace-elevated/60 border border-workspace-border w-fit">
+              {(
+                [
+                  { id: "mevzuat", label: "Mevzuat", icon: ShieldAlert },
+                  { id: "haberler", label: "Haberler", icon: Newspaper },
+                ] as const
+              ).map(({ id, label, icon: Icon }) => {
+                const active = feedView === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setFeedView(id)}
+                    className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      active
+                        ? "bg-workspace-surface text-text-primary shadow-sm"
+                        : "text-text-tertiary hover:text-text-secondary"
+                    }`}
+                  >
+                    <Icon size={14} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
             <header className="flex flex-wrap items-start justify-between gap-4 mb-6">
               <div className="min-w-0">
                 <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-3 text-[11px] font-mono font-semibold tracking-wider uppercase text-accent-primary bg-accent-primary/10 border border-accent-primary/20 rounded-full">
-                  <ShieldAlert size={12} />
-                  Mevzuat Takibi
+                  {feedView === "mevzuat" ? (
+                    <>
+                      <ShieldAlert size={12} />
+                      Mevzuat Takibi
+                    </>
+                  ) : (
+                    <>
+                      <Newspaper size={12} />
+                      Grup Haberleri
+                    </>
+                  )}
                 </div>
                 <h1 className="font-display text-2xl md:text-3xl font-bold text-text-primary tracking-tight">
-                  Param Grubu&apos;nu ilgilendiren düzenlemeler
+                  {feedView === "mevzuat"
+                    ? "Param Grubu'nu ilgilendiren düzenlemeler"
+                    : "Param Grubu şirketlerinin haberleri"}
                 </h1>
                 <p className="text-sm text-text-tertiary mt-1">
                   <span className="font-mono uppercase tracking-wide text-[11px] mr-2">
@@ -380,12 +491,16 @@ export default function RegulationsPage() {
                 <p className="font-display text-lg font-semibold text-text-primary mb-1">
                   {viewMode === "pinned"
                     ? "Henüz sabitlenmiş kayıt yok"
-                    : "Henüz mevzuat kaydı yok"}
+                    : feedView === "mevzuat"
+                    ? "Henüz mevzuat kaydı yok"
+                    : "Henüz haber kaydı yok"}
                 </p>
                 <p className="text-sm text-text-secondary max-w-md mx-auto">
                   {viewMode === "pinned"
                     ? "Listede karşılaştığın önemli kayıtları kart üzerindeki pin ikonuyla işaretle; burada toplanır."
-                    : '"Şimdi Tara" butonuyla canlı kaynaklardan ilgili mevzuat kayıtlarını çek.'}
+                    : feedView === "mevzuat"
+                    ? '"Şimdi Tara" butonuyla canlı kaynaklardan ilgili mevzuat kayıtlarını çek.'
+                    : '"Şimdi Tara" butonu Google Haberler\'den grup şirketleriyle ilgili son haberleri çeker.'}
                 </p>
               </div>
             ) : (

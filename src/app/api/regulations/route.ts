@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser, unauthorized } from "@/lib/api-auth";
 import { TOPIC_BY_ID } from "@/lib/regulations/topics";
+import { COMPANY_BY_ID } from "@/lib/regulations/companies";
 import type {
   RegulationFeedResponse,
   RegulationItemDTO,
@@ -31,6 +32,7 @@ const VALID_SOURCE_TOOLS: ReadonlySet<RegulationSourceTool> =
     "gib",
     "rekabet",
     "resmi-gazete",
+    "google-news",
   ]);
 
 const VALID_PRIORITIES: ReadonlySet<RegulationPriority> = new Set<RegulationPriority>([
@@ -58,6 +60,8 @@ export async function GET(req: NextRequest) {
   const searchParam = url.searchParams.get("search");
   const statusParam = url.searchParams.get("status");
   const sourceToolParam = url.searchParams.get("sourceTool");
+  const companiesParam = url.searchParams.get("companies");
+  const viewParam = url.searchParams.get("view");
   const pinnedOnly = url.searchParams.get("pinned") === "1";
   const limit = Math.min(
     Math.max(Number(url.searchParams.get("limit") ?? 50), 1),
@@ -104,9 +108,27 @@ export async function GET(req: NextRequest) {
         )
     : null;
 
+  const companiesFilter = companiesParam
+    ? companiesParam
+        .split(",")
+        .map((s) => s.trim())
+        .filter((id) => Boolean(COMPANY_BY_ID[id]))
+    : null;
+
+  // view: "mevzuat" → google-news kaynağını dışla; "haberler" → sadece
+  // google-news. Belirsiz / eski client → filtre uygulanmaz (geri uyumlu).
+  const view = viewParam === "mevzuat" || viewParam === "haberler"
+    ? viewParam
+    : null;
+
   const where: import("@prisma/client").Prisma.RegulationItemWhereInput = {
     ...(topicFilter && topicFilter.length > 0
       ? { topics: { hasSome: topicFilter } }
+      : {}),
+    ...(view === "haberler"
+      ? { sourceTool: "google-news" }
+      : view === "mevzuat"
+      ? { NOT: { sourceTool: "google-news" } }
       : {}),
     ...(allowedPriorities ? { priority: { in: allowedPriorities } } : {}),
     ...(statusFilter && statusFilter.length > 0
@@ -114,6 +136,9 @@ export async function GET(req: NextRequest) {
       : {}),
     ...(sourceToolFilter && sourceToolFilter.length > 0
       ? { sourceTool: { in: sourceToolFilter } }
+      : {}),
+    ...(companiesFilter && companiesFilter.length > 0
+      ? { companies: { hasSome: companiesFilter } }
       : {}),
     ...(pinnedOnly
       ? { reads: { some: { userId: user.id, pinned: true } } }
@@ -168,6 +193,7 @@ export async function GET(req: NextRequest) {
       status: (item.status as RegulationStatus | null) ?? null,
       sourceTool:
         (item.sourceTool as RegulationSourceTool | null) ?? null,
+      companies: item.companies ?? [],
       readAt: read?.readAt ? read.readAt.toISOString() : null,
       pinned: Boolean(read?.pinned),
     };
