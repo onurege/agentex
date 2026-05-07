@@ -84,6 +84,10 @@ export interface RegulationItemDTO {
    *  UI "Haberler" sekmesinde şirket chip filtresi bunun üstünde
    *  çalışır. */
   companies: string[];
+  /** AI relevance gate verdict'i — null ise AI değerlendirme yok
+   *  (env kapalı veya gate fail-open). UI XAI bloğunu sadece null
+   *  değilse render eder. */
+  aiVerdict: RegulationAIVerdictDTO | null;
 }
 
 export interface RegulationFeedResponse {
@@ -113,6 +117,23 @@ export interface ScannedRegulationCandidate {
   companies?: string[];
 }
 
+/** RegulationItem.aiVerdict alanının tipi. Ayrıca ai-gate.ts'te
+ *  AIVerdict olarak yaşar; burada DTO/UI imzası için tekrar export
+ *  ediyoruz. */
+export interface RegulationAIVerdictDTO {
+  relevant: boolean;
+  confidence: number;
+  paramRelation: {
+    summary: string;
+    impactedOperations: string[];
+    impactedCompanies: string[];
+    severityReason: string;
+    suggestedAction: "review" | "monitor" | "no-action";
+  };
+  model: string;
+  evaluatedAt: string;
+}
+
 export interface ScanSourceResult {
   source: RegulationSourceId;
   fetched: number;
@@ -129,6 +150,13 @@ export interface ScanResult {
   added: number;
   updated: number;
   skipped: number;
+  /** AI relevance gate'in reddettiği aday sayısı — classifier'dan
+   *  geçtiği halde AI "operasyonel olarak Param'ı etkilemez" dedi
+   *  veya confidence eşiğin altında kaldı. */
+  aiRejected: number;
+  /** AI çağrısı başarısız (timeout/HTTP error) olduğu için fail-open
+   *  ile DB'ye verdict'siz yazılan aday sayısı. */
+  aiFailed: number;
   /** Bu scan'de retention sınırını geçtiği için silinen kayıt sayısı. */
   pruned: number;
 }

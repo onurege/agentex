@@ -562,6 +562,24 @@ model RegulationItem {
   // az 1 eleman içerir. UI "Haberler" sekmesinde şirket chip filtresi
   // bu kolon üzerinden çalışır.
   companies    String[] @default([])
+  // AI relevance gate verdict'i (src/lib/regulations/ai-gate.ts).
+  // Şema:
+  //   {
+  //     relevant: boolean,
+  //     confidence: number (0..1),
+  //     paramRelation: {
+  //       summary: string,           // kart üstünde gösterilen XAI cümlesi
+  //       impactedOperations: string[],
+  //       impactedCompanies: string[],
+  //       severityReason: string,
+  //       suggestedAction: "review" | "monitor" | "no-action"
+  //     },
+  //     model: string,
+  //     evaluatedAt: string (ISO)
+  //   }
+  // null = AI gate atlandı (env disabled) veya AI çağrısı fail-open
+  // ile geçti — UI bu durumda XAI bloğunu gizler.
+  aiVerdict    Json?
 
   reads RegulationRead[]
 
