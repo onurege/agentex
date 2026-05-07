@@ -75,6 +75,7 @@ export type AuditAction =
   | "regulations_scan_started"
   | "regulations_scan_completed"
   | "regulations_scan_failed"
+  | "regulations_ai_gate_rejected"
   | "regulation_pinned"
   | "api_error";
 
@@ -250,6 +251,7 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   regulations_scan_started: "Mevzuat Taraması Başladı",
   regulations_scan_completed: "Mevzuat Taraması Tamamlandı",
   regulations_scan_failed: "Mevzuat Taraması Hatası",
+  regulations_ai_gate_rejected: "AI Gate Reddetti",
   regulation_pinned: "Mevzuat İşaretlendi",
   api_error: "API Hatası",
 };

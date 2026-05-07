@@ -48,3 +48,32 @@ describe("detectCompanies", () => {
     expect(matched).toContain("twisto");
   });
 });
+
+describe("AI gate — disabled mode", () => {
+  it("passes everything when REGULATIONS_AI_GATE_ENABLED=false", async () => {
+    const prev = process.env.REGULATIONS_AI_GATE_ENABLED;
+    process.env.REGULATIONS_AI_GATE_ENABLED = "false";
+    const { gateOne, gateAll } = await import("../ai-gate");
+    const candidate = {
+      source: "google-news" as const,
+      externalId: "test-1",
+      title: "test",
+      summary: "test",
+      publishedAt: new Date(),
+    };
+    const single = await gateOne(candidate);
+    expect(single.passed).toBe(true);
+    expect(single.reason).toBe("ai_disabled");
+    expect(single.verdict).toBeNull();
+
+    const batch = await gateAll([candidate, candidate]);
+    expect(batch).toHaveLength(2);
+    expect(batch.every((d) => d.passed)).toBe(true);
+
+    if (prev === undefined) {
+      delete process.env.REGULATIONS_AI_GATE_ENABLED;
+    } else {
+      process.env.REGULATIONS_AI_GATE_ENABLED = prev;
+    }
+  });
+});

@@ -8,10 +8,12 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { classifyText } from "./classifier";
 import { detectCompanies } from "./companies";
+import { gateAll } from "./ai-gate";
 import { fetchGoogleNewsCandidates } from "./sources/google-news";
 import { fetchResmiGazeteCandidates } from "./sources/resmi-gazete";
 import { fetchYargiMcpCandidates } from "./sources/yargi-mcp";
 import type {
+  RegulationPriority,
   RegulationSourceId,
   ScanResult,
   ScanSourceResult,
@@ -69,12 +71,37 @@ function trimRawPayload(raw: unknown): Prisma.InputJsonValue | typeof Prisma.Jso
   }
 }
 
+interface PreparedCandidate {
+  candidate: ScannedRegulationCandidate;
+  topics: string[];
+  priority: RegulationPriority;
+  companies: string[];
+  sourceId: RegulationSourceId;
+}
+
+const ADAPTER_ERROR_PATTERNS = [
+  /error calling tool/i,
+  /validation error/i,
+  /unexpected keyword argument/i,
+  /pydantic\.dev/i,
+];
+
+function looksLikeAdapterError(haystack: string): boolean {
+  return ADAPTER_ERROR_PATTERNS.some((re) => re.test(haystack));
+}
+
 export async function runRegulationsScan(): Promise<ScanResult> {
   const startedAt = new Date();
   const perSource: ScanSourceResult[] = [];
   let added = 0;
   let updated = 0;
   let skipped = 0;
+  let aiRejected = 0;
+  let aiFailed = 0;
+
+  // 1) Tüm kaynaklardan adayları topla, classifier ön süzgecinden
+  //    geçmiş olanları AI gate'e göndermek için biriktir.
+  const survivors: PreparedCandidate[] = [];
 
   for (const source of SOURCES) {
     const sourceStarted = Date.now();
@@ -92,78 +119,29 @@ export async function runRegulationsScan(): Promise<ScanResult> {
           candidate.summary,
           candidate.bodyExcerpt ?? "",
         ].join("\n");
-        // Belt-and-suspenders: bir source adapter hata yanıtını
-        // candidate olarak emit ederse classifier'a hiç sokmadan at.
-        if (
-          /error calling tool/i.test(haystack) ||
-          /validation error/i.test(haystack) ||
-          /unexpected keyword argument/i.test(haystack) ||
-          /pydantic\.dev/i.test(haystack)
-        ) {
+        if (looksLikeAdapterError(haystack)) {
           skipped++;
           continue;
         }
         const classification = classifyText(haystack);
         const detectedCompanies = detectCompanies(haystack);
-        // Adapter şirket etiketi koymuş olabilir (Google News query
-        // başlangıcı); metin eşleşmesini birleştir.
         const companies = Array.from(
           new Set([...(candidate.companies ?? []), ...detectedCompanies]),
         );
-        // Bir item topic eşleşirse VEYA grup şirketi eşleşirse Param
-        // bağlamında alakalı sayılır. Sadece company match'iyle gelen
-        // item'lar için topic listesi boş kalır; UI bunu zaten "Haberler"
-        // sekmesinde gösterir.
+        // Topic veya company eşleşmesi yoksa AI'ya bile gitmeyelim —
+        // sıfır iş etkisi bariz.
         if (classification.topics.length === 0 && companies.length === 0) {
           skipped++;
           continue;
         }
         classified++;
-        const priority = classification.priority;
-
-        const data = {
-          source: candidate.source,
-          externalId: candidate.externalId,
-          title: candidate.title,
-          summary: candidate.summary,
-          bodyExcerpt: candidate.bodyExcerpt ?? null,
-          url: candidate.url ?? null,
-          publishedAt: candidate.publishedAt,
+        survivors.push({
+          candidate,
           topics: classification.topics,
-          priority,
-          status: candidate.status ?? null,
-          sourceTool: candidate.sourceTool ?? null,
-          rawPayload: trimRawPayload(candidate.rawPayload),
+          priority: classification.priority,
           companies,
-        };
-
-        const existing = await prisma.regulationItem.findUnique({
-          where: {
-            source_externalId: {
-              source: candidate.source,
-              externalId: candidate.externalId,
-            },
-          },
-          select: { id: true },
+          sourceId: source.id,
         });
-
-        if (existing) {
-          await prisma.regulationItem.update({
-            where: { id: existing.id },
-            data: {
-              fetchedAt: new Date(),
-              topics: classification.topics,
-              priority,
-              status: candidate.status ?? null,
-              sourceTool: candidate.sourceTool ?? null,
-              companies,
-            },
-          });
-          updated++;
-        } else {
-          await prisma.regulationItem.create({ data });
-          added++;
-        }
       }
     } catch (err) {
       error = err instanceof Error ? err.message : "Bilinmeyen hata";
@@ -176,6 +154,86 @@ export async function runRegulationsScan(): Promise<ScanResult> {
       durationMs: Date.now() - sourceStarted,
       error,
     });
+  }
+
+  // 2) AI relevance gate — concurrency-limited paralel.
+  const decisions = await gateAll(survivors.map((s) => s.candidate));
+
+  // 3) Karara göre upsert / drop.
+  for (let i = 0; i < survivors.length; i++) {
+    const prepared = survivors[i];
+    const decision = decisions[i];
+    if (!decision.passed) {
+      aiRejected++;
+      continue;
+    }
+    if (decision.reason === "ai_failed") aiFailed++;
+
+    // AI verdict'i upsert verisinin parçası olarak ekle (null olabilir).
+    const verdictJson: Prisma.InputJsonValue | typeof Prisma.JsonNull = decision
+      .verdict
+      ? (decision.verdict as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
+
+    // AI doğruladığı şirket listesi varsa adapter+classifier birleşimi
+    // yerine onu kullan — false-positive'leri AI elemiş olur.
+    const finalCompanies =
+      decision.verdict?.paramRelation.impactedCompanies?.length
+        ? Array.from(
+            new Set([
+              ...prepared.companies.filter((id) =>
+                decision.verdict!.paramRelation.impactedCompanies.includes(id),
+              ),
+              ...decision.verdict.paramRelation.impactedCompanies,
+            ]),
+          )
+        : prepared.companies;
+
+    const data = {
+      source: prepared.candidate.source,
+      externalId: prepared.candidate.externalId,
+      title: prepared.candidate.title,
+      summary: prepared.candidate.summary,
+      bodyExcerpt: prepared.candidate.bodyExcerpt ?? null,
+      url: prepared.candidate.url ?? null,
+      publishedAt: prepared.candidate.publishedAt,
+      topics: prepared.topics,
+      priority: prepared.priority,
+      status: prepared.candidate.status ?? null,
+      sourceTool: prepared.candidate.sourceTool ?? null,
+      rawPayload: trimRawPayload(prepared.candidate.rawPayload),
+      companies: finalCompanies,
+      aiVerdict: verdictJson,
+    };
+
+    const existing = await prisma.regulationItem.findUnique({
+      where: {
+        source_externalId: {
+          source: prepared.candidate.source,
+          externalId: prepared.candidate.externalId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await prisma.regulationItem.update({
+        where: { id: existing.id },
+        data: {
+          fetchedAt: new Date(),
+          topics: prepared.topics,
+          priority: prepared.priority,
+          status: prepared.candidate.status ?? null,
+          sourceTool: prepared.candidate.sourceTool ?? null,
+          companies: finalCompanies,
+          aiVerdict: verdictJson,
+        },
+      });
+      updated++;
+    } else {
+      await prisma.regulationItem.create({ data });
+      added++;
+    }
   }
 
   // Sadece en az bir kaynak başarıyla candidate döndürdüyse prune et.
@@ -201,6 +259,8 @@ export async function runRegulationsScan(): Promise<ScanResult> {
     added,
     updated,
     skipped,
+    aiRejected,
+    aiFailed,
     pruned,
   };
 }
