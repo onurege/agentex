@@ -57,23 +57,16 @@ export default function BoardSetupPage() {
           </p>
         </div>
 
-        {/* Section 1 — Belge Yükle (full width) */}
-        <SceneIn className="mb-6">
+        {/* Üst sıra: Belge | Kurul | Temsil ve Tutum */}
+        <SceneIn className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
           <DocumentUploadPanel />
-        </SceneIn>
-
-        {/* Section 2 — Kurul + Temsil/Tutum (2 kolon) */}
-        <SceneIn
-          delay={0.08}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"
-        >
           <BoardSummaryPanel />
           <PartyStanceInput />
         </SceneIn>
 
-        {/* Section 3 — Maske + Bağlam (2 kolon) */}
+        {/* Alt sıra: Maske | Bağlam */}
         <SceneIn
-          delay={0.16}
+          delay={0.12}
           className="grid grid-cols-1 lg:grid-cols-2 gap-6"
         >
           <MaskMappingsInput />
