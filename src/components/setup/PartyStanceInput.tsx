@@ -41,18 +41,18 @@ export function PartyStanceInput() {
 
   return (
     <div>
-      <h2 className="text-base font-semibold text-text-primary mb-1">
+      <h2 className="text-xl font-semibold text-text-primary mb-1">
         Temsil ve Tutum
         <span className="text-accent-danger ml-1">*</span>
       </h2>
-      <p className="text-sm text-text-secondary mb-3">
+      <p className="text-base text-text-secondary mb-3">
         Hangi tarafı temsil ettiğinizi ve ajanların hangi tutumla değerlendirme yapacağını seçin.
       </p>
 
       <div className="mb-3">
         <label
           htmlFor="client-party"
-          className="block text-[12px] font-medium text-text-secondary mb-1"
+          className="block text-sm font-medium text-text-secondary mb-1.5"
         >
           Temsil edilen taraf
         </label>
@@ -62,16 +62,16 @@ export function PartyStanceInput() {
           value={clientParty}
           onChange={(e) => setClientParty(e.target.value)}
           placeholder="Örnek: Alıcı / ABC Ltd. Şti."
-          className="w-full rounded-lg bg-workspace-surface border border-workspace-border
+          className="w-full rounded-xl bg-workspace-surface border border-workspace-border
                      text-text-primary placeholder:text-text-muted
-                     text-sm px-3 py-2
+                     text-base px-3 py-2
                      focus:outline-none focus:border-accent-primary/40 focus:ring-1 focus:ring-accent-primary/20
                      transition-colors duration-150"
         />
       </div>
 
       <div>
-        <span className="block text-[12px] font-medium text-text-secondary mb-1">
+        <span className="block text-sm font-medium text-text-secondary mb-1.5">
           Tutum
         </span>
         <div className="grid grid-cols-2 gap-2">
@@ -82,7 +82,7 @@ export function PartyStanceInput() {
                 key={opt.value}
                 type="button"
                 onClick={() => setStance(opt.value)}
-                className={`text-left rounded-lg border p-2.5 transition-all duration-150
+                className={`text-left rounded-xl border p-3 transition-all duration-150
                   ${
                     selected
                       ? "border-accent-primary bg-accent-primary/10 ring-1 ring-accent-primary/40"
@@ -91,13 +91,13 @@ export function PartyStanceInput() {
                 aria-pressed={selected}
               >
                 <span
-                  className={`block text-[13px] font-semibold ${
+                  className={`block text-base font-semibold ${
                     selected ? "text-accent-primary" : "text-text-primary"
                   }`}
                 >
                   {opt.label}
                 </span>
-                <span className="block text-[11px] text-text-secondary leading-snug mt-0.5 line-clamp-2">
+                <span className="block text-[13px] text-text-secondary leading-snug mt-1 line-clamp-2">
                   {opt.description}
                 </span>
               </button>

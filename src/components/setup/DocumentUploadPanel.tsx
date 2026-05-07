@@ -114,7 +114,7 @@ export function DocumentUploadPanel() {
 
   return (
     <div className="flex flex-col">
-      <h2 className="text-base font-semibold text-text-primary mb-2">
+      <h2 className="text-xl font-semibold text-text-primary mb-3">
         Belge Yükle
       </h2>
 
