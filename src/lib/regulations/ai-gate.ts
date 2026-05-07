@@ -111,7 +111,11 @@ function buildPrompt(candidate: ScannedRegulationCandidate): string {
 
   return `Sen Param Holding'in mevzuat ve iş etkisi takip uzmanısın. Aşağıdaki düzenleme/haber Param Grubu için _operasyonel_ olarak gerçekten anlamlı mı, onu değerlendireceksin.
 
-Sadece şirket adı geçtiği veya yüzeysel bir keyword eşleştiği için "alakalı" deme — somut bir iş etkisi (ürün, izin, süreç, müşteri, raporlama, vergi, veri koruma vb.) varsa relevant=true. Yoksa relevant=false.
+KRİTİK KURALLAR:
+1. Bir haber, BAŞLIĞINDAKİ veya KONU OLARAK doğrudan Param Grubu şirketi hakkında değilse — sadece sektör/genel bir yazı içinde Param Grubu şirketinin adı geçiyorsa — relevant=false ve impactedCompanies=[]. (Örn: "Mobil çözümlerde yeni modüller" başlıklı sektör genel yazısında Univera'nın adı geçiyor diye Univera haberi sayma.)
+2. Bir mevzuat/karar metninde Param Grubu şirketleri taraf veya doğrudan muhatap değilse, ancak metin Param Grubu'nun YÜRÜTTÜĞÜ FAALİYETİ (e-para, BNPL, açık bankacılık, ödeme, KVKK uyumu, vergi yükümlülüğü vb.) düzenliyorsa relevant=true olabilir.
+3. PR/marketing içerik (yatırım turu duyurusu, "decacorn olmak", maaş zammı, CEO yıl değerlendirmesi, başarı hikayeleri) iş etkisi sayılmaz → relevant=false.
+4. Sadece keyword eşleşmesi (ör. "param" ile parametrik karışıklığı, "BDDK" ile alakasız bankacılık metni) ile "alakalı" deme.
 
 # Param Grubu Şirketleri
 ${companyLines}
