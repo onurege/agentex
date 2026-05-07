@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, Loader2, ShieldAlert, Sparkles } from "lucide-react";
-import { SignatureLayout } from "@/components/signatures/SignatureLayout";
+import { AppShell } from "@/components/app/AppShell";
 import { SignatureSourceCard } from "@/components/signatures/SignatureSourceCard";
 import { SignatureCropper } from "@/components/signatures/SignatureCropper";
 import { ReferenceSpecimensPanel } from "@/components/signatures/ReferenceSpecimensPanel";
@@ -331,11 +331,11 @@ export default function SignaturesPage() {
 
   if (!hydrated || !session) {
     return (
-      <SignatureLayout>
-        <div className="max-w-4xl mx-auto px-6 py-16 text-center text-text-tertiary">
+      <AppShell activePath="/app/signatures">
+        <div className="px-12 py-16 text-center text-[#494552]">
           Yükleniyor…
         </div>
-      </SignatureLayout>
+      </AppShell>
     );
   }
 
@@ -344,8 +344,8 @@ export default function SignaturesPage() {
   );
 
   return (
-    <SignatureLayout>
-      <div className="max-w-5xl mx-auto px-6 py-10">
+    <AppShell activePath="/app/signatures">
+      <div className="px-12 py-10">
         <header className="mb-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 text-xs font-mono font-semibold tracking-wider uppercase text-accent-primary bg-accent-primary/10 border border-accent-primary/20 rounded-full">
             <Sparkles size={12} />
@@ -604,6 +604,6 @@ export default function SignaturesPage() {
           </div>
         )}
       </div>
-    </SignatureLayout>
+    </AppShell>
   );
 }
