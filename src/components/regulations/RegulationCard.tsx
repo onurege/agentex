@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight, ExternalLink, Pin, PinOff } from "lucide-react";
 import { TOPIC_BY_ID } from "@/lib/regulations/topics";
+import { COMPANY_BY_ID } from "@/lib/regulations/companies";
 import type {
   RegulationItemDTO,
   RegulationPriority,
@@ -113,6 +114,19 @@ export function RegulationCard({ item, onTogglePinned }: Props) {
                   className="text-xs text-text-secondary px-2 py-0.5 rounded bg-workspace-elevated border border-workspace-border"
                 >
                   {topic.label}
+                </span>
+              );
+            })}
+            {item.companies.map((companyId) => {
+              const company = COMPANY_BY_ID[companyId];
+              if (!company) return null;
+              return (
+                <span
+                  key={companyId}
+                  title={company.description}
+                  className="text-xs font-medium px-2 py-0.5 rounded-full border bg-accent-primary/8 border-accent-primary/25 text-accent-primary"
+                >
+                  {company.displayName}
                 </span>
               );
             })}
