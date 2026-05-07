@@ -557,6 +557,11 @@ model RegulationItem {
   // Ham kaynak yanıtı (debug + future reclassify); 50KB cap
   // server tarafında uygulanır.
   rawPayload   Json?
+  // Eşleşen Param Grup şirket id'leri (src/lib/regulations/companies.ts).
+  // Mevzuat kaynaklarında genelde boş kalır; Google Haberler için en
+  // az 1 eleman içerir. UI "Haberler" sekmesinde şirket chip filtresi
+  // bu kolon üzerinden çalışır.
+  companies    String[] @default([])
 
   reads RegulationRead[]
 

@@ -17,7 +17,8 @@ export type RegulationSourceTool =
   | "bddk"
   | "gib"
   | "rekabet"
-  | "resmi-gazete";
+  | "resmi-gazete"
+  | "google-news";
 
 export const SOURCE_TOOL_LABEL: Record<RegulationSourceTool, string> = {
   bedesten: "Bedesten (Yargıtay/Danıştay)",
@@ -28,6 +29,7 @@ export const SOURCE_TOOL_LABEL: Record<RegulationSourceTool, string> = {
   gib: "GİB Özelge",
   rekabet: "Rekabet Kurumu",
   "resmi-gazete": "Resmî Gazete",
+  "google-news": "Google Haberler",
 };
 
 export type RegulationSourceId =
@@ -37,7 +39,8 @@ export type RegulationSourceId =
   | "bddk"
   | "kvkk"
   | "masak"
-  | "gib";
+  | "gib"
+  | "google-news";
 
 export interface RegulationTopic {
   id: string;
@@ -76,6 +79,11 @@ export interface RegulationItemDTO {
    *  on raw queries that don't include the join. */
   readAt?: string | null;
   pinned?: boolean;
+  /** Eşleşen Param Grup şirket id'leri (companies.ts). Mevzuat
+   *  kaynaklarında genelde boş; Google Haberler kayıtlarında en az 1.
+   *  UI "Haberler" sekmesinde şirket chip filtresi bunun üstünde
+   *  çalışır. */
+  companies: string[];
 }
 
 export interface RegulationFeedResponse {
@@ -100,6 +108,9 @@ export interface ScannedRegulationCandidate {
   status?: RegulationStatus | null;
   sourceTool?: RegulationSourceTool | null;
   rawPayload?: unknown;
+  /** Adapter eşleştirdiyse company id'leri taşır; classifier ek
+   *  match yapar ve birleşim DB'ye yazılır. */
+  companies?: string[];
 }
 
 export interface ScanSourceResult {
