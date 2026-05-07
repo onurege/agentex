@@ -8,19 +8,19 @@ export function ContextNotesInput() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-text-primary mb-2">
+      <h2 className="text-base font-semibold text-text-primary mb-1">
         Bağlam Notu
       </h2>
-      <p className="text-base text-text-secondary mb-4">
-        Kurula bu belge hakkında bağlam verin. İsteğe bağlı, ama değerlendirme kalitesini artırır.
+      <p className="text-sm text-text-secondary mb-2">
+        Kurula bu belge hakkında bağlam verin. İsteğe bağlı.
       </p>
       <textarea
         value={contextNotes}
         onChange={(e) => setContextNotes(e.target.value)}
-        placeholder="Örnek: Bu sözleşme tedarikçi ile yenilenecek. Fiyat artışı maddesi ve sorumluluk sınırı özellikle önemli..."
-        className="w-full rounded-xl bg-workspace-surface border border-workspace-border
+        placeholder="Örnek: Bu sözleşme tedarikçi ile yenilenecek..."
+        className="w-full rounded-lg bg-workspace-surface border border-workspace-border
                    text-text-primary placeholder:text-text-muted
-                   text-base p-4 min-h-[140px] resize-none leading-relaxed
+                   text-sm p-3 min-h-[88px] resize-none leading-relaxed
                    focus:outline-none focus:border-accent-primary/40 focus:ring-1 focus:ring-accent-primary/20
                    transition-colors duration-150"
       />

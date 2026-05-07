@@ -114,7 +114,7 @@ export function DocumentUploadPanel() {
 
   return (
     <div className="flex flex-col">
-      <h2 className="text-xl font-semibold text-text-primary mb-4">
+      <h2 className="text-base font-semibold text-text-primary mb-2">
         Belge Yükle
       </h2>
 
@@ -132,7 +132,7 @@ export function DocumentUploadPanel() {
           className={`
             flex flex-col items-center justify-center rounded-xl cursor-pointer
             border-2 border-dashed transition-all duration-200
-            min-h-[260px] p-8
+            min-h-[160px] p-5
             ${
               isDragOver
                 ? "border-accent-primary bg-accent-primary/5"
@@ -141,24 +141,24 @@ export function DocumentUploadPanel() {
           `}
         >
           <svg
-            width="48"
-            height="48"
+            width="32"
+            height="32"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-text-muted mb-4"
+            className="text-text-muted mb-2"
           >
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
-          <p className="text-lg text-text-secondary mb-1">
-            Dosyayı buraya bırakın veya tıklayın
+          <p className="text-sm text-text-secondary">
+            Dosyayı sürükleyin veya tıklayın
           </p>
-          <p className="text-base text-text-muted">PDF / DOCX / TXT</p>
+          <p className="text-xs text-text-muted">PDF / DOCX / TXT</p>
 
           {/* Error re-upload hint */}
           {uploadStatus === "error" && (
@@ -178,21 +178,19 @@ export function DocumentUploadPanel() {
         </div>
       ) : (
         /* ── File Card ── */
-        <div className="rounded-xl bg-workspace-surface border border-workspace-border p-5">
-          {/* File info row */}
-          <div className="flex items-center gap-4 mb-4">
-            {/* File type badge */}
-            <div className="w-14 h-14 rounded-lg bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center shrink-0">
-              <span className="text-base font-bold text-accent-primary uppercase font-mono">
+        <div className="rounded-xl bg-workspace-surface border border-workspace-border p-3">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-11 h-11 rounded-lg bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center shrink-0">
+              <span className="text-xs font-bold text-accent-primary uppercase font-mono">
                 {uploadedFile.name.split(".").pop()?.toUpperCase() ?? "?"}
               </span>
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="text-lg font-medium text-text-primary truncate">
+              <p className="text-sm font-medium text-text-primary truncate">
                 {uploadedFile.name}
               </p>
-              <p className="text-base text-text-secondary">
+              <p className="text-xs text-text-secondary">
                 {formatFileSize(uploadedFile.size)}
                 {parsedDocument?.pageCount
                   ? ` · ${parsedDocument.pageCount} sayfa`

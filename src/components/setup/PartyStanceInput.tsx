@@ -41,19 +41,18 @@ export function PartyStanceInput() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-text-primary mb-2">
+      <h2 className="text-base font-semibold text-text-primary mb-1">
         Temsil ve Tutum
         <span className="text-accent-danger ml-1">*</span>
       </h2>
-      <p className="text-base text-text-secondary mb-4">
-        Hangi tarafı temsil ettiğinizi ve ajanların hangi tutumla
-        değerlendirme yapmasını istediğinizi seçin. İkisi de zorunlu.
+      <p className="text-sm text-text-secondary mb-3">
+        Hangi tarafı temsil ettiğinizi ve ajanların hangi tutumla değerlendirme yapacağını seçin.
       </p>
 
-      <div className="mb-5">
+      <div className="mb-3">
         <label
           htmlFor="client-party"
-          className="block text-[14px] font-medium text-text-secondary mb-2"
+          className="block text-[12px] font-medium text-text-secondary mb-1"
         >
           Temsil edilen taraf
         </label>
@@ -63,19 +62,19 @@ export function PartyStanceInput() {
           value={clientParty}
           onChange={(e) => setClientParty(e.target.value)}
           placeholder="Örnek: Alıcı / ABC Ltd. Şti."
-          className="w-full rounded-xl bg-workspace-surface border border-workspace-border
+          className="w-full rounded-lg bg-workspace-surface border border-workspace-border
                      text-text-primary placeholder:text-text-muted
-                     text-base px-4 py-3 leading-relaxed
+                     text-sm px-3 py-2
                      focus:outline-none focus:border-accent-primary/40 focus:ring-1 focus:ring-accent-primary/20
                      transition-colors duration-150"
         />
       </div>
 
       <div>
-        <span className="block text-[14px] font-medium text-text-secondary mb-2">
+        <span className="block text-[12px] font-medium text-text-secondary mb-1">
           Tutum
         </span>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           {STANCE_OPTIONS.map((opt) => {
             const selected = stance === opt.value;
             return (
@@ -83,7 +82,7 @@ export function PartyStanceInput() {
                 key={opt.value}
                 type="button"
                 onClick={() => setStance(opt.value)}
-                className={`text-left rounded-xl border p-4 transition-all duration-150
+                className={`text-left rounded-lg border p-2.5 transition-all duration-150
                   ${
                     selected
                       ? "border-accent-primary bg-accent-primary/10 ring-1 ring-accent-primary/40"
@@ -92,13 +91,13 @@ export function PartyStanceInput() {
                 aria-pressed={selected}
               >
                 <span
-                  className={`block text-[15px] font-semibold mb-1 ${
+                  className={`block text-[13px] font-semibold ${
                     selected ? "text-accent-primary" : "text-text-primary"
                   }`}
                 >
                   {opt.label}
                 </span>
-                <span className="block text-[13px] text-text-secondary leading-relaxed">
+                <span className="block text-[11px] text-text-secondary leading-snug mt-0.5 line-clamp-2">
                   {opt.description}
                 </span>
               </button>

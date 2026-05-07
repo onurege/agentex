@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
 import { StageLayout } from "@/components/stage/StageLayout";
 import { DocumentUploadPanel } from "@/components/setup/DocumentUploadPanel";
 import { BoardSummaryPanel } from "@/components/setup/BoardSummaryPanel";
@@ -21,9 +20,6 @@ export default function BoardSetupPage() {
   const uploadStatus = useBoardroomFlowStore((s) => s.uploadStatus);
   const clientParty = useBoardroomFlowStore((s) => s.clientParty);
   const stance = useBoardroomFlowStore((s) => s.stance);
-  // Maske + Bağlam opsiyonel ama varsayılan açık — kullanıcı görüp
-  // istemezse kapatabilir. Kapalıyken stage tek viewport'a sığar.
-  const [advancedOpen, setAdvancedOpen] = useState(true);
 
   // Redirect to Agent Gallery if no agents selected
   useEffect(() => {
@@ -70,31 +66,12 @@ export default function BoardSetupPage() {
           <PartyStanceInput />
         </SceneIn>
 
-        {/* Opsiyonel detaylar — viewport'a sığsın diye kapalı başlar. */}
-        <SceneIn delay={0.08}>
-          <button
-            type="button"
-            onClick={() => setAdvancedOpen((v) => !v)}
-            className="w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border border-workspace-border/60 bg-workspace-surface/40 hover:bg-workspace-elevated/50 transition-colors text-sm font-medium text-text-secondary"
-            aria-expanded={advancedOpen}
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-text-muted">
-                Opsiyonel
-              </span>
-              Hassas alan maskeleme · bağlam notu
-            </span>
-            <ChevronDown
-              size={16}
-              className={`transition-transform ${advancedOpen ? "rotate-180" : ""}`}
-            />
-          </button>
-          {advancedOpen && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-3">
-              <MaskMappingsInput />
-              <ContextNotesInput />
-            </div>
-          )}
+        <SceneIn
+          delay={0.08}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-4"
+        >
+          <MaskMappingsInput />
+          <ContextNotesInput />
         </SceneIn>
 
         {/* Bottom Action Bar */}
