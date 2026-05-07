@@ -1,6 +1,16 @@
 "use client";
 
-import { StageTopBar } from "./StageTopBar";
+// ============================================================
+// StageLayout — Boardroom flow (setup → boardroom → verdict)
+// ============================================================
+//
+// Eski StageTopBar yerine AppShell'in paylaşılan sidebar + sticky
+// header'ını kullanıyor. Stage progress bar shell içeriğinin en
+// üstünde kalır; aşağıda sahne içerik full-width akar.
+// ============================================================
+
+import { AppShell } from "@/components/app/AppShell";
+import { SITE } from "@/lib/config/site";
 import { StageProgressBar, type StageStep } from "./StageProgressBar";
 
 interface StageLayoutProps {
@@ -10,14 +20,9 @@ interface StageLayoutProps {
 
 export function StageLayout({ currentStep, children }: StageLayoutProps) {
   return (
-    <div className="flex flex-col h-screen bg-workspace-bg text-text-primary overflow-hidden">
-      <StageTopBar />
+    <AppShell activePath={SITE.paths.boardroomAgents}>
       <StageProgressBar currentStep={currentStep} />
-
-      {/* Scene container — fills remaining space */}
-      <main className="flex-1 overflow-y-auto relative">
-        {children}
-      </main>
-    </div>
+      <div className="relative">{children}</div>
+    </AppShell>
   );
 }
