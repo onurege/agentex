@@ -47,7 +47,7 @@ export default function VerdictPage() {
   if (!verdictSeed || boardroomStatus !== "complete") {
     return (
       <StageLayout currentStep="verdict">
-        <div className="flex items-center justify-center h-full">
+        <div className="flex flex-1 items-center justify-center">
           <p className="text-lg text-text-muted">Yönlendiriliyor...</p>
         </div>
       </StageLayout>
@@ -61,7 +61,7 @@ export default function VerdictPage() {
     <StageLayout currentStep="verdict">
       <StaggerChildren
         stagger={0.15}
-        className="flex flex-col px-6 py-10 max-w-5xl mx-auto w-full"
+        className="flex-1 min-h-0 overflow-y-auto flex flex-col px-12 py-10 w-full"
       >
         {/* Hero */}
         <StaggerItem>
