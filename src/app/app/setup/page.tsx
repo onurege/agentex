@@ -32,7 +32,7 @@ export default function BoardSetupPage() {
   if (selectedAgentIds.length === 0) {
     return (
       <StageLayout currentStep="board-setup">
-        <div className="flex items-center justify-center h-full">
+        <div className="flex flex-1 items-center justify-center">
           <p className="text-lg text-text-muted">Yönlendiriliyor...</p>
         </div>
       </StageLayout>
@@ -43,7 +43,7 @@ export default function BoardSetupPage() {
 
   return (
     <StageLayout currentStep="board-setup">
-      <div className="flex flex-col h-full px-6 py-8">
+      <div className="flex flex-col flex-1 min-h-0 overflow-y-auto px-12 py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="font-display text-4xl font-bold text-text-primary mb-3">
@@ -55,7 +55,7 @@ export default function BoardSetupPage() {
         </div>
 
         {/* Two-column layout — left panel enters first, right follows at 120ms */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
           {/* Left — Document Upload */}
           <SceneIn>
             <DocumentUploadPanel />
@@ -71,7 +71,7 @@ export default function BoardSetupPage() {
         </div>
 
         {/* Bottom Action Bar */}
-        <div className="flex items-center justify-between mt-8 pt-6 border-t border-workspace-border/30 max-w-5xl mx-auto w-full">
+        <div className="flex items-center justify-between mt-8 pt-6 border-t border-workspace-border/30 w-full">
           {/* Back link */}
           <Link
             href={SITE.paths.boardroomAgents}

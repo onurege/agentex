@@ -23,7 +23,7 @@ export default function SavedRunVerdictPage() {
   if (!run) {
     return (
       <StageLayout currentStep="verdict">
-        <div className="flex flex-col items-center justify-center h-full gap-4">
+        <div className="flex flex-col flex-1 items-center justify-center gap-4">
           <p className="text-2xl font-semibold text-text-primary">Oturum Bulunamadı</p>
           <p className="text-lg text-text-secondary">Bu kayıtlı oturum artık mevcut değil.</p>
           <Link
@@ -48,7 +48,7 @@ export default function SavedRunVerdictPage() {
 
   return (
     <StageLayout currentStep="verdict">
-      <div className="flex flex-col px-6 py-10 max-w-5xl mx-auto w-full">
+      <div className="flex flex-col flex-1 min-h-0 overflow-y-auto px-12 py-10 w-full">
         {/* Saved run badge */}
         <div className="flex items-center justify-center mb-6">
           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent-info/10 border border-accent-info/20">

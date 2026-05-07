@@ -107,7 +107,7 @@ export default function BoardroomReplayPage() {
   if (!run) {
     return (
       <StageLayout currentStep="boardroom">
-        <div className="flex flex-col items-center justify-center h-full gap-4">
+        <div className="flex flex-col flex-1 items-center justify-center gap-4">
           <p className="text-2xl font-semibold text-text-primary">Oturum Bulunamadı</p>
           <Link href="/app" className="px-6 py-3 rounded-xl text-base font-semibold bg-accent-primary text-workspace-surface hover:bg-accent-secondary transition-colors">
             Ana Sayfaya Dön
@@ -121,7 +121,7 @@ export default function BoardroomReplayPage() {
 
   return (
     <StageLayout currentStep="boardroom">
-      <div className="flex h-full">
+      <div className="flex flex-1 min-h-0">
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
           <div className="px-6 py-4 border-b border-workspace-border/30 shrink-0">
