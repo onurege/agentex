@@ -24,26 +24,22 @@ export default function AgentGalleryPage() {
 
   return (
     <StageLayout currentStep="agent-gallery">
-      {/* Scrollable content with bottom padding for the fixed bar */}
-      <div className="flex flex-col items-center px-6 py-10 pb-32">
-        {/* Header */}
-        <div className="text-center mb-10 max-w-2xl">
+      <div className="px-12 py-10 pb-32">
+        <div className="mb-10">
           <h1 className="font-display text-4xl font-bold text-text-primary mb-3">
             Uzman Ajanlar
           </h1>
-          <p className="text-xl text-text-secondary leading-relaxed">
-            Kurulunuzu oluşturmak için uzman ajanları seçin.
-            <br />
+          <p className="text-xl text-text-secondary leading-relaxed max-w-3xl">
+            Kurulunuzu oluşturmak için uzman ajanları seçin.{" "}
             <span className="text-text-muted text-lg">
               En az 2, en fazla {MAX_BOARD_SIZE} ajan seçebilirsiniz.
             </span>
           </p>
         </div>
 
-        {/* Agent Grid — uses published effective data */}
         <StaggerChildren
           stagger={0.06}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-[1080px]"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full"
         >
           {stageAgents.map((agent) => (
             <StaggerItem key={agent.id} className="h-full">
