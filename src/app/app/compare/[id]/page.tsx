@@ -22,7 +22,7 @@ import {
   FileDiff,
   Loader2,
 } from "lucide-react";
-import { CompareLayout } from "@/components/compare/CompareLayout";
+import { AppShell } from "@/components/app/AppShell";
 import { FindingCard } from "@/components/compare/FindingCard";
 import { useCompareStore } from "@/lib/compare/store";
 import type { CompareRiskLevel } from "@/lib/compare/types";
@@ -127,8 +127,8 @@ export default function CompareResultsPage() {
   }
 
   return (
-    <CompareLayout pageTitle="Sonuç">
-      <div className="max-w-6xl mx-auto px-6 py-8">
+    <AppShell activePath="/app/compare">
+      <div className="px-12 py-8">
         <Link
           href="/app/compare"
           className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary mb-5 transition-colors"
@@ -263,7 +263,7 @@ export default function CompareResultsPage() {
           </ul>
         )}
       </div>
-    </CompareLayout>
+    </AppShell>
   );
 }
 

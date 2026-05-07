@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Zap } from "lucide-react";
-import { CompareLayout } from "@/components/compare/CompareLayout";
+import { AppShell } from "@/components/app/AppShell";
 import { CompareUploadBox } from "@/components/compare/CompareUploadBox";
 import { useCompareStore } from "@/lib/compare/store";
 import { logClientActivity } from "@/lib/client-activity";
@@ -54,8 +54,8 @@ export default function NewCompareRunPage() {
   }, [startCompareRun, router, pendingV1, pendingV2]);
 
   return (
-    <CompareLayout pageTitle="Yeni Karşılaştırma">
-      <div className="max-w-5xl mx-auto px-6 py-10">
+    <AppShell activePath="/app/compare">
+      <div className="px-12 py-10">
         {/* Breadcrumb-style back */}
         <Link
           href="/app/compare"
@@ -121,6 +121,6 @@ export default function NewCompareRunPage() {
           </button>
         </div>
       </div>
-    </CompareLayout>
+    </AppShell>
   );
 }
