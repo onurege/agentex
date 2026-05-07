@@ -21,8 +21,9 @@ export default function BoardSetupPage() {
   const uploadStatus = useBoardroomFlowStore((s) => s.uploadStatus);
   const clientParty = useBoardroomFlowStore((s) => s.clientParty);
   const stance = useBoardroomFlowStore((s) => s.stance);
-  // Maske + Bağlam opsiyonel; varsayılan kapalı, viewport'a sığsın diye.
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  // Maske + Bağlam opsiyonel ama varsayılan açık — kullanıcı görüp
+  // istemezse kapatabilir. Kapalıyken stage tek viewport'a sığar.
+  const [advancedOpen, setAdvancedOpen] = useState(true);
 
   // Redirect to Agent Gallery if no agents selected
   useEffect(() => {
