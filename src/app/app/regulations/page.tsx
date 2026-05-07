@@ -27,6 +27,21 @@ import type {
 import { SOURCE_TOOL_LABEL } from "@/lib/regulations/types";
 
 type FeedView = "mevzuat" | "haberler";
+type NewsDateFloor = "30d" | "90d" | "year2025" | "all";
+
+const NEWS_DATE_FLOOR_LABEL: Record<NewsDateFloor, string> = {
+  "30d": "Son 30 gün",
+  "90d": "Son 90 gün",
+  year2025: "2025'ten itibaren",
+  all: "Tümü",
+};
+
+function newsDateFloorToISO(floor: NewsDateFloor): string | null {
+  if (floor === "all") return null;
+  if (floor === "year2025") return "2025-01-01T00:00:00.000Z";
+  const days = floor === "30d" ? 30 : 90;
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
 
 const SOURCE_TOOL_ORDER: RegulationSourceTool[] = [
   "bedesten",
@@ -72,6 +87,8 @@ export default function RegulationsPage() {
   const [companyFilter, setCompanyFilter] = useState<Set<string>>(
     () => new Set(),
   );
+  const [newsDateFloor, setNewsDateFloor] =
+    useState<NewsDateFloor>("year2025");
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -86,8 +103,12 @@ export default function RegulationsPage() {
       if (sourceTools.size > 0) {
         params.set("sourceTool", Array.from(sourceTools).join(","));
       }
-    } else if (companyFilter.size > 0) {
-      params.set("companies", Array.from(companyFilter).join(","));
+    } else {
+      if (companyFilter.size > 0) {
+        params.set("companies", Array.from(companyFilter).join(","));
+      }
+      const since = newsDateFloorToISO(newsDateFloor);
+      if (since) params.set("since", since);
     }
     if (search.trim()) {
       params.set("search", search.trim());
@@ -105,6 +126,7 @@ export default function RegulationsPage() {
     search,
     viewMode,
     companyFilter,
+    newsDateFloor,
   ]);
 
   const load = useCallback(async () => {
@@ -226,7 +248,9 @@ export default function RegulationsPage() {
       ? (priorityFloor !== "all" ? 1 : 0) +
         sourceTools.size +
         (search.trim() ? 1 : 0)
-      : companyFilter.size + (search.trim() ? 1 : 0);
+      : companyFilter.size +
+        (search.trim() ? 1 : 0) +
+        (newsDateFloor !== "year2025" ? 1 : 0);
 
   const resetFilters = () => {
     setSearch("");
@@ -236,6 +260,7 @@ export default function RegulationsPage() {
       setTopicFilter(new Set(DEFAULT_TOPIC_FILTER));
     } else {
       setCompanyFilter(new Set());
+      setNewsDateFloor("year2025");
     }
   };
 
@@ -313,7 +338,26 @@ export default function RegulationsPage() {
                 </FilterSection>
               </>
             ) : (
-              <FilterSection title="Şirket">
+              <>
+                <FilterSection title="Tarih">
+                  <select
+                    value={newsDateFloor}
+                    onChange={(e) =>
+                      setNewsDateFloor(e.target.value as NewsDateFloor)
+                    }
+                    className="w-full px-3 py-2 rounded-lg text-sm bg-workspace-surface border border-workspace-border text-text-secondary"
+                  >
+                    {(Object.keys(NEWS_DATE_FLOOR_LABEL) as NewsDateFloor[]).map(
+                      (f) => (
+                        <option key={f} value={f}>
+                          {NEWS_DATE_FLOOR_LABEL[f]}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </FilterSection>
+
+                <FilterSection title="Şirket">
                 <div className="flex flex-wrap gap-1.5">
                   <button
                     type="button"
@@ -346,6 +390,7 @@ export default function RegulationsPage() {
                   })}
                 </div>
               </FilterSection>
+              </>
             )}
 
             {activeFilterCount > 0 && (
