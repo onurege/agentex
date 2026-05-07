@@ -42,17 +42,23 @@ export function DebateTimelinePanel({ events }: DebateTimelinePanelProps) {
   }, [events.length]);
 
   return (
-    <aside className="w-[340px] shrink-0 border-l border-workspace-border bg-workspace-surface/50 flex flex-col">
-      <div className="px-5 py-4 border-b border-workspace-border/30">
-        <h2 className="text-lg font-semibold text-text-primary">
-          Canlı Tartışma Akışı
-        </h2>
-        <p className="text-[13px] text-text-muted mt-0.5">
-          {events.length} olay
-        </p>
+    <section className="flex-1 min-w-0 flex flex-col bg-workspace-bg">
+      <div className="px-8 py-5 border-b border-workspace-border/30 flex items-end justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-text-primary">
+            Canlı Tartışma Akışı
+          </h2>
+          <p className="text-sm text-text-muted mt-0.5">
+            {events.length} olay · son konuşmayı görmek için aşağı kaydırın
+          </p>
+        </div>
       </div>
 
-      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-8 py-6 space-y-4 max-w-[1080px] w-full"
+      >
         {events.length === 0 && (
           <p className="text-base text-text-muted text-center py-8">
             Tartışma başladığında konuşmalar burada görünecek.
@@ -69,44 +75,38 @@ export function DebateTimelinePanel({ events }: DebateTimelinePanelProps) {
             <div
               key={event.id}
               className={`
-                rounded-xl p-4 transition-all duration-300 scene-bubble-enter
+                rounded-2xl p-6 transition-all duration-300 scene-bubble-enter
                 ${isDisagreement
-                  ? "bg-accent-danger/5 border border-accent-danger/20"
+                  ? "bg-accent-danger/5 border border-accent-danger/30"
                   : isObjection
-                    ? "bg-accent-warning/5 border border-accent-warning/20"
+                    ? "bg-accent-warning/5 border border-accent-warning/30"
                     : isVerdict
-                      ? "bg-accent-success/5 border border-accent-success/20"
-                      : "bg-workspace-elevated/80 border border-workspace-border/50"
+                      ? "bg-accent-success/5 border border-accent-success/30"
+                      : "bg-workspace-surface border border-workspace-border/60"
                 }
               `}
             >
-              {/* Header */}
-              <div className="flex items-center gap-2.5 mb-2">
-                <span className="text-xl shrink-0">{event.agentAvatar}</span>
-                <span className="text-[15px] font-semibold text-text-primary">
-                  {event.agentName}
-                </span>
-                <span className={`text-[12px] font-semibold ml-auto ${typeInfo.style}`}>
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-3xl shrink-0">{event.agentAvatar}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-semibold text-text-primary truncate">
+                    {event.agentName}
+                  </p>
+                  <p className="text-xs text-text-muted font-mono uppercase tracking-wider mt-0.5">
+                    Konu · {event.topic}
+                  </p>
+                </div>
+                <span className={`text-[12px] font-semibold uppercase tracking-wide shrink-0 ${typeInfo.style}`}>
                   {typeInfo.label}
                 </span>
               </div>
-
-              {/* Message */}
-              <p className="text-[15px] text-text-secondary leading-relaxed">
+              <p className="text-[16px] text-text-primary leading-[1.7]">
                 {event.message}
               </p>
-
-              {/* Topic */}
-              <div className="mt-2 flex items-center gap-1.5">
-                <span className="text-[12px] text-text-muted font-mono">Konu:</span>
-                <span className="text-[13px] text-text-secondary font-medium">
-                  {event.topic}
-                </span>
-              </div>
             </div>
           );
         })}
       </div>
-    </aside>
+    </section>
   );
 }

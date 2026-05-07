@@ -8,7 +8,6 @@ import { ScenePhaseBar } from "@/components/boardroom/ScenePhaseBar";
 import { BoardroomAgentSeat } from "@/components/boardroom/BoardroomAgentSeat";
 import { DocumentFocusCard } from "@/components/boardroom/DocumentFocusCard";
 import { DebateTimelinePanel } from "@/components/boardroom/DebateTimelinePanel";
-import { DisagreementConnector } from "@/components/boardroom/DisagreementConnector";
 import { SpotlightFocus } from "@/lib/motion/primitives";
 import { useBoardroomFlowStore } from "@/lib/boardroom-flow-store";
 import {
@@ -27,20 +26,6 @@ import type { ParsedDocument } from "@/lib/ingestion/types";
 import { SITE } from "@/lib/config/site";
 
 // Seats sit on an ellipse around the oval table. Chief is always at
-// index 0 → angle 0 → head of table (far from viewer under rotateX).
-// Other seats spread evenly around the remaining circle.
-const SEAT_RADIUS_X = 320;
-const SEAT_RADIUS_Y = 180;
-
-function computeSeatPosition(index: number, total: number): { x: number; y: number } {
-  const angleDeg = (360 / Math.max(total, 1)) * index;
-  const rad = (angleDeg * Math.PI) / 180;
-  return {
-    x: Math.sin(rad) * SEAT_RADIUS_X,
-    y: -Math.cos(rad) * SEAT_RADIUS_Y,
-  };
-}
-
 export default function BoardroomPage() {
   const router = useRouter();
   const selectedAgentIds = useBoardroomFlowStore((s) => s.selectedAgentIds);
@@ -276,192 +261,149 @@ export default function BoardroomPage() {
   const fileName = uploadedFile?.name ?? parsedDocument?.fileName ?? "Belge";
   const isComplete = boardroomStatus === "complete";
 
+  const phaseLabel: Record<typeof boardroomPhase, string> = {
+    "kurul-toplaniyor": "Kurul toplanıyor…",
+    "belge-inceleniyor": "Uzmanlar sözleşmeyi inceliyor…",
+    "tartisma": "Ajanlar düzeltme önerilerini paylaşıyor…",
+    "karar-olusturuluyor": "Kurul Başkanı görüş ayrılıklarını değerlendiriyor…",
+    "idle": "AI analizi hazırlanıyor…",
+    "tamamlandi": "Tartışma tamamlandı.",
+  };
+
   return (
     <StageLayout currentStep="boardroom">
+      {/* Compact tek satır header — sahne başlığı + dosya + faz */}
+      <div className="px-8 py-4 border-b border-workspace-border/30 shrink-0 flex flex-col xl:flex-row xl:items-center gap-3 xl:gap-6">
+        <div className="min-w-0 flex items-center gap-3 flex-1">
+          <h1 className="text-xl font-bold text-text-primary shrink-0">
+            Tartışma Sahnesi
+          </h1>
+          {analysisMode === "ai" && (
+            <span className="text-[11px] font-semibold text-accent-primary bg-accent-primary/10 px-2 py-0.5 rounded shrink-0">
+              AI
+            </span>
+          )}
+          <span className="text-text-muted shrink-0">·</span>
+          <span className="text-sm text-text-secondary truncate">
+            <span className="text-text-primary font-medium">{fileName}</span>
+          </span>
+        </div>
+        <ScenePhaseBar currentPhase={boardroomPhase} />
+      </div>
+
+      {/* 2 kolon: SOL kompakt sahne paneli, SAĞ büyük tartışma akışı */}
       <div className="flex flex-1 min-h-0">
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Scene Header */}
-          <div className="px-6 py-4 border-b border-workspace-border/30 shrink-0">
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold text-text-primary">
-                    Tartışma Sahnesi
-                  </h1>
-                  {analysisMode === "ai" && (
-                    <span className="text-[12px] font-semibold text-accent-primary bg-accent-primary/10 px-2 py-0.5 rounded">
-                      AI
-                    </span>
-                  )}
-                </div>
-                <p className="text-base text-text-secondary mt-1 truncate">
-                  Belge: <span className="text-text-primary font-medium">{fileName}</span>
-                </p>
-              </div>
-              <ScenePhaseBar currentPhase={boardroomPhase} />
-            </div>
+        <aside
+          ref={stageRef}
+          className="w-[320px] shrink-0 border-r border-workspace-border/30 bg-workspace-surface/40 flex flex-col"
+        >
+          {/* Doküman odak kartı */}
+          <div className="p-5 border-b border-workspace-border/30">
+            <DocumentFocusCard fileName={fileName} currentTopic={highlightedTopic} />
           </div>
 
-          {/* Boardroom Table Area — 3D on desktop, stacked list on mobile */}
-          <div className="flex-1 flex items-center justify-center relative overflow-hidden">
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  "radial-gradient(ellipse at center, rgb(var(--color-accent-info) / 0.08) 0%, transparent 70%)",
-              }}
-            />
-
-            {/* Mobile / tablet stacked fallback — no 3D, no connector */}
-            <div className="lg:hidden w-full max-w-md px-4 py-6 flex flex-col gap-3">
-              {boardroomAgents.map((agent) => {
-                const sceneState = agentSceneStates[agent.id];
-                const isActive = activeSpeakerId === agent.id;
-                return (
-                  <div
-                    key={agent.id}
-                    className={`rounded-xl bg-workspace-surface border p-3 ${
-                      isActive
-                        ? "border-accent-primary/50 shadow-glow-blue"
-                        : "border-workspace-border"
-                    }`}
+          {/* Toplantı masası — dikey kart listesi, aktif konuşmacı vurgulu */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            <h2 className="text-[10px] font-mono uppercase tracking-widest text-text-muted px-2 mb-2 mt-1">
+              Toplantı Masası · {boardroomAgents.length} kişi
+            </h2>
+            {boardroomAgents.map((agent) => {
+              const sceneState = agentSceneStates[agent.id];
+              const isActive = activeSpeakerId === agent.id;
+              const isChief = agent.id === "chief-agent";
+              const status = sceneState?.status ?? "waiting";
+              const inDisagreement =
+                disagreementPair &&
+                (agent.id === disagreementPair.fromId ||
+                  agent.id === disagreementPair.toId);
+              return (
+                <div
+                  key={agent.id}
+                  data-seat-id={agent.id}
+                  className={`rounded-xl border p-3 transition-all ${
+                    isActive
+                      ? "border-accent-primary/60 bg-accent-primary/[0.06] shadow-glow-blue"
+                      : inDisagreement
+                        ? "border-accent-danger/40 bg-accent-danger/[0.04]"
+                        : "border-workspace-border bg-workspace-surface"
+                  }`}
+                >
+                  <SpotlightFocus
+                    active={
+                      !disagreementPair ||
+                      agent.id === disagreementPair.fromId ||
+                      agent.id === disagreementPair.toId
+                    }
                   >
                     <BoardroomAgentSeat
                       agent={agent}
                       sceneState={sceneState}
                       isActiveSpeaker={isActive}
-                      isChief={agent.id === "chief-agent"}
+                      isChief={isChief}
                     />
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Desktop stage — perspective root. z-index layering:
-                z-0 disagreement connector, z-10 table, z-20 seats. */}
-            <div
-              ref={stageRef}
-              className="hidden lg:block relative w-[720px] h-[440px]"
-              style={{
-                perspective: "1400px",
-                perspectiveOrigin: "50% 20%",
-              }}
-            >
-              <DisagreementConnector
-                stageRef={stageRef}
-                fromId={disagreementPair?.fromId ?? null}
-                toId={disagreementPair?.toId ?? null}
-              />
-              {/* Oval table — tilted away from the viewer */}
-              <div
-                className="absolute left-1/2 top-1/2 w-[420px] h-[240px] z-10 flex items-center justify-center"
-                style={{
-                  transform: "translate(-50%, -50%) rotateX(28deg)",
-                  transformStyle: "preserve-3d",
-                  borderRadius: "50% / 40%",
-                  background:
-                    "radial-gradient(ellipse at 50% 30%, rgb(var(--color-workspace-elevated) / 0.95) 0%, rgb(var(--color-workspace-surface) / 0.98) 70%)",
-                  border: "1px solid rgb(var(--color-workspace-border) / 0.9)",
-                  boxShadow:
-                    "0 40px 80px -20px rgb(40 0 100 / 0.24), inset 0 0 60px rgb(var(--color-accent-info) / 0.12)",
-                }}
-              >
-                <DocumentFocusCard fileName={fileName} currentTopic={highlightedTopic} />
-              </div>
-
-              {/* Seats — positioned on an ellipse around the table.
-                  SpotlightFocus dims non-participants during a
-                  disagreement moment; active=true everywhere else. */}
-              {boardroomAgents.map((agent, i) => {
-                const { x, y } = computeSeatPosition(i, boardroomAgents.length);
-                const sceneState = agentSceneStates[agent.id];
-                const isActive = activeSpeakerId === agent.id;
-                const status = sceneState?.status ?? "waiting";
-                const isIdle = status === "waiting" || status === "seated";
-                const inSpotlight =
-                  !disagreementPair ||
-                  agent.id === disagreementPair.fromId ||
-                  agent.id === disagreementPair.toId;
-                return (
-                  <div
-                    key={agent.id}
-                    data-seat-id={agent.id}
-                    className="absolute z-20"
-                    style={{
-                      left: `calc(50% + ${x}px)`,
-                      top: `calc(50% + ${y}px)`,
-                      transform: `translate(-50%, -50%) translateZ(${isActive ? 20 : 0}px)`,
-                      filter: isIdle ? "saturate(0.85)" : "saturate(1)",
-                      transition:
-                        "transform 220ms cubic-bezier(0.16, 1, 0.3, 1), filter 600ms linear",
-                    }}
-                  >
-                    <SpotlightFocus active={inSpotlight}>
-                      <BoardroomAgentSeat
-                        agent={agent}
-                        sceneState={sceneState}
-                        isActiveSpeaker={isActive}
-                        isChief={agent.id === "chief-agent"}
-                      />
-                    </SpotlightFocus>
-                  </div>
-                );
-              })}
-            </div>
+                  </SpotlightFocus>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Footer Status Bar */}
-          <div className="px-6 py-4 border-t border-workspace-border/30 flex items-center justify-between shrink-0">
+          {/* Durum + karar CTA */}
+          <div className="p-4 border-t border-workspace-border/30 space-y-3 shrink-0">
             <div
-              className="flex items-center gap-3"
+              className="flex items-center gap-2"
               role="status"
               aria-live="polite"
               aria-atomic="true"
             >
-              {!isComplete && (
+              {!isComplete ? (
                 <>
-                  <span className="w-2.5 h-2.5 rounded-full bg-accent-primary animate-pulse" />
-                  <p className="text-base text-text-secondary">
-                    Durum:{" "}
-                    <span className="text-text-primary font-medium">
-                      {boardroomPhase === "kurul-toplaniyor" && "Kurul toplanıyor..."}
-                      {boardroomPhase === "belge-inceleniyor" && "Uzmanlar sözleşmeyi inceliyor..."}
-                      {boardroomPhase === "tartisma" && "Ajanlar düzeltme önerilerini paylaşıyor..."}
-                      {boardroomPhase === "karar-olusturuluyor" && "Kurul Başkanı görüş ayrılıklarını değerlendiriyor..."}
-                      {boardroomPhase === "idle" && "AI analizi hazırlanıyor..."}
-                    </span>
-                  </p>
+                  <span className="w-2 h-2 rounded-full bg-accent-primary animate-pulse shrink-0" />
+                  <span className="text-sm text-text-secondary leading-snug">
+                    {phaseLabel[boardroomPhase]}
+                  </span>
                 </>
-              )}
-              {isComplete && (
+              ) : (
                 <>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent-success">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-accent-success shrink-0"
+                  >
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  <p className="text-base text-accent-success font-medium">
-                    Kurul tartışması tamamlandı
-                  </p>
+                  <span className="text-sm text-accent-success font-medium">
+                    Tartışma tamamlandı
+                  </span>
                 </>
               )}
             </div>
-
             {isComplete ? (
               <Link
                 href={SITE.paths.verdict}
-                className="flex items-center gap-2 px-8 py-3 rounded-xl text-lg font-semibold bg-accent-primary text-workspace-surface border border-accent-primary hover:bg-accent-secondary transition-all duration-150 min-h-[48px] shadow-glow-blue"
+                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-accent-primary text-workspace-surface border border-accent-primary hover:bg-accent-secondary transition-all duration-150 shadow-glow-blue"
               >
                 <span>Kararı Gör</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
               </Link>
             ) : (
-              <button disabled className="px-8 py-3 rounded-xl text-lg font-semibold bg-workspace-elevated text-text-muted border border-workspace-border cursor-not-allowed min-h-[48px]">
+              <button
+                type="button"
+                disabled
+                className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-workspace-elevated text-text-muted border border-workspace-border cursor-not-allowed"
+              >
                 Kararı Hazırla
               </button>
             )}
           </div>
-        </div>
+        </aside>
 
         <DebateTimelinePanel events={debateTimeline} />
       </div>
