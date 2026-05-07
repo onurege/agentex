@@ -10,11 +10,11 @@ export function AgentPerspectivesCard({ perspectives }: AgentPerspectivesCardPro
   return (
     <div className="rounded-xl bg-workspace-surface border border-workspace-border p-6">
       <h2 className="text-xl font-semibold text-text-primary mb-5">
-        Ajan Görüşleri
+        Uzman Görüşleri
       </h2>
 
       {perspectives.length === 0 ? (
-        <p className="text-base text-text-muted">Ajan görüşü bulunmuyor.</p>
+        <p className="text-base text-text-muted">Uzman görüşü bulunmuyor.</p>
       ) : (
         <div className="space-y-4">
           {perspectives.map((p) => (

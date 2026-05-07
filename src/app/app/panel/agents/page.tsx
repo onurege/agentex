@@ -34,7 +34,7 @@ export default function AgentLibraryPage() {
       <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
         <div>
           <h1 className="font-display text-3xl font-bold text-text-primary mb-2">
-            Agent Library
+            Uzman Kütüphanesi
           </h1>
           <p className="text-lg text-text-secondary">
             Kurul ajanlarını yönetin, CV ve prompt ayarlarını düzenleyin.

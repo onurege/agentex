@@ -27,7 +27,7 @@ export default function ControlRoomDashboardPage() {
   return (
     <div>
       <div className="mb-10">
-        <h1 className="font-display text-3xl font-bold text-text-primary mb-2">Dashboard</h1>
+        <h1 className="font-display text-3xl font-bold text-text-primary mb-2">Gösterge Paneli</h1>
         <p className="text-lg text-text-secondary">Sistem genel durumu ve hızlı erişim.</p>
       </div>
 
@@ -37,7 +37,7 @@ export default function ControlRoomDashboardPage() {
           <div className="rounded-xl bg-workspace-surface border border-workspace-border p-6 hover:border-accent-primary/20 transition-colors">
             <div className="flex items-center gap-3 mb-4">
               <span className="text-2xl">📋</span>
-              <span className="text-base text-text-secondary font-medium">Toplam Çalıştırma</span>
+              <span className="text-base text-text-secondary font-medium">Toplam Değerlendirme</span>
             </div>
             <p className="text-4xl font-bold text-text-primary">{mounted ? metrics?.totalRuns ?? 0 : "—"}</p>
             {mounted && metrics && metrics.aiRuns > 0 && (
@@ -70,7 +70,7 @@ export default function ControlRoomDashboardPage() {
         <div className="rounded-xl bg-workspace-surface border border-workspace-border p-6">
           <div className="flex items-center gap-3 mb-4">
             <span className="text-2xl">🕐</span>
-            <span className="text-base text-text-secondary font-medium">Son Çalıştırma</span>
+            <span className="text-base text-text-secondary font-medium">Son Değerlendirme</span>
           </div>
           <p className="text-xl font-bold text-text-primary">
             {mounted && metrics?.lastRunDate
@@ -87,10 +87,10 @@ export default function ControlRoomDashboardPage() {
 
       {/* Two-column: Recent Runs + Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
-        {/* Recent Runs */}
+        {/* Recent evaluations */}
         <div className="rounded-xl bg-workspace-surface border border-workspace-border p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xl font-semibold text-text-primary">Son Çalıştırmalar</h2>
+            <h2 className="text-xl font-semibold text-text-primary">Son Değerlendirmeler</h2>
             <Link href="/app/panel/runs" className="text-[14px] font-medium text-accent-primary hover:text-accent-secondary transition-colors">
               Tümünü Gör →
             </Link>

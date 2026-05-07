@@ -53,8 +53,8 @@ function checkCompanyIdentity(
     const missing = !sirkuVkn && !petitionVkn
       ? "İki belgeden de"
       : !sirkuVkn
-        ? "Sirküden"
-        : "Dilekçeden";
+        ? "İmza sirküsünden"
+        : "Belgeden";
     return makeCheck(
       "company_identity",
       "warning",
@@ -80,7 +80,7 @@ function checkCompanyIdentity(
     "company_identity",
     "critical",
     "Şirket vergi kimliği",
-    `Vergi numaraları farklı: sirküde ${sirkuVkn}, dilekçede ${petitionVkn}.`,
+    `Vergi numaraları farklı: imza sirküsünde ${sirkuVkn}, belgede ${petitionVkn}.`,
     sirkuVkn,
     petitionVkn,
   );
@@ -145,7 +145,7 @@ function checkAuthorityType(
       "authority_type",
       "warning",
       "Yetki kullanım şekli",
-      "Sirküde münferiden / müştereken bilgisi tespit edilemedi.",
+      "İmza sirküsünde münferiden / müştereken bilgisi tespit edilemedi.",
     );
   }
 
@@ -175,7 +175,7 @@ function checkAuthorityType(
     "authority_type",
     "critical",
     "Yetki kullanım şekli",
-    `Sirkü müştereken yetki gerektiriyor ancak dilekçede ${p.signatureCount} imza var; birden fazla yetkili imzası gerekir.`,
+    `İmza sirküsü müştereken yetki gerektiriyor ancak belgede ${p.signatureCount} imza var; birden fazla yetkili imzası gerekir.`,
     "müştereken (≥2 imza)",
     `${p.signatureCount} imza`,
   );
@@ -194,7 +194,7 @@ function checkAuthorityDuration(
       "authority_duration",
       "warning",
       "Temsil süresi",
-      "Sirkünün başlangıç tarihi/süresi veya dilekçe tarihi okunamadı; süre kontrolü yapılamadı.",
+      "İmza sirküsünün başlangıç tarihi/süresi veya belge tarihi okunamadı; süre kontrolü yapılamadı.",
     );
   }
 
@@ -212,7 +212,7 @@ function checkAuthorityDuration(
       "authority_duration",
       "critical",
       "Temsil süresi",
-      `Dilekçe (${petitionStr}) temsil yetkisinin başlangıcından (${startStr}) önce.`,
+      `Belge (${petitionStr}) temsil yetkisinin başlangıcından (${startStr}) önce.`,
       `${startStr} – ${endStr}`,
       petitionStr,
     );
@@ -222,7 +222,7 @@ function checkAuthorityDuration(
       "authority_duration",
       "critical",
       "Temsil süresi",
-      `Temsil yetkisi ${endStr} tarihinde dolmuş; dilekçe ${petitionStr} tarihli — yetki bitiminden sonra düzenlenmiş.`,
+      `Temsil yetkisi ${endStr} tarihinde dolmuş; belge ${petitionStr} tarihli — yetki bitiminden sonra düzenlenmiş.`,
       `${startStr} – ${endStr}`,
       petitionStr,
     );
@@ -231,7 +231,7 @@ function checkAuthorityDuration(
     "authority_duration",
     "ok",
     "Temsil süresi",
-    `Dilekçe tarihi (${petitionStr}) temsil aralığında (${startStr} – ${endStr}).`,
+    `Belge tarihi (${petitionStr}) temsil aralığında (${startStr} – ${endStr}).`,
     `${startStr} – ${endStr}`,
     petitionStr,
   );
@@ -274,7 +274,7 @@ function checkAddressMatch(
     "address_match",
     "warning",
     "Adres tutarlılığı",
-    "Sirkü ve dilekçedeki adresler farklı; şirket taşınmış olabilir, sirkünün güncel olduğunu doğrulayın.",
+    "İmza sirküsü ve belgedeki adresler farklı; şirket taşınmış olabilir, imza sirküsünün güncel olduğunu doğrulayın.",
     s.address ?? undefined,
     p.address ?? undefined,
   );
@@ -288,8 +288,8 @@ function checkSirkuFreshness(
     return makeCheck(
       "sirku_freshness",
       "warning",
-      "Sirkü güncelliği",
-      "Sirkü veya dilekçe tarihi okunamadı; güncellik kontrolü yapılamadı.",
+      "İmza sirküsü güncelliği",
+      "İmza sirküsü veya belge tarihi okunamadı; güncellik kontrolü yapılamadı.",
     );
   }
 
@@ -303,15 +303,15 @@ function checkSirkuFreshness(
     return makeCheck(
       "sirku_freshness",
       "ok",
-      "Sirkü güncelliği",
-      `Sirkü ${months} ay önce düzenlenmiş.`,
+      "İmza sirküsü güncelliği",
+      `İmza sirküsü ${months} ay önce düzenlenmiş.`,
     );
   }
   return makeCheck(
     "sirku_freshness",
     "warning",
-    "Sirkü güncelliği",
-    `Sirkü ${months} ay önce düzenlenmiş; daha güncel bir sirkü olup olmadığını kontrol edin.`,
+    "İmza sirküsü güncelliği",
+    `İmza sirküsü ${months} ay önce düzenlenmiş; daha güncel bir imza sirküsü olup olmadığını kontrol edin.`,
     formatTrDate(sirku),
     formatTrDate(petition),
   );

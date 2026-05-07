@@ -63,7 +63,7 @@ export function ReferenceSpecimensPanel({
             Ek referans imzaları
           </h3>
           <p className="text-xs text-text-tertiary mt-0.5">
-            Sirküsünde birden fazla örnek varsa ekleyin — en iyi eşleşen
+            İmza sirküsünde birden fazla örnek varsa ekleyin — en iyi eşleşen
             skor kullanılır.
           </p>
         </div>

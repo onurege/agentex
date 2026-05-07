@@ -61,7 +61,7 @@ export default function CVBuilderPage() {
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-2xl font-semibold text-text-primary mb-3">Ajan Bulunamadı</p>
         <Link href="/app/panel/agents" className="px-6 py-3 rounded-xl text-base font-semibold bg-accent-primary text-workspace-surface hover:bg-accent-secondary transition-colors">
-          Agent Library&apos;ye Dön
+          Uzman Kütüphanesi&apos;ne Dön
         </Link>
       </div>
     );

@@ -121,7 +121,7 @@ export function ComparisonResultCard({
           toneClass="text-accent-info"
         />
         <SignaturePanel
-          label="Sirkü maskesi"
+          label="İmza sirküsü maskesi"
           fileName={reference.fileName}
           dataUrl={reference.signatureDataUrl}
           toneClass="text-accent-primary"

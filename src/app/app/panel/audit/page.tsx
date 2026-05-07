@@ -65,7 +65,7 @@ export default function AuditLogPage() {
     <PermissionGate require="canViewAudit">
       <div>
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-text-primary mb-2">Audit Log</h1>
+          <h1 className="font-display text-3xl font-bold text-text-primary mb-2">Denetim Günlüğü</h1>
           <p className="text-lg text-text-secondary">
             Sistem işlem geçmişi ve değişiklik kayıtları. {mounted && `${events.length} kayıt`}
           </p>

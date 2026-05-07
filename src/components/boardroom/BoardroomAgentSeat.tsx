@@ -82,7 +82,7 @@ export function BoardroomAgentSeat({
           ${isActive ? "text-accent-primary" : "text-text-primary"}
         `}
       >
-        {isChief ? "Baş Ajan" : agent.shortName}
+        {isChief ? "Kurul Başkanı" : agent.shortName}
       </span>
 
       {/* Status badge — always text, never color-only */}

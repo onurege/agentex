@@ -256,7 +256,7 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
 
 export const TARGET_TYPE_LABELS: Record<AuditTargetType, string> = {
   agent: "Ajan",
-  run: "Çalıştırma",
+  run: "Değerlendirme",
   template: "Şablon",
   user: "Kullanıcı",
   document: "Belge",
@@ -270,8 +270,8 @@ export const TARGET_TYPE_LABELS: Record<AuditTargetType, string> = {
 };
 
 export const MODULE_LABELS: Record<AuditModule, string> = {
-  control_room: "Control Room",
-  boardroom: "Agent Kurulu",
+  control_room: "Yönetim Paneli",
+  boardroom: "Uzman Kurulu",
   draft: "Sözleşme Taslağı",
   compare: "Döküman Karşılaştırma",
   signatures: "İmza Kontrolü",

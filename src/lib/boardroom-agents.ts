@@ -272,8 +272,8 @@ export function getBoardroomAgent(id: string): BoardroomAgent | undefined {
 // continue to work via a re-export.
 export const CHIEF_AGENT: BoardroomAgent = {
   id: "chief-agent",
-  name: "Baş Ajan",
-  shortName: "Baş",
+  name: "Kurul Başkanı",
+  shortName: "Başkan",
   title: "Kurul Koordinatörü",
   avatar: "👤",
   color: "agent-chief",

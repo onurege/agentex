@@ -402,7 +402,7 @@ function agentPerspectivesBlock(
   perspectives: VerdictSeed["agentPerspectives"],
 ): (Paragraph | Table)[] {
   if (perspectives.length === 0) return [];
-  const out: (Paragraph | Table)[] = [sectionHeader("Ajan Görüşleri")];
+  const out: (Paragraph | Table)[] = [sectionHeader("Uzman Görüşleri")];
   perspectives.forEach((perspective) => {
     const AVATAR_W = 900;
     const BODY_W = PAGE_USABLE - AVATAR_W;

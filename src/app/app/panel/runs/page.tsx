@@ -362,7 +362,7 @@ export default function PanelRunsPage() {
       {/* Main content */}
       <div className="flex-1 min-w-0">
       <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold text-text-primary mb-2">Runs</h1>
+        <h1 className="font-display text-3xl font-bold text-text-primary mb-2">Değerlendirme Kayıtları</h1>
         <p className="text-lg text-text-secondary">
           Tamamlanan kurul tartışmaları ve sonuçları. {mounted && `${allRuns.length} kayıt`}
         </p>
@@ -438,11 +438,11 @@ export default function PanelRunsPage() {
           <div className="flex flex-col items-center justify-center text-center py-8">
             <span className="text-5xl mb-5">📋</span>
             <p className="text-xl font-semibold text-text-primary mb-2">
-              {allRuns.length === 0 ? "Henüz çalıştırma kaydı bulunmuyor" : "Filtrelerle eşleşen sonuç yok"}
+              {allRuns.length === 0 ? "Henüz değerlendirme kaydı bulunmuyor" : "Filtrelerle eşleşen sonuç yok"}
             </p>
             <p className="text-base text-text-secondary max-w-md">
               {allRuns.length === 0
-                ? "Kurul tartışmaları tamamlandığında geçmiş çalıştırmalar burada listelenecek."
+                ? "Kurul tartışmaları tamamlandığında geçmiş değerlendirmeler burada listelenecek."
                 : "Farklı filtreler deneyin veya arama terimini değiştirin."}
             </p>
           </div>

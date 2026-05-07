@@ -29,7 +29,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    label: "Agent Library",
+    label: "Uzman Kütüphanesi",
     href: "/app/panel/agents",
     requirePermission: "canManageOwnAgents",
     icon: (
@@ -42,7 +42,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    label: "Board Templates",
+    label: "Kurul Şablonları",
     href: "/app/panel/templates",
     requirePermission: "canManageOwnAgents",
     icon: (
@@ -54,7 +54,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    label: "Runs",
+    label: "Değerlendirme Kayıtları",
     href: "/app/panel/runs",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -63,7 +63,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    label: "Users",
+    label: "Kullanıcılar",
     href: "/app/panel/users",
     requirePermission: "canViewUsers",
     icon: (
@@ -86,7 +86,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    label: "Audit Log",
+    label: "Denetim Günlüğü",
     href: "/app/panel/audit",
     requirePermission: "canViewAudit",
     icon: (

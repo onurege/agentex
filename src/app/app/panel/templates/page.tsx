@@ -31,7 +31,7 @@ export default function BoardTemplatesPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold text-text-primary mb-2">Board Templates</h1>
+        <h1 className="font-display text-3xl font-bold text-text-primary mb-2">Kurul Şablonları</h1>
         <p className="text-lg text-text-secondary">
           Hazır kurul şablonları ile hızlı başlangıç yapın.
         </p>

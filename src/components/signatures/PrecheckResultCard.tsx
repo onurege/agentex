@@ -4,7 +4,7 @@
 // PrecheckResultCard
 // ============================================================
 //
-// Sirkü + dilekçe karşılaştırması sonuç kartı. Kart her durumda
+// İmza sirküsü + belge karşılaştırması sonuç kartı. Kart her durumda
 // görünür ve imza karşılaştırma akışını engellemez — sadece
 // uyumsuzlukları belirgin şekilde işaretler. failed/warned/passed
 // status'una göre üst banner rengi değişir; her bir check satırı
@@ -40,7 +40,7 @@ const STATUS_PRESET = {
     iconColor: "text-semantic-positive",
     title: "Şirket bilgileri tutuyor",
     subtitle:
-      "Sirkü ile dilekçe arasında kritik uyumsuzluk yok; imza karşılaştırmasına geçebilirsiniz.",
+      "İmza sirküsü ile belge arasında kritik uyumsuzluk yok; imza karşılaştırmasına geçebilirsiniz.",
   },
   warned: {
     icon: ShieldAlert,
@@ -54,7 +54,7 @@ const STATUS_PRESET = {
     iconColor: "text-semantic-negative",
     title: "Önemli uyumsuzluklar tespit edildi",
     subtitle:
-      "İmza karşılaştırması açık tutuldu ama bu uyumsuzluklar dilekçenin geçerliliğini tartışmalı hale getirebilir.",
+      "İmza karşılaştırması açık tutuldu ama bu uyumsuzluklar belgenin geçerliliğini tartışmalı hale getirebilir.",
   },
 } as const;
 
@@ -143,7 +143,7 @@ function CheckRow({ check }: { check: PrecheckCheck }) {
             {check.expected && (
               <div className="min-w-0">
                 <dt className="font-mono uppercase tracking-wide text-text-tertiary text-xs">
-                  Sirkü
+                  İmza sirküsü
                 </dt>
                 <dd className="text-text-secondary truncate mt-0.5" title={check.expected}>
                   {check.expected}
@@ -153,7 +153,7 @@ function CheckRow({ check }: { check: PrecheckCheck }) {
             {check.observed && (
               <div className="min-w-0">
                 <dt className="font-mono uppercase tracking-wide text-text-tertiary text-xs">
-                  Dilekçe
+                  Belge
                 </dt>
                 <dd className="text-text-secondary truncate mt-0.5" title={check.observed}>
                   {check.observed}

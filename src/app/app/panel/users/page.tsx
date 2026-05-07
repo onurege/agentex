@@ -290,7 +290,7 @@ export default function UsersPage() {
         <div className="mb-4">
           <h2 className="font-display text-xl font-bold text-text-primary">Gruplar</h2>
           <p className="text-sm text-text-secondary">
-            Aynı gruptaki kullanıcılar birbirinin Boardroom run'larını ve
+            Aynı gruptaki kullanıcılar birbirinin Boardroom run&apos;larını ve
             sözleşme indirmelerini görür (read-only). Edit/sil sadece sahibinde.
           </p>
         </div>
