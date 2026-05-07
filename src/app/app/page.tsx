@@ -7,24 +7,20 @@ import {
   ArrowRight,
   BadgeCheck,
   Bolt,
-  Bell,
   Download,
   FileDiff,
   FilePenLine,
   FileSignature,
   Gavel,
-  Grid2X2,
   LineChart,
   MoreVertical,
   PlusCircle,
   ScrollText,
-  Settings,
   Sparkles,
   WalletCards,
   type LucideIcon,
 } from "lucide-react";
-import { ThemeToggle } from "@/components/app/ThemeToggle";
-import { UserMenu } from "@/components/app/UserMenu";
+import { AppShell } from "@/components/app/AppShell";
 import { SITE } from "@/lib/config/site";
 import { getPermissions } from "@/lib/config/roles";
 import { getBoardroomRuns } from "@/lib/run-history";
@@ -118,66 +114,8 @@ export default function AppDashboardPage() {
   }, []);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#fef7ff] text-[#1d1a21]">
-      <aside className="fixed inset-y-0 left-0 z-50 flex w-16 flex-col items-center border-r border-slate-200/70 bg-white/95 py-4">
-        <Link
-          href={SITE.paths.app}
-          className="mb-6 flex h-10 w-10 items-center justify-center rounded-xl bg-[#401689] text-white shadow-md shadow-[#401689]/20"
-          aria-label="Ana Sayfa"
-        >
-          <span className="font-black text-lg tracking-tight">C</span>
-        </Link>
-
-        <nav className="flex flex-1 flex-col items-center gap-1.5">
-          <RailItem href={SITE.paths.app} active icon={Grid2X2} label="Ana Sayfa" />
-          <RailItem href={SITE.paths.boardroomAgents} icon={Gavel} label="Agents" />
-          <RailItem href="/app/draft" icon={FilePenLine} label="Sözleşme Taslağı" />
-          <RailItem href="/app/compare" icon={LineChart} label="Döküman Karşılaştır" />
-          <RailItem href="/app/signatures" icon={WalletCards} label="İmza Kontrolü" />
-          <RailItem href="/app/regulations" icon={ScrollText} label="Mevzuat Takibi" />
-          {permissions.canAccessPanel && (
-            <>
-              <span className="my-2 h-px w-8 bg-slate-200" />
-              <RailItem href={SITE.paths.panel} icon={Settings} label="Panel" />
-            </>
-          )}
-        </nav>
-
-        <div className="mt-auto flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white">
-          {session?.user?.image ? (
-            <img
-              src={session.user.image}
-              alt=""
-              className="h-full w-full rounded-full object-cover"
-            />
-          ) : (
-            <span className="text-base">👤</span>
-          )}
-        </div>
-      </aside>
-
-      <main className="ml-16 min-h-screen pb-20">
-        <header className="sticky top-0 z-40 flex h-20 items-center justify-end bg-white/40 px-12 backdrop-blur-md">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-              <button className="p-2 transition-colors hover:text-[#280064]" aria-label="Bildirimler">
-                <Bell size={22} />
-              </button>
-              <button className="p-2 transition-colors hover:text-[#280064]" aria-label="Uygulamalar">
-                <Grid2X2 size={22} />
-              </button>
-              <span className="mx-2 h-4 w-px bg-slate-300" />
-              <Link href="/app/support" className="transition-colors hover:text-[#280064]">
-                Destek
-              </Link>
-            </div>
-
-            <ThemeToggle />
-            <UserMenu />
-          </div>
-        </header>
-
-        <div className="mx-auto mt-2 w-full max-w-[1280px] px-12">
+    <AppShell activePath={SITE.paths.app}>
+        <div className="mt-2 w-full px-12">
           <section className="relative mb-12 overflow-hidden rounded-[40px] bg-gradient-to-br from-[#280064] to-[#401689] p-12 shadow-2xl shadow-[#280064]/20">
             <div className="absolute inset-y-0 right-0 hidden w-1/2 overflow-hidden md:block">
               <img
@@ -189,11 +127,11 @@ export default function AppDashboardPage() {
             </div>
 
             <div className="relative z-10 max-w-2xl">
-              <span className="mb-6 inline-flex rounded-full border border-[#51e7ff]/30 bg-[#006875]/25 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.28em] text-[#9defff]">
+              <span className="mb-6 inline-flex rounded-full border border-[#34D399]/30 bg-[#047857]/25 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.28em] text-[#A7F3D0]">
                 {SITE.marketing.badge}
               </span>
               <h1 className="mb-6 font-display text-5xl font-extrabold leading-[1.1] tracking-[-0.02em] text-white">
-                İş süreçleriniz için <span className="text-[#51e7ff]">AI karar destek</span> platformu
+                İş süreçleriniz için <span className="text-[#34D399]">AI karar destek</span> platformu
               </h1>
               <p className="mb-8 max-w-2xl text-lg leading-relaxed text-[#eaddff]/90">
                 Sözleşme inceleme, belge karşılaştırma, imza kontrolü, redline ve uzman ajan değerlendirmelerini tek izlenebilir süreçte birleştirin.
@@ -201,7 +139,7 @@ export default function AppDashboardPage() {
               <div className="flex gap-4">
                 <Link
                   href={SITE.paths.boardroomAgents}
-                  className="inline-flex items-center justify-center gap-2 rounded-[24px] bg-[#51e7ff] px-8 py-4 text-base font-bold text-[#001f24] transition-transform hover:scale-[1.02]"
+                  className="inline-flex items-center justify-center gap-2 rounded-[24px] bg-[#34D399] px-8 py-4 text-base font-bold text-[#022c22] transition-transform hover:scale-[1.02]"
                 >
                   Agent Team ile Toplantı Başlat
                   <Bolt size={18} />
@@ -228,7 +166,7 @@ export default function AppDashboardPage() {
               </div>
               <Link
                 href={SITE.paths.boardroomAgents}
-                className="hidden items-center gap-1 text-base font-bold text-[#006875] hover:underline sm:flex"
+                className="hidden items-center gap-1 text-base font-bold text-[#047857] hover:underline sm:flex"
               >
                 Ajanları Gör
                 <ArrowRight size={18} />
@@ -249,7 +187,7 @@ export default function AppDashboardPage() {
                   Süreç Yönetimi
                 </h3>
                 <div className="flex gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[#006875]" />
+                  <span className="h-2 w-2 rounded-full bg-[#047857]" />
                   <span className="h-2 w-2 rounded-full bg-slate-200" />
                   <span className="h-2 w-2 rounded-full bg-slate-200" />
                 </div>
@@ -293,7 +231,7 @@ export default function AppDashboardPage() {
                 <div className="space-y-4">
                   {recentRuns.map((run) => (
                     <Link key={run.id} href={`/app/runs/${run.id}`}>
-                      <div className="rounded-[24px] border border-[#e7e0ea] bg-white/80 p-4 transition-all hover:border-[#51e7ff] hover:shadow-[0_12px_36px_rgba(64,22,137,0.08)]">
+                      <div className="rounded-[24px] border border-[#e7e0ea] bg-white/80 p-4 transition-all hover:border-[#34D399] hover:shadow-[0_12px_36px_rgba(64,22,137,0.08)]">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="truncate text-base font-bold text-[#1d1a21]">{run.name}</p>
@@ -315,7 +253,7 @@ export default function AppDashboardPage() {
             <div className="mt-8 rounded-[32px] border border-[#e7e0ea] bg-white/70 p-6 shadow-[0_16px_50px_rgba(64,22,137,0.05)] backdrop-blur-xl">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h3 className="font-display text-xl font-bold text-[#280064]">Control Room</h3>
+                  <h3 className="font-display text-xl font-bold text-[#280064]">Yönetim Paneli</h3>
                   <p className="mt-1 text-base text-[#494552]">
                     Ajan CV&apos;leri, prompt sürümleri, şablonlar ve audit kayıtlarını yönetin.
                   </p>
@@ -330,8 +268,7 @@ export default function AppDashboardPage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+    </AppShell>
   );
 }
 
@@ -352,7 +289,7 @@ function ModuleCard({
 }) {
   return (
     <Link href={href} className="group block">
-      <div className="flex h-full min-h-[224px] flex-col rounded-[32px] border border-white/40 bg-white/70 p-6 shadow-[0_16px_48px_rgba(64,22,137,0.05)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#51e7ff]/60">
+      <div className="flex h-full min-h-[224px] flex-col rounded-[32px] border border-white/40 bg-white/70 p-6 shadow-[0_16px_48px_rgba(64,22,137,0.05)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#34D399]/60">
         <div className="mb-8 flex items-start justify-between">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#280064]/5 text-[#280064] transition-colors group-hover:bg-[#280064] group-hover:text-white">
             <Icon size={27} />
@@ -370,38 +307,6 @@ function ModuleCard({
           {action}
         </div>
       </div>
-    </Link>
-  );
-}
-
-function RailItem({
-  href,
-  icon: Icon,
-  label,
-  active = false,
-}: {
-  href: string;
-  icon: LucideIcon;
-  label: string;
-  active?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-label={label}
-      className={`group/rail relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
-        active
-          ? "bg-[#401689] text-white shadow-md shadow-[#401689]/20"
-          : "text-slate-500 hover:bg-slate-100 hover:text-[#401689]"
-      }`}
-    >
-      <Icon size={20} className="shrink-0" />
-      <span
-        className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/rail:opacity-100"
-        role="tooltip"
-      >
-        {label}
-      </span>
     </Link>
   );
 }
@@ -437,7 +342,7 @@ function ProcessRow({
         {state === "progress" && (
           <>
             <span className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
-              <span className="block h-full w-3/4 rounded-full bg-[#006875]" />
+              <span className="block h-full w-3/4 rounded-full bg-[#047857]" />
             </span>
             <MoreVertical size={20} className="text-[#280064]" />
           </>
