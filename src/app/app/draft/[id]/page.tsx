@@ -12,7 +12,7 @@
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { DraftLayout } from "@/components/draft/DraftLayout";
+import { AppShell } from "@/components/app/AppShell";
 import { WizardShell } from "@/components/draft/WizardShell";
 import { ClausePreview } from "@/components/draft/ClausePreview";
 import { useDraftStore } from "@/lib/draft/store";
@@ -30,12 +30,12 @@ export default function DraftWizardPage() {
 
   if (!hydrated) {
     return (
-      <DraftLayout>
-        <div className="max-w-7xl mx-auto px-6 py-16 flex items-center justify-center gap-2 text-text-tertiary">
+      <AppShell activePath="/app/draft">
+        <div className="px-12 py-16 flex items-center justify-center gap-2 text-[#494552]">
           <Loader2 size={16} className="animate-spin" />
           <span className="text-sm">Yükleniyor…</span>
         </div>
-      </DraftLayout>
+      </AppShell>
     );
   }
 
@@ -47,7 +47,7 @@ export default function DraftWizardPage() {
   const meta = TEMPLATE_META[session.templateId];
 
   return (
-    <DraftLayout pageTitle={meta.label}>
+    <AppShell activePath="/app/draft">
       <div className="w-full px-5 py-8">
         <Link
           href="/app/draft"
@@ -90,6 +90,6 @@ export default function DraftWizardPage() {
           </div>
         )}
       </div>
-    </DraftLayout>
+    </AppShell>
   );
 }

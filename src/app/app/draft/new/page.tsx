@@ -21,7 +21,7 @@ import {
   Handshake,
   Lock,
 } from "lucide-react";
-import { DraftLayout } from "@/components/draft/DraftLayout";
+import { AppShell } from "@/components/app/AppShell";
 import { useDraftStore } from "@/lib/draft/store";
 import {
   TEMPLATE_META,
@@ -49,8 +49,8 @@ export default function DraftTemplatePickerPage() {
   );
 
   return (
-    <DraftLayout pageTitle="Şablon Seç">
-      <div className="max-w-5xl mx-auto px-6 py-10">
+    <AppShell activePath="/app/draft">
+      <div className="px-12 py-10">
         <Link
           href="/app/draft"
           className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary mb-6 transition-colors"
@@ -80,7 +80,7 @@ export default function DraftTemplatePickerPage() {
           ))}
         </ul>
       </div>
-    </DraftLayout>
+    </AppShell>
   );
 }
 

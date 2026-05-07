@@ -20,7 +20,7 @@ import {
   Lock,
   Trash2,
 } from "lucide-react";
-import { DraftLayout } from "@/components/draft/DraftLayout";
+import { AppShell } from "@/components/app/AppShell";
 import { useDraftStore } from "@/lib/draft/store";
 import { useHydrated } from "@/lib/draft/use-hydrated";
 import {
@@ -65,8 +65,8 @@ export default function DraftModuleLanding() {
   }, [sessions]);
 
   return (
-    <DraftLayout>
-      <div className="max-w-6xl mx-auto px-6 py-12">
+    <AppShell activePath="/app/draft">
+      <div className="px-12 py-12">
         {/* Hero */}
         <section className="relative rounded-2xl border border-workspace-border bg-workspace-surface p-10 mb-12 overflow-hidden">
           <div className="pointer-events-none absolute -top-24 -right-24 w-80 h-80 rounded-full bg-accent-primary/[0.05] blur-3xl" />
@@ -204,6 +204,6 @@ export default function DraftModuleLanding() {
           )}
         </section>
       </div>
-    </DraftLayout>
+    </AppShell>
   );
 }
