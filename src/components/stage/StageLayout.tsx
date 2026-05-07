@@ -22,7 +22,12 @@ export function StageLayout({ currentStep, children }: StageLayoutProps) {
   return (
     <AppShell activePath={SITE.paths.boardroomAgents}>
       <StageProgressBar currentStep={currentStep} />
-      <div className="relative">{children}</div>
+      {/* Stage sahnesi viewport'un kalanını doldursun ki boardroom'un
+          3D düzeni gibi h-full'a güvenen layout'lar deterministik
+          yükseklik bulsun. Header (h-20) + progress (~3.5rem) çıkarıldı. */}
+      <div className="relative flex flex-col min-h-[calc(100vh-7.5rem)]">
+        {children}
+      </div>
     </AppShell>
   );
 }

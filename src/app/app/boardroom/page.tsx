@@ -265,7 +265,7 @@ export default function BoardroomPage() {
   if (selectedAgentIds.length === 0 || (!parsedDocument && !uploadedFile)) {
     return (
       <StageLayout currentStep="boardroom">
-        <div className="flex items-center justify-center h-full">
+        <div className="flex flex-1 items-center justify-center">
           <p className="text-lg text-text-muted">Yönlendiriliyor...</p>
         </div>
       </StageLayout>
@@ -278,7 +278,7 @@ export default function BoardroomPage() {
 
   return (
     <StageLayout currentStep="boardroom">
-      <div className="flex h-full">
+      <div className="flex flex-1 min-h-0">
         <div className="flex-1 flex flex-col min-w-0">
           {/* Scene Header */}
           <div className="px-6 py-4 border-b border-workspace-border/30 shrink-0">
@@ -425,9 +425,9 @@ export default function BoardroomPage() {
                     Durum:{" "}
                     <span className="text-text-primary font-medium">
                       {boardroomPhase === "kurul-toplaniyor" && "Kurul toplanıyor..."}
-                      {boardroomPhase === "belge-inceleniyor" && "Ajanlar sözleşmeyi tarıyor ve düzeltme hazırlıyor..."}
+                      {boardroomPhase === "belge-inceleniyor" && "Uzmanlar sözleşmeyi inceliyor..."}
                       {boardroomPhase === "tartisma" && "Ajanlar düzeltme önerilerini paylaşıyor..."}
-                      {boardroomPhase === "karar-olusturuluyor" && "Baş ajan çakışmaları çözüyor, redline hazırlanıyor..."}
+                      {boardroomPhase === "karar-olusturuluyor" && "Kurul Başkanı görüş ayrılıklarını değerlendiriyor..."}
                       {boardroomPhase === "idle" && "AI analizi hazırlanıyor..."}
                     </span>
                   </p>
