@@ -18,15 +18,12 @@ export function MaskMappingsInput() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-text-primary mb-1">
+      <h2 className="text-xl font-semibold text-text-primary mb-3">
         Hassas Alan Maskeleme
         <span className="text-text-muted font-normal text-sm ml-2">
           opsiyonel
         </span>
       </h2>
-      <p className="text-base text-text-secondary mb-3">
-        Şirket adı/VKN gibi hassas metinleri AI&apos;ya gönderilmeden önce maskele.
-      </p>
 
       <div className="flex gap-2 mb-3">
         <input

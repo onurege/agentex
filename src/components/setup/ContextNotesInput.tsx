@@ -8,12 +8,12 @@ export function ContextNotesInput() {
 
   return (
     <div className="flex flex-col h-full">
-      <h2 className="text-xl font-semibold text-text-primary mb-1">
+      <h2 className="text-xl font-semibold text-text-primary mb-3">
         Bağlam Notu
+        <span className="text-text-muted font-normal text-sm ml-2">
+          opsiyonel
+        </span>
       </h2>
-      <p className="text-base text-text-secondary mb-3">
-        Kurula bu belge hakkında bağlam verin. İsteğe bağlı.
-      </p>
       <textarea
         value={contextNotes}
         onChange={(e) => setContextNotes(e.target.value)}

@@ -30,7 +30,7 @@ export function BoardSummaryPanel() {
         </Link>
       </div>
 
-      <div className="rounded-xl bg-workspace-surface border border-workspace-border p-4">
+      <div>
         {count === 0 ? (
           <p className="text-sm text-text-muted">
             Henüz ajan seçilmedi.{" "}

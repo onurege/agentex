@@ -60,18 +60,28 @@ export default function BoardSetupPage() {
         </div>
 
         {/* Üst sıra: Belge | Kurul | Temsil ve Tutum */}
-        <SceneIn className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-3">
-          <DocumentUploadPanel />
-          <BoardSummaryPanel />
-          <PartyStanceInput />
+        <SceneIn className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-4">
+          <section className="rounded-2xl border border-workspace-border bg-workspace-surface/40 p-5">
+            <DocumentUploadPanel />
+          </section>
+          <section className="rounded-2xl border border-workspace-border bg-workspace-surface/40 p-5">
+            <BoardSummaryPanel />
+          </section>
+          <section className="rounded-2xl border border-workspace-border bg-workspace-surface/40 p-5">
+            <PartyStanceInput />
+          </section>
         </SceneIn>
 
         <SceneIn
           delay={0.08}
           className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-0"
         >
-          <MaskMappingsInput />
-          <ContextNotesInput />
+          <section className="rounded-2xl border border-workspace-border bg-workspace-surface/40 p-5 flex flex-col">
+            <MaskMappingsInput />
+          </section>
+          <section className="rounded-2xl border border-workspace-border bg-workspace-surface/40 p-5 flex flex-col">
+            <ContextNotesInput />
+          </section>
         </SceneIn>
 
         {/* Bottom Action Bar */}

@@ -41,13 +41,10 @@ export function PartyStanceInput() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-text-primary mb-1">
+      <h2 className="text-xl font-semibold text-text-primary mb-3">
         Temsil ve Tutum
         <span className="text-accent-danger ml-1">*</span>
       </h2>
-      <p className="text-base text-text-secondary mb-3">
-        Hangi tarafı temsil ettiğinizi ve ajanların hangi tutumla değerlendirme yapacağını seçin.
-      </p>
 
       <div className="mb-3">
         <label
