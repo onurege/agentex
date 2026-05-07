@@ -7,6 +7,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { classifyText } from "./classifier";
+import { detectCompanies } from "./companies";
+import { fetchGoogleNewsCandidates } from "./sources/google-news";
 import { fetchResmiGazeteCandidates } from "./sources/resmi-gazete";
 import { fetchYargiMcpCandidates } from "./sources/yargi-mcp";
 import type {
@@ -30,6 +32,7 @@ const SOURCES: SourceRunner[] = [
     id: "resmi-gazete",
     run: () => fetchResmiGazeteCandidates({ days: 7 }),
   },
+  { id: "google-news", run: fetchGoogleNewsCandidates },
 ];
 
 const RAW_PAYLOAD_BYTES_CAP = 50_000;
@@ -100,12 +103,23 @@ export async function runRegulationsScan(): Promise<ScanResult> {
           skipped++;
           continue;
         }
-        const { topics, priority } = classifyText(haystack);
-        if (topics.length === 0) {
+        const classification = classifyText(haystack);
+        const detectedCompanies = detectCompanies(haystack);
+        // Adapter şirket etiketi koymuş olabilir (Google News query
+        // başlangıcı); metin eşleşmesini birleştir.
+        const companies = Array.from(
+          new Set([...(candidate.companies ?? []), ...detectedCompanies]),
+        );
+        // Bir item topic eşleşirse VEYA grup şirketi eşleşirse Param
+        // bağlamında alakalı sayılır. Sadece company match'iyle gelen
+        // item'lar için topic listesi boş kalır; UI bunu zaten "Haberler"
+        // sekmesinde gösterir.
+        if (classification.topics.length === 0 && companies.length === 0) {
           skipped++;
           continue;
         }
         classified++;
+        const priority = classification.priority;
 
         const data = {
           source: candidate.source,
@@ -115,11 +129,12 @@ export async function runRegulationsScan(): Promise<ScanResult> {
           bodyExcerpt: candidate.bodyExcerpt ?? null,
           url: candidate.url ?? null,
           publishedAt: candidate.publishedAt,
-          topics,
+          topics: classification.topics,
           priority,
           status: candidate.status ?? null,
           sourceTool: candidate.sourceTool ?? null,
           rawPayload: trimRawPayload(candidate.rawPayload),
+          companies,
         };
 
         const existing = await prisma.regulationItem.findUnique({
@@ -137,10 +152,11 @@ export async function runRegulationsScan(): Promise<ScanResult> {
             where: { id: existing.id },
             data: {
               fetchedAt: new Date(),
-              topics,
+              topics: classification.topics,
               priority,
               status: candidate.status ?? null,
               sourceTool: candidate.sourceTool ?? null,
+              companies,
             },
           });
           updated++;

@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { fetchResmiGazeteCandidates } from "../sources/resmi-gazete";
+import { fetchGoogleNewsCandidates } from "../sources/google-news";
+import { detectCompanies } from "../companies";
 
 // Adapters do live network in normal flow; tests assert resilience —
 // when the public site is unreachable or returns empty, the adapter
@@ -15,4 +17,34 @@ describe("fetchResmiGazeteCandidates — defensive shape", () => {
     expect(r).toHaveProperty("error");
     expect(Array.isArray(r.candidates)).toBe(true);
   }, 20_000);
+});
+
+describe("fetchGoogleNewsCandidates — defensive shape", () => {
+  it("returns a result object with candidates and error fields", async () => {
+    const r = await fetchGoogleNewsCandidates();
+    expect(r).toHaveProperty("candidates");
+    expect(r).toHaveProperty("error");
+    expect(Array.isArray(r.candidates)).toBe(true);
+    // Eğer ağ erişimi varsa her bir kayıt en az bir company id taşımalı.
+    for (const c of r.candidates) {
+      expect(c.source).toBe("google-news");
+      expect(c.sourceTool).toBe("google-news");
+      expect(Array.isArray(c.companies)).toBe(true);
+      expect((c.companies ?? []).length).toBeGreaterThan(0);
+    }
+  }, 60_000);
+});
+
+describe("detectCompanies", () => {
+  it("matches Param via Turkish-cased aliases", () => {
+    expect(detectCompanies("Param Ödeme yeni cüzdanı duyurdu")).toContain("param");
+  });
+  it("returns empty for unrelated text", () => {
+    expect(detectCompanies("ankara büyükşehir belediyesi")).toEqual([]);
+  });
+  it("matches multiple companies in one text", () => {
+    const matched = detectCompanies("Kredim ile Twisto işbirliği");
+    expect(matched).toContain("kredim");
+    expect(matched).toContain("twisto");
+  });
 });
