@@ -44,31 +44,41 @@ export default function BoardSetupPage() {
   return (
     <StageLayout currentStep="board-setup">
       <div className="flex flex-col flex-1 min-h-0 overflow-y-auto px-12 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="font-display text-4xl font-bold text-text-primary mb-3">
+        {/* Header — sola hizalı, kompakt */}
+        <div className="mb-8">
+          <p className="text-[11px] font-mono uppercase tracking-widest text-text-muted mb-1.5">
             Kurul Hazırlığı
+          </p>
+          <h1 className="font-display text-3xl font-bold text-text-primary mb-1.5">
+            Belgeyi yükleyin, kuruluna hazırlanın
           </h1>
-          <p className="text-xl text-text-secondary">
-            Belgenizi yükleyin ve tartışmayı başlatın.
+          <p className="text-base text-text-secondary">
+            Aşağıdaki dört adımı tamamladığınızda kurul tartışmaya başlayabilir.
           </p>
         </div>
 
-        {/* Two-column layout — left panel enters first, right follows at 120ms */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
-          {/* Left — Document Upload */}
-          <SceneIn>
-            <DocumentUploadPanel />
-          </SceneIn>
+        {/* Section 1 — Belge Yükle (full width) */}
+        <SceneIn className="mb-6">
+          <DocumentUploadPanel />
+        </SceneIn>
 
-          {/* Right — Board, Representation & Context */}
-          <SceneIn delay={0.12} className="flex flex-col gap-8">
-            <BoardSummaryPanel />
-            <PartyStanceInput />
-            <MaskMappingsInput />
-            <ContextNotesInput />
-          </SceneIn>
-        </div>
+        {/* Section 2 — Kurul + Temsil/Tutum (2 kolon) */}
+        <SceneIn
+          delay={0.08}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"
+        >
+          <BoardSummaryPanel />
+          <PartyStanceInput />
+        </SceneIn>
+
+        {/* Section 3 — Maske + Bağlam (2 kolon) */}
+        <SceneIn
+          delay={0.16}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+        >
+          <MaskMappingsInput />
+          <ContextNotesInput />
+        </SceneIn>
 
         {/* Bottom Action Bar */}
         <div className="flex items-center justify-between mt-8 pt-6 border-t border-workspace-border/30 w-full">
