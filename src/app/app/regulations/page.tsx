@@ -13,7 +13,7 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, RefreshCw, Search, ShieldAlert } from "lucide-react";
-import { RegulationsLayout } from "@/components/regulations/RegulationsLayout";
+import { AppShell } from "@/components/app/AppShell";
 import { TopicChips } from "@/components/regulations/TopicChips";
 import { RegulationCard } from "@/components/regulations/RegulationCard";
 import { DEFAULT_TOPIC_FILTER } from "@/lib/regulations/topics";
@@ -204,8 +204,8 @@ export default function RegulationsPage() {
   };
 
   return (
-    <RegulationsLayout>
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-8 py-8">
+    <AppShell activePath="/app/regulations">
+      <div className="px-12 py-8">
         {/* 12-kolon grid: solda sticky filtre raylı (üstten başlar),
             sağda başlık + banner'lar + kart akışı */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -402,7 +402,7 @@ export default function RegulationsPage() {
           </main>
         </div>
       </div>
-    </RegulationsLayout>
+    </AppShell>
   );
 }
 

@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Loader2, ShieldAlert } from "lucide-react";
-import { RegulationsLayout } from "@/components/regulations/RegulationsLayout";
+import { AppShell } from "@/components/app/AppShell";
 import { TOPIC_BY_ID } from "@/lib/regulations/topics";
 import type {
   RegulationItemDTO,
@@ -135,8 +135,8 @@ export default function RegulationDetailPage() {
   }, [id]);
 
   return (
-    <RegulationsLayout>
-      <div className="max-w-[1400px] mx-auto px-8 py-10">
+    <AppShell activePath="/app/regulations">
+      <div className="px-12 py-10">
         <Link
           href="/app/regulations"
           className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary mb-6"
@@ -158,7 +158,7 @@ export default function RegulationDetailPage() {
 
         {data && <DetailBody data={data} />}
       </div>
-    </RegulationsLayout>
+    </AppShell>
   );
 }
 
