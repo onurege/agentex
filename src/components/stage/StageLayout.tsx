@@ -19,14 +19,15 @@ interface StageLayoutProps {
 }
 
 export function StageLayout({ currentStep, children }: StageLayoutProps) {
+  // `-mb-20` AppShell main'in alt padding'ini siler. Sahne yalnızca
+  // viewport - header (5rem) yüksekliğinde sabit kalır; iç bölgeler
+  // (debate stream gibi) kendi `overflow-y-auto`'ları ile scroll eder
+  // ki sayfa gövdesi kaymadan tüm panel sabit dursun.
   return (
     <AppShell activePath={SITE.paths.boardroomAgents}>
-      <StageProgressBar currentStep={currentStep} />
-      {/* Stage sahnesi viewport'un kalanını doldursun ki boardroom'un
-          3D düzeni gibi h-full'a güvenen layout'lar deterministik
-          yükseklik bulsun. Header (h-20) + progress (~3.5rem) çıkarıldı. */}
-      <div className="relative flex flex-col min-h-[calc(100vh-7.5rem)]">
-        {children}
+      <div className="flex flex-col h-[calc(100vh-5rem)] -mb-20 overflow-hidden">
+        <StageProgressBar currentStep={currentStep} />
+        <div className="flex-1 min-h-0 flex flex-col">{children}</div>
       </div>
     </AppShell>
   );
