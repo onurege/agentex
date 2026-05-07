@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { StageLayout } from "@/components/stage/StageLayout";
 import { ScenePhaseBar } from "@/components/boardroom/ScenePhaseBar";
-import { BoardroomAgentSeat } from "@/components/boardroom/BoardroomAgentSeat";
 import { DocumentFocusCard } from "@/components/boardroom/DocumentFocusCard";
 import { DebateTimelinePanel } from "@/components/boardroom/DebateTimelinePanel";
-import { SpotlightFocus } from "@/lib/motion/primitives";
+import type { AgentSceneState } from "@/lib/boardroom-flow-store";
 import { useBoardroomFlowStore } from "@/lib/boardroom-flow-store";
 import {
   generateDebateSequence,
@@ -25,7 +24,21 @@ import { applyMask, reverseMaskInResult } from "@/lib/boardroom-engine/mask";
 import type { ParsedDocument } from "@/lib/ingestion/types";
 import { SITE } from "@/lib/config/site";
 
-// Seats sit on an ellipse around the oval table. Chief is always at
+// Sahnedeki durum etiketleri için kısa karşılıklar — uzun "Düzeltme
+// Hazırlıyor" gibi metinler katılımcı listesine sığmıyor.
+const STATUS_SHORT: Record<AgentSceneState["status"], string> = {
+  waiting: "Bekliyor",
+  seated: "Hazır",
+  reading: "Okuyor",
+  analyzing: "Analiz",
+  speaking: "Sunuyor",
+  objecting: "İtiraz",
+  defending: "Savunuyor",
+  rebutting: "Karşı Yanıt",
+  synthesizing: "Sentez",
+  done: "Tamam",
+};
+
 export default function BoardroomPage() {
   const router = useRouter();
   const selectedAgentIds = useBoardroomFlowStore((s) => s.selectedAgentIds);
@@ -297,127 +310,144 @@ export default function BoardroomPage() {
           ref={stageRef}
           className="w-[320px] shrink-0 border-r border-workspace-border/30 bg-workspace-surface/40 flex flex-col"
         >
-          {/* Mini toplantı masası — temiz SVG'li tepeden bakış. */}
+          {/* Sahnedekiler — yatay büyük avatar şeridi */}
           <div className="px-5 pt-5 pb-4 border-b border-workspace-border/30">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-text-muted">
-                Toplantı Masası
-              </span>
-              {activeSpeakerId && (
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-accent-primary">
+              <h2 className="font-display text-[15px] font-semibold text-text-primary">
+                Sahnedekiler
+              </h2>
+              {activeSpeakerId ? (
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-accent-primary">
                   <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse" />
                   Konuşuyor
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                  {boardroomAgents.length} kişi
                 </span>
               )}
             </div>
 
-            <div className="relative w-full aspect-[16/9]">
-              <svg
-                viewBox="0 0 160 90"
-                className="absolute inset-0 w-full h-full"
-                preserveAspectRatio="xMidYMid meet"
-              >
-                <defs>
-                  <radialGradient id="table-grad" cx="50%" cy="35%" r="65%">
-                    <stop
-                      offset="0%"
-                      stopColor="rgb(var(--color-accent-info))"
-                      stopOpacity="0.22"
-                    />
-                    <stop
-                      offset="100%"
-                      stopColor="rgb(var(--color-workspace-elevated))"
-                      stopOpacity="0.4"
-                    />
-                  </radialGradient>
-                </defs>
-                <ellipse
-                  cx="80"
-                  cy="45"
-                  rx="46"
-                  ry="20"
-                  fill="url(#table-grad)"
-                  stroke="rgb(var(--color-workspace-border))"
-                  strokeWidth="0.6"
-                />
-              </svg>
-
-              {/* Çevredeki ajan koltukları */}
-              {boardroomAgents.map((agent, i) => {
-                const total = Math.max(boardroomAgents.length, 1);
-                const angle = (2 * Math.PI * i) / total - Math.PI / 2;
-                const cx = 50 + Math.cos(angle) * 44;
-                const cy = 50 + Math.sin(angle) * 38;
-                const isActive = activeSpeakerId === agent.id;
-                const isChief = agent.id === "chief-agent";
-                return (
-                  <div
-                    key={agent.id}
-                    title={agent.name}
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full border-2 flex items-center justify-center text-lg transition-all duration-200 ${
-                      isActive
-                        ? "border-accent-primary bg-accent-primary/15 scale-110 shadow-glow-blue z-10"
-                        : isChief
-                          ? "border-accent-info/60 bg-workspace-surface"
-                          : "border-workspace-border bg-workspace-surface"
-                    }`}
-                    style={{ left: `${cx}%`, top: `${cy}%` }}
-                  >
-                    {agent.avatar}
-                  </div>
-                );
-              })}
+            {/* Avatar şerit — masa hattı altta soluk çizgi */}
+            <div className="relative">
+              <div className="flex items-end justify-around gap-1 pb-3">
+                {boardroomAgents.map((agent) => {
+                  const isActive = activeSpeakerId === agent.id;
+                  const isChief = agent.id === "chief-agent";
+                  return (
+                    <div
+                      key={agent.id}
+                      title={agent.name}
+                      className="flex flex-col items-center min-w-0 flex-1"
+                    >
+                      <div
+                        className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-2xl leading-none transition-all duration-200 ${
+                          isActive
+                            ? "border-accent-primary bg-accent-primary/15 scale-110 shadow-glow-blue"
+                            : isChief
+                              ? "border-accent-info/50 bg-workspace-surface"
+                              : "border-workspace-border bg-workspace-surface"
+                        }`}
+                      >
+                        <span aria-hidden>{agent.avatar}</span>
+                      </div>
+                      <span className="mt-1.5 text-[10px] font-medium text-text-secondary truncate max-w-full">
+                        {agent.shortName ?? agent.name}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Masa hattı */}
+              <div className="absolute left-2 right-2 bottom-2 h-px bg-gradient-to-r from-transparent via-workspace-border to-transparent" />
             </div>
           </div>
 
           {/* Doküman odak kartı */}
-          <div className="p-5 border-b border-workspace-border/30">
+          <div className="px-5 py-4 border-b border-workspace-border/30">
             <DocumentFocusCard fileName={fileName} currentTopic={highlightedTopic} />
           </div>
 
-          {/* Toplantı masası — dikey kart listesi, aktif konuşmacı vurgulu */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            <h2 className="text-[10px] font-mono uppercase tracking-widest text-text-muted px-2 mb-2 mt-1">
-              Katılımcılar · {boardroomAgents.length} kişi
-            </h2>
-            {boardroomAgents.map((agent) => {
-              const sceneState = agentSceneStates[agent.id];
-              const isActive = activeSpeakerId === agent.id;
-              const isChief = agent.id === "chief-agent";
-              const status = sceneState?.status ?? "waiting";
-              const inDisagreement =
-                disagreementPair &&
-                (agent.id === disagreementPair.fromId ||
-                  agent.id === disagreementPair.toId);
-              return (
-                <div
-                  key={agent.id}
-                  data-seat-id={agent.id}
-                  className={`rounded-xl border p-3 transition-all ${
-                    isActive
-                      ? "border-accent-primary/60 bg-accent-primary/[0.06] shadow-glow-blue"
-                      : inDisagreement
-                        ? "border-accent-danger/40 bg-accent-danger/[0.04]"
-                        : "border-workspace-border bg-workspace-surface"
-                  }`}
-                >
-                  <SpotlightFocus
-                    active={
-                      !disagreementPair ||
-                      agent.id === disagreementPair.fromId ||
-                      agent.id === disagreementPair.toId
-                    }
+          {/* Katılımcılar — kompakt tek satır */}
+          <div className="flex-1 overflow-y-auto px-3 py-3">
+            <h3 className="font-display text-[13px] font-semibold text-text-primary px-2 mb-2">
+              Katılımcılar
+            </h3>
+            <ul className="space-y-1">
+              {boardroomAgents.map((agent) => {
+                const sceneState = agentSceneStates[agent.id];
+                const isActive = activeSpeakerId === agent.id;
+                const isChief = agent.id === "chief-agent";
+                const status = sceneState?.status ?? "waiting";
+                const inDisagreement =
+                  disagreementPair &&
+                  (agent.id === disagreementPair.fromId ||
+                    agent.id === disagreementPair.toId);
+
+                let pill: { label: string; className: string } | null = null;
+                if (isActive) {
+                  pill = {
+                    label: "Konuşuyor",
+                    className: "text-accent-primary",
+                  };
+                } else if (inDisagreement) {
+                  pill = {
+                    label: "Görüş Ayrılığı",
+                    className: "text-accent-danger",
+                  };
+                } else if (status === "done") {
+                  pill = {
+                    label: "Tamam",
+                    className: "text-accent-success",
+                  };
+                } else if (status !== "waiting") {
+                  pill = {
+                    label: STATUS_SHORT[status] ?? status,
+                    className: "text-text-secondary",
+                  };
+                }
+
+                return (
+                  <li
+                    key={agent.id}
+                    className={`flex items-center gap-3 px-2.5 py-2 rounded-lg transition-colors ${
+                      isActive
+                        ? "bg-accent-primary/[0.08] ring-1 ring-accent-primary/30"
+                        : inDisagreement
+                          ? "bg-accent-danger/[0.05]"
+                          : "hover:bg-workspace-elevated/50"
+                    }`}
                   >
-                    <BoardroomAgentSeat
-                      agent={agent}
-                      sceneState={sceneState}
-                      isActiveSpeaker={isActive}
-                      isChief={isChief}
-                    />
-                  </SpotlightFocus>
-                </div>
-              );
-            })}
+                    <div
+                      className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-lg leading-none shrink-0 ${
+                        isActive
+                          ? "border-accent-primary bg-accent-primary/10"
+                          : isChief
+                            ? "border-accent-info/50 bg-workspace-surface"
+                            : "border-workspace-border bg-workspace-surface"
+                      }`}
+                    >
+                      <span aria-hidden>{agent.avatar}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-text-primary truncate">
+                        {agent.name}
+                      </p>
+                      <p className="text-[11px] text-text-muted truncate">
+                        {isChief ? "Kurul Başkanı" : agent.title}
+                      </p>
+                    </div>
+                    {pill && (
+                      <span
+                        className={`text-[10px] font-mono uppercase tracking-wider shrink-0 ${pill.className}`}
+                      >
+                        {pill.label}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
           {/* Durum + karar CTA */}
