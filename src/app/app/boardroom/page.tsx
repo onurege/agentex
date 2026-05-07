@@ -297,35 +297,69 @@ export default function BoardroomPage() {
           ref={stageRef}
           className="w-[320px] shrink-0 border-r border-workspace-border/30 bg-workspace-surface/40 flex flex-col"
         >
-          {/* Mini toplantı masası — tepeden bakış, aktif konuşmacı parlar */}
-          <div className="px-5 pt-5 pb-3 border-b border-workspace-border/30">
-            <div className="text-[10px] font-mono uppercase tracking-widest text-text-muted mb-2">
-              Toplantı Masası
+          {/* Mini toplantı masası — temiz SVG'li tepeden bakış. */}
+          <div className="px-5 pt-5 pb-4 border-b border-workspace-border/30">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-text-muted">
+                Toplantı Masası
+              </span>
+              {activeSpeakerId && (
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-accent-primary">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse" />
+                  Konuşuyor
+                </span>
+              )}
             </div>
-            <div className="relative w-full aspect-[2/1] rounded-2xl bg-workspace-elevated/60 border border-workspace-border overflow-hidden">
-              {/* Oval masa */}
-              <div
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[58%] h-[44%] rounded-[50%] border border-accent-info/40"
-                style={{
-                  background:
-                    "radial-gradient(ellipse at 50% 30%, rgb(var(--color-accent-info) / 0.12) 0%, transparent 70%)",
-                }}
-              />
+
+            <div className="relative w-full aspect-[16/9]">
+              <svg
+                viewBox="0 0 160 90"
+                className="absolute inset-0 w-full h-full"
+                preserveAspectRatio="xMidYMid meet"
+              >
+                <defs>
+                  <radialGradient id="table-grad" cx="50%" cy="35%" r="65%">
+                    <stop
+                      offset="0%"
+                      stopColor="rgb(var(--color-accent-info))"
+                      stopOpacity="0.22"
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="rgb(var(--color-workspace-elevated))"
+                      stopOpacity="0.4"
+                    />
+                  </radialGradient>
+                </defs>
+                <ellipse
+                  cx="80"
+                  cy="45"
+                  rx="46"
+                  ry="20"
+                  fill="url(#table-grad)"
+                  stroke="rgb(var(--color-workspace-border))"
+                  strokeWidth="0.6"
+                />
+              </svg>
+
               {/* Çevredeki ajan koltukları */}
               {boardroomAgents.map((agent, i) => {
                 const total = Math.max(boardroomAgents.length, 1);
-                const angle = (2 * Math.PI * i) / total;
-                const cx = 50 + Math.sin(angle) * 38;
-                const cy = 50 - Math.cos(angle) * 34;
+                const angle = (2 * Math.PI * i) / total - Math.PI / 2;
+                const cx = 50 + Math.cos(angle) * 44;
+                const cy = 50 + Math.sin(angle) * 38;
                 const isActive = activeSpeakerId === agent.id;
+                const isChief = agent.id === "chief-agent";
                 return (
                   <div
                     key={agent.id}
                     title={agent.name}
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full border-2 flex items-center justify-center text-base transition-all ${
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full border-2 flex items-center justify-center text-lg transition-all duration-200 ${
                       isActive
                         ? "border-accent-primary bg-accent-primary/15 scale-110 shadow-glow-blue z-10"
-                        : "border-workspace-border bg-workspace-surface"
+                        : isChief
+                          ? "border-accent-info/60 bg-workspace-surface"
+                          : "border-workspace-border bg-workspace-surface"
                     }`}
                     style={{ left: `${cx}%`, top: `${cy}%` }}
                   >
