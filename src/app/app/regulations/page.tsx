@@ -245,7 +245,7 @@ export default function RegulationsPage() {
         {/* 12-kolon grid: solda sticky filtre raylı (üstten başlar),
             sağda başlık + banner'lar + kart akışı */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <aside className="lg:col-span-3 lg:sticky lg:top-6 self-start space-y-5">
+          <aside className="lg:col-span-3 lg:sticky lg:top-24 self-start space-y-5 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-2">
             {/* Arama */}
             <div className="relative">
               <Search
