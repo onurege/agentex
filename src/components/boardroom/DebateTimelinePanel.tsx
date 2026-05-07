@@ -1,9 +1,19 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
-import type { DebateEvent } from "@/lib/boardroom-flow-store";
+// ============================================================
+// DebateTimelinePanel — Konu bazlı gruplama
+// ============================================================
+//
+// Olaylar artık `topic` alanına göre kümeleniyor; kullanıcı sürekli
+// alta kaymadan tartışmanın yapısını görebiliyor. Her konu kart olarak
+// çizilir, içinde ajanların katkıları kompakt satırlar halinde dizilir.
+// En yeni konu en üstte; verdict olayı ayrı bir vurgu kartı olarak
+// her zaman tepede durur.
+// ============================================================
 
-const STICK_THRESHOLD_PX = 32;
+import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import type { DebateEvent } from "@/lib/boardroom-flow-store";
 
 interface DebateTimelinePanelProps {
   events: DebateEvent[];
@@ -24,86 +34,162 @@ const TYPE_LABELS: Record<DebateEvent["type"], { label: string; style: string }>
   verdict: { label: "Karar", style: "text-accent-success" },
 };
 
-export function DebateTimelinePanel({ events }: DebateTimelinePanelProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const stickToBottomRef = useRef(true);
+interface TopicGroup {
+  topic: string;
+  events: DebateEvent[];
+}
 
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    stickToBottomRef.current = distanceFromBottom <= STICK_THRESHOLD_PX;
-  }, []);
-
-  useEffect(() => {
-    if (stickToBottomRef.current && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+function groupByTopic(events: DebateEvent[]): {
+  verdicts: DebateEvent[];
+  groups: TopicGroup[];
+} {
+  const verdicts: DebateEvent[] = [];
+  const groups: TopicGroup[] = [];
+  for (const ev of events) {
+    if (ev.type === "verdict") {
+      verdicts.push(ev);
+      continue;
     }
-  }, [events.length]);
+    const existing = groups.find((g) => g.topic === ev.topic);
+    if (existing) {
+      existing.events.push(ev);
+    } else {
+      groups.push({ topic: ev.topic, events: [ev] });
+    }
+  }
+  // En son konuşulan konu en üstte; her grup içinde olaylar kronolojik kalır.
+  groups.reverse();
+  return { verdicts, groups };
+}
+
+export function DebateTimelinePanel({ events }: DebateTimelinePanelProps) {
+  const { verdicts, groups } = useMemo(() => groupByTopic(events), [events]);
+  const [collapsedTopics, setCollapsedTopics] = useState<Set<string>>(new Set());
+
+  const toggle = (topic: string) => {
+    setCollapsedTopics((prev) => {
+      const next = new Set(prev);
+      if (next.has(topic)) next.delete(topic);
+      else next.add(topic);
+      return next;
+    });
+  };
 
   return (
     <section className="flex-1 min-w-0 flex flex-col bg-workspace-bg">
-      <div className="px-8 py-5 border-b border-workspace-border/30 flex items-end justify-between gap-4">
+      <div className="px-8 py-5 border-b border-workspace-border/30 flex items-end justify-between gap-4 shrink-0">
         <div>
           <h2 className="text-xl font-semibold text-text-primary">
-            Canlı Tartışma Akışı
+            Tartışma Akışı
           </h2>
           <p className="text-sm text-text-muted mt-0.5">
-            {events.length} olay · son konuşmayı görmek için aşağı kaydırın
+            {events.length === 0
+              ? "Tartışma başladığında konuşmalar burada görünecek."
+              : `${groups.length} konu · ${events.length} konuşma · konu başına gruplandı`}
           </p>
         </div>
       </div>
 
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-8 py-6 space-y-4 max-w-[1080px] w-full"
-      >
-        {events.length === 0 && (
-          <p className="text-base text-text-muted text-center py-8">
-            Tartışma başladığında konuşmalar burada görünecek.
-          </p>
-        )}
-
-        {events.map((event) => {
-          const typeInfo = TYPE_LABELS[event.type];
-          const isDisagreement = event.type === "disagreement";
-          const isObjection = event.type === "objection";
-          const isVerdict = event.type === "verdict";
-
-          return (
-            <div
-              key={event.id}
-              className={`
-                rounded-2xl p-6 transition-all duration-300 scene-bubble-enter
-                ${isDisagreement
-                  ? "bg-accent-danger/5 border border-accent-danger/30"
-                  : isObjection
-                    ? "bg-accent-warning/5 border border-accent-warning/30"
-                    : isVerdict
-                      ? "bg-accent-success/5 border border-accent-success/30"
-                      : "bg-workspace-surface border border-workspace-border/60"
-                }
-              `}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-3xl shrink-0">{event.agentAvatar}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-base font-semibold text-text-primary truncate">
-                    {event.agentName}
-                  </p>
-                  <p className="text-xs text-text-muted font-mono uppercase tracking-wider mt-0.5">
-                    Konu · {event.topic}
-                  </p>
-                </div>
-                <span className={`text-[12px] font-semibold uppercase tracking-wide shrink-0 ${typeInfo.style}`}>
-                  {typeInfo.label}
-                </span>
+      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-5">
+        {/* Verdict — varsa her zaman en tepede */}
+        {verdicts.map((ev) => (
+          <article
+            key={ev.id}
+            className="rounded-2xl p-5 bg-accent-success/[0.06] border-2 border-accent-success/40"
+          >
+            <header className="flex items-center gap-3 mb-2">
+              <span className="text-2xl shrink-0">{ev.agentAvatar}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-mono uppercase tracking-widest text-accent-success">
+                  Karar
+                </p>
+                <p className="text-base font-semibold text-text-primary">
+                  {ev.agentName}
+                </p>
               </div>
-              <p className="text-[16px] text-text-primary leading-[1.7]">
-                {event.message}
-              </p>
-            </div>
+            </header>
+            <p className="text-[15px] text-text-primary leading-relaxed">
+              {ev.message}
+            </p>
+          </article>
+        ))}
+
+        {/* Konu kartları */}
+        {groups.map((group, idx) => {
+          const isCollapsed = collapsedTopics.has(group.topic);
+          const isLatest = idx === 0;
+          return (
+            <article
+              key={group.topic}
+              className="rounded-2xl border border-workspace-border bg-workspace-surface overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={() => toggle(group.topic)}
+                className="w-full flex items-center justify-between gap-3 px-5 py-3.5 border-b border-workspace-border/50 hover:bg-workspace-elevated/40 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {isLatest && (
+                    <span className="w-2 h-2 rounded-full bg-accent-primary animate-pulse shrink-0" />
+                  )}
+                  <h3 className="font-display text-[15px] font-semibold text-text-primary truncate">
+                    {group.topic}
+                  </h3>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs text-text-muted">
+                    {group.events.length} konuşma
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className={`text-text-muted transition-transform ${
+                      isCollapsed ? "-rotate-90" : ""
+                    }`}
+                  />
+                </div>
+              </button>
+
+              {!isCollapsed && (
+                <div className="divide-y divide-workspace-border/40">
+                  {group.events.map((ev) => {
+                    const typeInfo = TYPE_LABELS[ev.type];
+                    const isDisagreement = ev.type === "disagreement";
+                    const isObjection = ev.type === "objection";
+                    return (
+                      <div
+                        key={ev.id}
+                        className={`px-5 py-4 flex gap-3 ${
+                          isDisagreement
+                            ? "bg-accent-danger/[0.04]"
+                            : isObjection
+                              ? "bg-accent-warning/[0.04]"
+                              : ""
+                        }`}
+                      >
+                        <span className="text-2xl shrink-0 leading-none mt-0.5">
+                          {ev.agentAvatar}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="text-sm font-semibold text-text-primary">
+                              {ev.agentName}
+                            </span>
+                            <span
+                              className={`text-[11px] font-semibold uppercase tracking-wide ${typeInfo.style}`}
+                            >
+                              {typeInfo.label}
+                            </span>
+                          </div>
+                          <p className="text-[15px] text-text-secondary leading-relaxed">
+                            {ev.message}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </article>
           );
         })}
       </div>
