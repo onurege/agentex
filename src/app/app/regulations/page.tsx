@@ -241,11 +241,12 @@ export default function RegulationsPage() {
 
   return (
     <AppShell activePath="/app/regulations">
-      <div className="px-12 py-8">
-        {/* 12-kolon grid: solda sticky filtre raylı (üstten başlar),
-            sağda başlık + banner'lar + kart akışı */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <aside className="lg:col-span-3 lg:sticky lg:top-24 self-start space-y-5 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-2">
+      {/* İki-pane layout: sol filtre paneli viewport yüksekliğinde
+          fixed (kendi içinde scroll), sağ kart kolonu kendi içinde
+          scroll. AppShell header'ı 80px sticky olduğu için yükseklik
+          calc(100vh-5rem). lg altı ekranlarda dikey stack. */}
+      <div className="px-12 py-6 lg:h-[calc(100vh-5rem)] lg:flex lg:gap-6 lg:overflow-hidden">
+        <aside className="w-full lg:w-80 shrink-0 space-y-5 lg:overflow-y-auto lg:pr-2 lg:pb-6">
             {/* Arama */}
             <div className="relative">
               <Search
@@ -356,9 +357,9 @@ export default function RegulationsPage() {
                 Filtreleri sıfırla ({activeFilterCount})
               </button>
             )}
-          </aside>
+        </aside>
 
-          <main className="lg:col-span-9 min-w-0">
+        <main className="flex-1 min-w-0 lg:overflow-y-auto lg:pb-6 mt-6 lg:mt-0">
             <div className="flex items-center gap-1 p-1 mb-5 rounded-lg bg-workspace-elevated/60 border border-workspace-border w-fit">
               {(
                 [
@@ -514,8 +515,7 @@ export default function RegulationsPage() {
                 ))}
               </div>
             )}
-          </main>
-        </div>
+        </main>
       </div>
     </AppShell>
   );
