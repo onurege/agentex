@@ -22,6 +22,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
+import { SavedPromptDraftList } from "@/components/draft-prompt/SavedPromptDraftList";
 import { useDraftStore } from "@/lib/draft/store";
 import { useHydrated } from "@/lib/draft/use-hydrated";
 import {
@@ -110,6 +111,9 @@ export default function DraftModuleLanding() {
             </div>
           </div>
         </section>
+
+        {/* Saved prompt drafts (own + group) */}
+        <SavedPromptDraftList />
 
         {/* History */}
         <section>

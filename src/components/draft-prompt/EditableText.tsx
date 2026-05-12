@@ -14,6 +14,7 @@ interface Props {
   /** Sadece görsel etiket; gerçek tag her zaman div. */
   as?: "div" | "span";
   placeholder?: string;
+  readOnly?: boolean;
 }
 
 export function EditableText({
@@ -23,6 +24,7 @@ export function EditableText({
   className,
   multiline = false,
   placeholder,
+  readOnly = false,
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -34,6 +36,14 @@ export function EditableText({
       el.textContent = value;
     }
   }, [value]);
+
+  if (readOnly) {
+    return (
+      <div className={className} aria-label={ariaLabel}>
+        {value}
+      </div>
+    );
+  }
 
   return (
     <div

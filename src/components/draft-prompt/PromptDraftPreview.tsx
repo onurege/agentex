@@ -1,16 +1,24 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Download, FileText, Loader2 } from "lucide-react";
+import { Check, Download, FileText, Loader2, Save, SquarePlus } from "lucide-react";
 import { useDraftPromptStore } from "@/lib/draft-prompt/store";
 import type { PromptDraftSession } from "@/lib/draft-prompt/types";
 import { EditableText } from "./EditableText";
 
 interface Props {
   session: PromptDraftSession;
+  /** Sağ üstte ekstra aksiyon butonları (kaydet vs.). */
+  toolbarExtras?: React.ReactNode;
+  /** Sahibi olmayan grup üyesi için preview read-only. */
+  readOnly?: boolean;
 }
 
-export function PromptDraftPreview({ session }: Props) {
+export function PromptDraftPreview({
+  session,
+  toolbarExtras,
+  readOnly = false,
+}: Props) {
   const updateTitle = useDraftPromptStore((s) => s.updateTitle);
   const updatePreamble = useDraftPromptStore((s) => s.updatePreamble);
   const updateClosing = useDraftPromptStore((s) => s.updateClosing);
@@ -86,10 +94,11 @@ export function PromptDraftPreview({ session }: Props) {
         </div>
         <div className="flex items-center gap-2">
           {exportState === "error" && exportError && (
-            <span className="text-xs text-accent-danger truncate max-w-[260px]" title={exportError}>
+            <span className="text-xs text-accent-danger truncate max-w-[200px]" title={exportError}>
               {exportError}
             </span>
           )}
+          {toolbarExtras}
           <button
             type="button"
             onClick={() => void handleExport()}
@@ -113,6 +122,7 @@ export function PromptDraftPreview({ session }: Props) {
             value={draft.title}
             onCommit={(next) => updateTitle(session.id, next)}
             ariaLabel="Sözleşme başlığı"
+            readOnly={readOnly}
             className="font-display text-2xl md:text-3xl font-bold text-center leading-tight tracking-tight outline-none focus:bg-accent-primary/[0.04] rounded px-2 py-1"
           />
 
@@ -123,6 +133,7 @@ export function PromptDraftPreview({ session }: Props) {
             ariaLabel="Taraflar paragrafı"
             multiline
             placeholder="Taraflar paragrafı"
+            readOnly={readOnly}
             className="mt-8 text-[15px] leading-[1.8] text-justify whitespace-pre-wrap outline-none focus:bg-accent-primary/[0.04] rounded px-2 py-1.5"
           />
 
@@ -140,6 +151,7 @@ export function PromptDraftPreview({ session }: Props) {
                       updateClauseHeading(session.id, clause.id, next)
                     }
                     ariaLabel={`Madde ${idx + 1} başlığı`}
+                    readOnly={readOnly}
                     className="flex-1 font-semibold text-[15px] outline-none focus:bg-accent-primary/[0.04] rounded px-1.5 py-0.5"
                   />
                 </div>
@@ -151,6 +163,7 @@ export function PromptDraftPreview({ session }: Props) {
                   }
                   ariaLabel={`Madde ${idx + 1} içeriği`}
                   multiline
+                  readOnly={readOnly}
                   className="pl-5 text-[14px] leading-[1.75] text-justify whitespace-pre-wrap outline-none focus:bg-accent-primary/[0.04] rounded px-2 py-1.5"
                 />
               </section>
@@ -164,6 +177,7 @@ export function PromptDraftPreview({ session }: Props) {
             ariaLabel="Kapanış paragrafı"
             multiline
             placeholder="Kapanış / imza alanı"
+            readOnly={readOnly}
             className="mt-10 text-[15px] leading-[1.8] whitespace-pre-wrap outline-none focus:bg-accent-primary/[0.04] rounded px-2 py-1.5"
           />
         </article>

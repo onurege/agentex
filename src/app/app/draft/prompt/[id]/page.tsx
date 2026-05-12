@@ -3,10 +3,10 @@
 // /app/draft/prompt/[id] — chat (sol ~%18) + editable preview (sağ).
 // AppShell header'ı altında full-height iki-pane layout.
 
-import { useCallback } from "react";
-import { notFound, useParams } from "next/navigation";
+import { useCallback, useState } from "react";
+import { notFound, useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Save, SquarePlus } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { PromptChatPanel } from "@/components/draft-prompt/PromptChatPanel";
 import { PromptDraftPreview } from "@/components/draft-prompt/PromptDraftPreview";
@@ -23,11 +23,74 @@ function newMessageId(): string {
 
 export default function PromptDraftDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const hydrated = useHydrated();
   const session = useDraftPromptStore((s) => s.getSession(params.id));
   const appendMessage = useDraftPromptStore((s) => s.appendMessage);
   const setStatus = useDraftPromptStore((s) => s.setStatus);
   const applyAIResult = useDraftPromptStore((s) => s.applyAIResult);
+  const markSaved = useDraftPromptStore((s) => s.markSaved);
+  const createSession = useDraftPromptStore((s) => s.createSession);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const saveToServer = useCallback(async () => {
+    if (!session?.draft) {
+      throw new Error("Kayıt edilecek taslak yok.");
+    }
+    setSaveState("saving");
+    setSaveError(null);
+    try {
+      const res = await fetch("/api/draft/prompt/saved", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: session.serverId ?? undefined,
+          document: session.draft,
+          messages: session.messages,
+        }),
+      });
+      if (!res.ok) {
+        let msg = `Kayıt başarısız (HTTP ${res.status})`;
+        try {
+          const body = (await res.json()) as { message?: string };
+          if (body?.message) msg = body.message;
+        } catch {
+          // non-json
+        }
+        throw new Error(msg);
+      }
+      const data = (await res.json()) as { id: string; updatedAt: string };
+      markSaved(session.id, data.id, data.updatedAt);
+      setSaveState("idle");
+      return data.id;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Kayıt başarısız.";
+      setSaveState("error");
+      setSaveError(message);
+      throw err;
+    }
+  }, [session, markSaved]);
+
+  const handleSaveAndReturn = useCallback(async () => {
+    try {
+      await saveToServer();
+      router.push("/app/draft");
+    } catch {
+      // saveToServer already set error state
+    }
+  }, [saveToServer, router]);
+
+  const handleSaveAndNew = useCallback(async () => {
+    try {
+      await saveToServer();
+      const newId = createSession();
+      router.replace(`/app/draft/prompt/${newId}`);
+    } catch {
+      // already shown
+    }
+  }, [saveToServer, createSession, router]);
 
   const handleSubmit = useCallback(
     async (text: string) => {
@@ -119,9 +182,83 @@ export default function PromptDraftDetailPage() {
         </aside>
 
         <main className="flex-1 min-w-0 h-[calc(100vh-5rem-40vh)] lg:h-full bg-workspace-bg">
-          <PromptDraftPreview session={session} />
+          <PromptDraftPreview
+            session={session}
+            toolbarExtras={
+              session.draft ? (
+                <SaveButtons
+                  saveState={saveState}
+                  saveError={saveError}
+                  hasDraft={!!session.draft}
+                  isDirtyAfterSave={
+                    Boolean(session.savedAt) &&
+                    session.updatedAt > (session.savedAt ?? "")
+                  }
+                  savedAt={session.savedAt}
+                  onSaveAndReturn={handleSaveAndReturn}
+                  onSaveAndNew={handleSaveAndNew}
+                />
+              ) : null
+            }
+          />
         </main>
       </div>
     </AppShell>
+  );
+}
+
+interface SaveButtonsProps {
+  saveState: "idle" | "saving" | "error";
+  saveError: string | null;
+  hasDraft: boolean;
+  isDirtyAfterSave: boolean;
+  savedAt: string | null;
+  onSaveAndReturn: () => void | Promise<void>;
+  onSaveAndNew: () => void | Promise<void>;
+}
+
+function SaveButtons({
+  saveState,
+  saveError,
+  hasDraft,
+  isDirtyAfterSave,
+  savedAt,
+  onSaveAndReturn,
+  onSaveAndNew,
+}: SaveButtonsProps) {
+  if (!hasDraft) return null;
+  const busy = saveState === "saving";
+  return (
+    <div className="flex items-center gap-2">
+      {saveState === "error" && saveError && (
+        <span className="text-xs text-accent-danger truncate max-w-[180px]" title={saveError}>
+          {saveError}
+        </span>
+      )}
+      {savedAt && !isDirtyAfterSave && saveState !== "saving" && (
+        <span className="inline-flex items-center gap-1 text-[11px] text-text-tertiary">
+          <Check size={11} className="text-accent-success" />
+          Kaydedildi
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={() => void onSaveAndReturn()}
+        disabled={busy}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-workspace-surface border border-workspace-border text-text-primary hover:border-accent-primary/40 hover:bg-accent-primary/[0.04] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+      >
+        {busy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+        Kaydet ve Dön
+      </button>
+      <button
+        type="button"
+        onClick={() => void onSaveAndNew()}
+        disabled={busy}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-workspace-surface border border-workspace-border text-text-primary hover:border-accent-primary/40 hover:bg-accent-primary/[0.04] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+      >
+        {busy ? <Loader2 size={14} className="animate-spin" /> : <SquarePlus size={14} />}
+        Kaydet ve Yeni
+      </button>
+    </div>
   );
 }
