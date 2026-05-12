@@ -37,6 +37,7 @@ model User {
   auditLogs        AuditLog[]       @relation("AuditActor")
   regulationReads  RegulationRead[]
   supportTickets   SupportTicket[]
+  promptDrafts     PromptDraft[]
 
   // İmza ön-kontrol — sahip + reviewer ilişkileri (T-6).
   ownedSigPrechecks    SignaturePrecheck[] @relation("SigPrecheckOwner")
@@ -55,6 +56,40 @@ model Group {
   createdAt DateTime @default(now())
   users     User[]
   boardRuns BoardRun[]
+  promptDrafts PromptDraft[]
+}
+
+// Prompt-driven (chat) ile üretilmiş sözleşme taslağı. Kullanıcı
+// "Kaydet" derse buraya yazılır; aynı gruptaki kullanıcılar
+// read-only olarak görebilir. Edit/sil sadece sahibinde.
+//
+// `document` ve `messages` alanları JSON; şemaları
+// src/lib/draft-prompt/types.ts içindeki PromptDraftDocument ve
+// PromptChatMessage[] tipine birebir uyar.
+model PromptDraft {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  groupId   String?
+  group     Group?   @relation(fields: [groupId], references: [id])
+
+  /** UI listesinde gösterilecek başlık (document.title kopyası). */
+  title     String
+
+  /** PromptDraftDocument JSON ({title, preamble, clauses[], closing}). */
+  document  Json
+
+  /** PromptChatMessage[] — konuşma geçmişi. Liste sayfasında "konuşmayı aç"
+   *  için gerekli; sahibi olmayan grup üyeleri sadece okur. */
+  messages  Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([updatedAt])
 }
 
 // İmza ön-kontrol kayıtları (T-6). Stateless precheck akışının
