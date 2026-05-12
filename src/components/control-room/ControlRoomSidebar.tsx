@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { getPermissions, type UserPermissions } from "@/lib/config/roles";
 import { useSession } from "next-auth/react";
 import { ThemeToggle } from "@/components/app/ThemeToggle";
-import { BrandMark } from "@/components/app/BrandMark";
 
 interface NavItem {
   label: string;
@@ -121,18 +120,10 @@ export function ControlRoomSidebar() {
   );
 
   return (
-    <aside className="w-[240px] shrink-0 border-r border-workspace-border bg-workspace-surface flex flex-col">
-      {/* Brand */}
-      <div className="px-4 h-[72px] flex items-center border-b border-workspace-border/50">
-        <Link
-          href="/app/panel"
-          className="transition-opacity hover:opacity-80"
-        >
-          <BrandMark size="sm" />
-        </Link>
-      </div>
-
-      {/* Navigation */}
+    <aside className="w-[240px] shrink-0 border-r border-workspace-border bg-workspace-surface flex flex-col lg:sticky lg:top-20 lg:self-start lg:h-[calc(100vh-5rem)]">
+      {/* Navigation — AppShell header (h-20) zaten brand mark taşıyor;
+          burada ikincisini koymuyoruz, doğrudan modül navı en üstte
+          başlasın diye. */}
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
         {visibleItems.map((item) => {
           const isActive =
