@@ -25,12 +25,8 @@ function paragraphs(text: string, opts: { justify?: boolean; spaceAfter?: number
   const blocks = (text ?? "")
     .split(/\n{2,}/)
     .map((p) => p.trim())
-    .filter(Boolean);
-  if (blocks.length === 0) {
-    return [
-      new Paragraph({ children: [new TextRun({ text: "", size: SZ.body })] }),
-    ];
-  }
+    .filter((p) => p.length > 0);
+  if (blocks.length === 0) return [];
   return blocks.map(
     (p) =>
       new Paragraph({
@@ -48,6 +44,13 @@ function paragraphs(text: string, opts: { justify?: boolean; spaceAfter?: number
         ],
       }),
   );
+}
+
+function emptyLine(): Paragraph {
+  return new Paragraph({
+    spacing: { after: 240 },
+    children: [new TextRun({ text: "", size: SZ.body })],
+  });
 }
 
 function titleParagraph(title: string): Paragraph {
@@ -85,17 +88,23 @@ export async function buildPromptDraftDocx(
 ): Promise<Buffer> {
   const children: Paragraph[] = [];
   children.push(titleParagraph(draft.title || "Sözleşme"));
-  if (draft.preamble) {
-    children.push(...paragraphs(draft.preamble, { justify: true, spaceAfter: 240 }));
-  }
+  const preambleBlocks = paragraphs(draft.preamble ?? "", {
+    justify: true,
+    spaceAfter: 240,
+  });
+  children.push(...preambleBlocks);
+
   draft.clauses.forEach((c, idx) => {
     children.push(...clauseParagraphs(c.heading, c.body, idx + 1));
   });
-  if (draft.closing) {
-    children.push(new Paragraph({ spacing: { after: 240 }, children: [] }));
-    children.push(...paragraphs(draft.closing, { spaceAfter: 120 }));
+
+  const closingBlocks = paragraphs(draft.closing ?? "", { spaceAfter: 120 });
+  if (closingBlocks.length > 0) {
+    children.push(emptyLine());
+    children.push(...closingBlocks);
   }
 
+  // Document expects at least one paragraph; title already guarantees that.
   const doc = new Document({
     styles: {
       default: {

@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "DOCX üretilemedi.";
+    console.error("[draft-prompt:export] failure", err);
     return NextResponse.json(
       { error: "export_failed", message },
       { status: 500 },
