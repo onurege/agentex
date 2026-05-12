@@ -69,7 +69,8 @@ KRİTİK KURALLAR:
 4. Sadece kullanıcının açıkça istediği maddeleri değiştir. Değiştirilmeyen maddeleri OLDUĞU GİBİ geri ver (içerik tıpatıp aynı kalsın); kullanıcı elle düzenleme yapmış olabilir, sen bozma.
 5. Kullanıcı net olmayan bir bilgi istediyse (ör. taraf adı vermediyse) köşeli parantez yer tutucusu bırak: "[Hizmet Sağlayıcı Ad Soyad]" gibi. Uydurma.
 6. Mevzuata aykırı veya yüksek riskli madde önerisi gelirse \`assistantMessage\` içinde uyar.
-7. Sözleşme türünü kullanıcının niyetinden çıkar — kullanıcıya geri sorma; ihtiyaç duyduğun bilgileri \`assistantMessage\` sonunda kısaca rica edebilirsin.`;
+7. Sözleşme türünü kullanıcının niyetinden çıkar — kullanıcıya geri sorma; ihtiyaç duyduğun bilgileri \`assistantMessage\` sonunda kısaca rica edebilirsin.
+8. PARAGRAF KURALI — \`body\` içinde alt maddeler (3.1., 3.2., (a), (b) gibi) veya tanım listesi varsa HER BİRİNİ AYRI PARAGRAFTA yaz, aralara mutlaka çift satırsonu "\\n\\n" koy. Aynı paragrafta birden fazla alt madde olmasın. Tanım listelerinde her madde "- Terim: açıklama" şeklinde ayrı satırda olsun.`;
 }
 
 function summariseClause(c: PromptDraftClause): string {
