@@ -18,6 +18,7 @@ import {
   FilePlus2,
   Handshake,
   Lock,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
@@ -88,13 +89,25 @@ export default function DraftModuleLanding() {
               </p>
             </div>
 
-            <Link
-              href="/app/draft/new"
-              className="group inline-flex items-center gap-2.5 px-6 py-3.5 text-base font-semibold rounded-xl bg-accent-primary text-workspace-surface hover:bg-accent-secondary transition-all shadow-medium self-start md:self-auto"
-            >
-              Yeni Sözleşme
-              <ArrowRight size={18} className="transition-transform group-hover:translate-x-0.5" />
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3 self-start md:self-auto">
+              <Link
+                href="/app/draft/new"
+                className="group inline-flex items-center gap-2.5 px-6 py-3.5 text-base font-semibold rounded-xl bg-accent-primary text-workspace-surface hover:bg-accent-secondary transition-all shadow-medium"
+              >
+                Yeni Sözleşme
+                <ArrowRight
+                  size={18}
+                  className="transition-transform group-hover:translate-x-0.5"
+                />
+              </Link>
+              <Link
+                href="/app/draft/prompt"
+                className="group inline-flex items-center gap-2.5 px-6 py-3.5 text-base font-semibold rounded-xl bg-workspace-surface border border-accent-primary/40 text-accent-primary hover:bg-accent-primary/[0.06] transition-all"
+              >
+                <Sparkles size={16} />
+                Prompt ile Başlat
+              </Link>
+            </div>
           </div>
         </section>
 
