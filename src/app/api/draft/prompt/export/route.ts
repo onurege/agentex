@@ -22,7 +22,30 @@ function isDraft(v: unknown): v is PromptDraftDocument {
   );
 }
 
-function safeFilename(title: string): string {
+// Türkçe karakterleri ASCII'ye indirgeyerek HTTP header güvenli
+// `filename="…"` üretir. Orijinal başlık RFC 5987 `filename*` ile
+// UTF-8 olarak ayrı verilir; modern tarayıcılar onu tercih eder.
+function asciiFilename(title: string): string {
+  const map: Record<string, string> = {
+    ç: "c", Ç: "C",
+    ğ: "g", Ğ: "G",
+    ı: "i", İ: "I",
+    ö: "o", Ö: "O",
+    ş: "s", Ş: "S",
+    ü: "u", Ü: "U",
+  };
+  const folded = title.replace(/[çÇğĞıİöÖşŞüÜ]/g, (c) => map[c] ?? c);
+  const stripped = folded.replace(/[^\x20-\x7E]/g, "").trim();
+  const base =
+    stripped
+      .replace(/[\\/:*?"<>|]+/g, "")
+      .replace(/\s+/g, "-")
+      .slice(0, 80) || "sozlesme";
+  const stamp = new Date().toISOString().slice(0, 10);
+  return `${base}-${stamp}.docx`;
+}
+
+function utf8Filename(title: string): string {
   const base =
     title
       .replace(/[\\/:*?"<>|]+/g, "")
@@ -30,6 +53,16 @@ function safeFilename(title: string): string {
       .slice(0, 80) || "sozlesme";
   const stamp = new Date().toISOString().slice(0, 10);
   return `${base}-${stamp}.docx`;
+}
+
+function contentDispositionHeader(title: string): string {
+  const ascii = asciiFilename(title);
+  const utf8 = utf8Filename(title);
+  // RFC 5987 encoding for the UTF-8 variant.
+  const encoded = encodeURIComponent(utf8)
+    .replace(/['()]/g, escape)
+    .replace(/\*/g, "%2A");
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -68,7 +101,7 @@ export async function POST(req: NextRequest) {
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Content-Disposition": `attachment; filename="${safeFilename(payload.draft.title)}"`,
+        "Content-Disposition": contentDispositionHeader(payload.draft.title),
       },
     });
   } catch (err) {
