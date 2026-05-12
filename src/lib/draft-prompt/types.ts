@@ -46,6 +46,21 @@ export interface PromptDraftSession {
   draft: PromptDraftDocument | null;
   status: PromptDraftStatus;
   errorMessage: string | null;
+  /** DB'ye kaydedilmişse PromptDraft.id. Update etmek için bu kullanılır;
+   *  null ise sonraki kaydet yeni satır yaratır. */
+  serverId: string | null;
+  /** Saved ISO timestamp — UI'da "kaydedildi" rozeti için. */
+  savedAt: string | null;
+}
+
+/** Liste API'sinin bir item shape'i. */
+export interface PromptDraftListItem {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  isOwner: boolean;
+  ownerName: string;
 }
 
 /** AI response sözleşmesi — `/api/draft/prompt` POST'undan döner. */

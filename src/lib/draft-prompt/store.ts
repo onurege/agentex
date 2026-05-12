@@ -37,6 +37,10 @@ interface PromptDraftState {
   updateTitle(sessionId: string, nextTitle: string): void;
   updatePreamble(sessionId: string, next: string): void;
   updateClosing(sessionId: string, next: string): void;
+  /** Server tarafına kaydedilince çağrılır; mevcut session'a server id + timestamp atar. */
+  markSaved(sessionId: string, serverId: string, savedAt: string): void;
+  /** DB'den yüklenmiş bir session'ı local store'a yerleştirir / overwrite eder. */
+  hydrateFromServer(session: PromptDraftSession): void;
 }
 
 function genId(prefix: string): string {
@@ -68,6 +72,8 @@ export const useDraftPromptStore = create<PromptDraftState>()(
           draft: null,
           status: "empty",
           errorMessage: null,
+          serverId: null,
+          savedAt: null,
         };
         set((s) => ({ sessions: { ...s.sessions, [id]: session } }));
         return id;
@@ -200,6 +206,23 @@ export const useDraftPromptStore = create<PromptDraftState>()(
             },
           };
         }),
+
+      markSaved: (sessionId, serverId, savedAt) =>
+        set((s) => {
+          const existing = s.sessions[sessionId];
+          if (!existing) return s;
+          return {
+            sessions: {
+              ...s.sessions,
+              [sessionId]: { ...existing, serverId, savedAt },
+            },
+          };
+        }),
+
+      hydrateFromServer: (session) =>
+        set((s) => ({
+          sessions: { ...s.sessions, [session.id]: session },
+        })),
 
       updateClosing: (sessionId, next) =>
         set((s) => {
